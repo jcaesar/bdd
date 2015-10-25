@@ -56,6 +56,7 @@ definition "abdd_is_child c n \<equiv> (label c = left n \<or> label c = right n
 inductive abdd_reachable :: "abdd \<Rightarrow> abdd_node \<Rightarrow> abdd_node \<Rightarrow> bool" where
 ar_base: "ln2 \<in> set (nodes bdd) \<Longrightarrow> abdd_is_child ln2 ln  \<Longrightarrow> abdd_reachable bdd ln ln2" |
 ar_step: "ln3 \<in> set (nodes bdd) \<Longrightarrow> abdd_reachable bdd ln ln2 \<Longrightarrow> abdd_is_child ln3 ln2  \<Longrightarrow> abdd_reachable bdd ln ln3"
+print_theorems
 code_pred abdd_reachable .
 definition "abdd_reachable_set bdd node = {n |n. abdd_reachable bdd node n}"
 definition "abdd_cycle_free bdd = (\<forall>node \<in> set (nodes bdd). \<not> abdd_reachable bdd node node)"
@@ -80,6 +81,7 @@ lemma step_reachable_subset_l: "node \<in> set (nodes bdd) \<Longrightarrow> abd
 proof(rule, unfold abdd_reachable_set_def, simp, fast elim: reachable_trans[OF _ reachable_child(2)]) qed
 
 lemma hlp1: "x \<in> {n |n. P n} \<Longrightarrow> P x" by blast
+lemma hlp2: "x \<in> {n |n. P n} = P x" by blast
 lemma notselfreach:
 	assumes "abdd_cycle_free bdd"
 	shows "node \<in> abdd_reachable_set bdd node \<Longrightarrow> False"
@@ -233,6 +235,7 @@ proof(relation "measure (\<lambda>(bdd,nods). length (nodes bdd) - card nods)", 
 		by(simp add: swapdir[OF lep1 lep2] psubset_card_mono[OF _ a, simplified, unfolded xa[symmetric]])
 qed
 print_theorems
+value "(label ` abdd_reachable_set_code abdd_xor {the (getnode abdd_xor (start abdd_xor))})"
 
 lemma reachable_code_subset_self: 
 	"x \<subseteq> set (nodes bdd) \<Longrightarrow> abdd_reference_integrity bdd \<Longrightarrow> x \<subseteq> abdd_reachable_set_code bdd x"
@@ -340,13 +343,47 @@ next
 	from this[of _ "{node}"] show ?case by blast
 qed
 
+lemma Un_least_sym: "A \<subseteq> C \<Longrightarrow> B \<subseteq> C \<Longrightarrow> B \<union> A \<subseteq> C" using Un_least .
+
+lemma abdd_reachable_set_code_eq_hlp2: "abdd_reference_integrity bdd \<Longrightarrow> node \<in> set (nodes bdd) \<Longrightarrow>
+	abdd_reachable_set bdd node = abdd_reachable_set_code bdd {(the \<circ> getnode bdd \<circ> right) node} 
+	\<union> abdd_reachable_set_code bdd {(the \<circ> getnode bdd \<circ> left) node}"
+proof -
+	case goal1
+	note f = abdd_reachable_set_code_eq_hlp[OF goal1(1)]
+	note ci = getnode_in[OF goal1(2) goal1(1)]
+	note g = f[OF ci(1)] f[OF ci(2)]
+	show ?case unfolding comp_def g
+	unfolding abdd_reachable_set_def
+	apply(rule equalityI[symmetric])
+	apply(rule Un_least_sym)+
+	apply (simp add: goal1(1) goal1(2) reachable_child(2))
+	using abdd_reachable_set_def goal1(1) goal1(2) step_reachable_subset_l apply auto[1]
+	apply(rule Un_least)
+	using abdd_reachable_set_def goal1(1) goal1(2) step_reachable_subset_r apply auto[1]
+	apply (simp add: goal1(1) goal1(2) reachable_child(1))
+	apply rule
+	apply(drule hlp1)
+	apply auto sorry
+qed
+
 lemma [code]: "(if abdd_reference_integrity bdd \<and> abdd_cycle_free bdd then a else b) =
                (if abdd_reference_integrity bdd \<and> (\<forall>node \<in> set (nodes bdd). 
-               		node \<notin> abdd_reachable_set_code bdd node) then a else b)"
-using abdd_reachable_set_code_eq_hlp
+               		node \<notin> abdd_reachable_set_code bdd {(the \<circ> getnode bdd \<circ> right) node} 
+	\<union> abdd_reachable_set_code bdd {(the \<circ> getnode bdd \<circ> left) node}) then a else b)"
+using abdd_reachable_set_code_eq_hlp2
+proof(cases "abdd_reference_integrity bdd")
+	case False thus ?thesis by simp
+next
+	case True
+	have c: "abdd_cycle_free bdd =
+        (\<forall>node\<in>set (nodes bdd).
+            node \<notin> abdd_reachable_set_code bdd {(the \<circ> getnode bdd \<circ> right) node} \<union>
+                    abdd_reachable_set_code bdd {(the \<circ> getnode bdd \<circ> left) node})"
+		unfolding abdd_cycle_free_def
+		sorry
+	show ?thesis unfolding c
+	..
+qed
 
-lemma abdd_reachable_dub: assumes "abdd_reference_integrity bdd" "nod \<in> set (nodes bdd)"
-	shows "\<Union>(abdd_reachable_set bdd ` abdd_reachable_set bdd nod) = abdd_reachable_set bdd nod"
-oops
-	
 end
