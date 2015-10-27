@@ -51,6 +51,17 @@ lemma getnode_in:
 using node_gettable[OF assms] by simp_all (metis find_Some_iff getnode_def nth_mem option.sel)+
 lemma getnode_in2: "getnode bdd (LabeledNode ln) = Some x \<Longrightarrow> x \<in> set (nodes bdd)"
 	unfolding getnode_def find_Some_iff by force
+lemma getnode_in3:
+	assumes "abdd_reference_integrity bdd"
+	shows "the (getnode bdd (start bdd)) \<in> set (nodes bdd)"
+proof -
+	have 1: "start bdd \<in> set (abdd_collect_refs bdd)"
+		unfolding abdd_collect_refs_def by simp 
+	have "getnode bdd (start bdd) \<noteq> None"
+		using getnode_noNone[OF 1 assms] .
+	then show ?thesis
+		by (metis find_Some_iff getnode_def nth_mem option.collapse)
+qed
 
 definition "abdd_is_child c n \<equiv> (label c = left n \<or> label c = right n)"
 inductive abdd_reachable :: "abdd \<Rightarrow> abdd_node \<Rightarrow> abdd_node \<Rightarrow> bool" where
@@ -183,11 +194,12 @@ function abstract_abdd2 :: "abdd \<Rightarrow> nodelabel \<Rightarrow> boolfunc2
 	(case getnode bdd (LabeledNode ln) of Some n \<Rightarrow> 
 		(\<lambda>as. if as (var n) then abstract_abdd2 bdd (right n) as 
 		else abstract_abdd2 bdd (left n) as)
-		| _ \<Rightarrow> undefined) else undefined)"
+		| _ \<Rightarrow> (\<lambda>x. False)) else (\<lambda>x. False))" (* used to be undefined, but that's annoying *)
 by pat_completeness auto
 
 termination abstract_abdd2
-proof(relation "measure (\<lambda>(bdd, nl). case getnode bdd nl of Some n \<Rightarrow> card (abdd_reachable_set bdd n) | None \<Rightarrow> 0)", rule wf_measure)
+proof(relation "measure (\<lambda>(bdd, nl). case getnode bdd nl of Some n \<Rightarrow> card (abdd_reachable_set bdd n) | None \<Rightarrow> 0)",
+	rule wf_measure)
 	case goal1
 	then have as: "abdd_reference_integrity bdd" "abdd_cycle_free bdd" by simp_all
 	have xe: "x2 \<in> set (nodes bdd)" using getnode_in2[OF goal1(2)] . 
@@ -204,5 +216,218 @@ next
 	note psubset_card_mono[OF abdd_reachable_fin step_reachable_rsubset_l[OF as(2) xe as(1)]]
 	then show ?case by(simp add: cs goal2(2))
 qed
+
+function abstract_abdd3 :: "abdd \<Rightarrow> boolfunc2" where
+"abstract_abdd3 bdd = (if abdd_reference_integrity bdd \<and> abdd_cycle_free bdd then
+	(case start bdd of 
+		DTrue \<Rightarrow> (\<lambda>as. True) |
+		DFalse \<Rightarrow> (\<lambda>as. False) |
+		LabeledNode ln \<Rightarrow> let n = the (getnode bdd (LabeledNode ln)) in
+			(\<lambda>as. if as (var n)
+				then abstract_abdd3 \<lparr> nodes = nodes bdd, start = right n \<rparr> as 
+				else abstract_abdd3 \<lparr> nodes = nodes bdd, start = left n \<rparr> as)
+	) else (\<lambda>x. False))"
+by pat_completeness auto
+
+lemma getnode_start_inv: "getnode \<lparr> nodes = n, start = a \<rparr> l = getnode \<lparr> nodes = n, start = b \<rparr> l"
+	unfolding getnode_def
+	unfolding abdd.simps
+	..
+lemma abdd_simp_instance: "\<lparr>nodes = nodes bdd, start = start bdd\<rparr> = bdd" by simp
+
+lemma reachable_inv_startI: "abdd_reachable \<lparr> nodes = n, start = x \<rparr> a b \<Longrightarrow> abdd_reachable \<lparr> nodes = n, start = y \<rparr> a b"
+	by(induction "\<lparr> nodes = n, start = x \<rparr>" a b rule: abdd_reachable.induct)
+	(simp_all add: ar_base ar_step)
+lemma reachable_inv_start: "abdd_reachable \<lparr> nodes = n, start = x \<rparr> a b = abdd_reachable \<lparr> nodes = n, start = y \<rparr> a b"
+	using reachable_inv_startI by blast
+
+termination abstract_abdd3
+proof(relation "measure (\<lambda>bdd. case getnode bdd (start bdd) of Some n \<Rightarrow> card (abdd_reachable_set bdd n) | None \<Rightarrow> 0)",
+	rule wf_measure)
+	case goal1
+	then have as: "abdd_reference_integrity bdd" "abdd_cycle_free bdd" by simp_all
+	have xe: "x \<in> set (nodes bdd)" using as(1) getnode_in3 goal1(2) goal1(3) by fastforce  
+	have cs: "(case getnode bdd (right x) of None \<Rightarrow> 0 | Some n \<Rightarrow> card (abdd_reachable_set bdd n)) =
+		card (abdd_reachable_set bdd  (the (getnode bdd (right x))))" using node_gettable(1)[OF xe as(1)] by force
+	have start_in: "start bdd \<in> set (abdd_collect_refs bdd)" unfolding abdd_collect_refs_def by simp
+	note psubset_card_mono[OF abdd_reachable_fin step_reachable_rsubset_r[OF as(2) xe as(1)]]
+	then show ?case
+		unfolding in_measure
+		unfolding getnode_start_inv[of "nodes bdd" "right x" _ "start bdd"]
+		unfolding abdd.simps
+		unfolding abdd_reachable_set_def
+		unfolding reachable_inv_start[of "nodes bdd" "right x" _ _ "start bdd"]
+		unfolding abdd_simp_instance
+		unfolding abdd_reachable_set_def[symmetric]
+		unfolding cs
+		using getnode_noNone[OF start_in as(1)]
+		using goal1(2) goal1(3) by force
+next
+	case goal2
+	then have as: "abdd_reference_integrity bdd" "abdd_cycle_free bdd" by simp_all
+	have xe: "x \<in> set (nodes bdd)" using as(1) getnode_in3 goal2(2) goal2(3) by fastforce  
+	have cs: "(case getnode bdd (left x) of None \<Rightarrow> 0 | Some n \<Rightarrow> card (abdd_reachable_set bdd n)) =
+		card (abdd_reachable_set bdd  (the (getnode bdd (left x))))" using node_gettable(2)[OF xe as(1)] by force
+	have start_in: "start bdd \<in> set (abdd_collect_refs bdd)" unfolding abdd_collect_refs_def by simp
+	note psubset_card_mono[OF abdd_reachable_fin step_reachable_rsubset_l[OF as(2) xe as(1)]]
+	then show ?case
+		unfolding in_measure
+		unfolding getnode_start_inv[of "nodes bdd" "left x" _ "start bdd"]
+		unfolding abdd.simps
+		unfolding abdd_reachable_set_def
+		unfolding reachable_inv_start[of "nodes bdd" "left x" _ _ "start bdd"]
+		unfolding abdd_simp_instance
+		unfolding abdd_reachable_set_def[symmetric]
+		unfolding cs
+		using getnode_noNone[OF start_in as(1)]
+		using goal2(2) goal2(3)
+		by force
+qed
+
+definition "abstract_abdd bdd = abstract_abdd2 bdd (start bdd)"
+
+definition "abdd_restrict_top bdd val = \<lparr> nodes = nodes bdd, 
+	start = ((if val then right else left) \<circ> the \<circ> getnode bdd \<circ> start) bdd  \<rparr>"
+	
+lemma ref_integr_inv_startI: "y \<in> set (abdd_collect_refs \<lparr> nodes = n, start = x \<rparr>) \<Longrightarrow> 
+	abdd_reference_integrity \<lparr> nodes = n, start = x \<rparr> \<Longrightarrow> abdd_reference_integrity \<lparr> nodes = n, start = y \<rparr>"
+	unfolding abdd_reference_integrity_def
+	unfolding abdd_collect_refs_def
+	unfolding abdd.simps
+	by auto
+	(* In hindsight, it is scary that this is provable automatically *)
+lemma abdd_reference_integrity_children:
+	assumes "abdd_reference_integrity bdd" 
+	shows "abdd_reference_integrity \<lparr> nodes = nodes bdd, start = right (the (getnode bdd (start bdd)))  \<rparr>"
+		"abdd_reference_integrity \<lparr> nodes = nodes bdd, start = left (the (getnode bdd (start bdd)))  \<rparr>"
+using assms
+proof -
+	assume san: "abdd_reference_integrity bdd"
+	have si: "start bdd \<in> set (abdd_collect_refs bdd)" 
+		unfolding abdd_collect_refs_def by simp
+	obtain nod where nod: "Some nod = getnode bdd (start bdd)"
+		using san getnode_noNone[OF si san] by fastforce
+	then have nodeq: "the (getnode bdd (start bdd)) = nod"
+		using option.sel by metis
+	then have "nod \<in> set (nodes bdd)"
+		using getnode_in3 san by blast 
+	then have "right nod \<in> set (abdd_collect_refs bdd)" "left nod \<in> set (abdd_collect_refs bdd)"
+		unfolding abdd_collect_refs_def by simp_all
+	then show "abdd_reference_integrity \<lparr>nodes = nodes bdd, start = right (the (getnode bdd (start bdd)))\<rparr>"
+		"abdd_reference_integrity \<lparr>nodes = nodes bdd, start = left (the (getnode bdd (start bdd)))\<rparr>"
+		using san nodeq abdd_simp_instance ref_integr_inv_startI
+		by metis+
+qed
+
+lemma
+	assumes "abdd_reference_integrity bdd"
+	shows "abdd_reference_integrity (abdd_restrict_top bdd val)"
+	unfolding abdd_restrict_top_def
+	using assms
+	unfolding abdd_reference_integrity_def
+	proof -
+		case goal1
+		have "set (abdd_collect_refs \<lparr>nodes = nodes bdd, 
+			start = ((if val then right else left) \<circ> the \<circ> getnode bdd \<circ> start) bdd\<rparr>)
+			\<subseteq> set (abdd_collect_refs bdd)"
+			unfolding comp_def
+			unfolding abdd_collect_refs_def
+			unfolding abdd.simps
+			unfolding set_simps set_append
+			using getnode_in3[OF assms]
+			by fastforce
+		thus ?case using goal1 by fastforce
+	qed
+
+lemma cycle_free_inv_startI: "abdd_cycle_free \<lparr> nodes = n, start = x \<rparr> \<Longrightarrow> abdd_cycle_free \<lparr> nodes = n, start = y \<rparr>"
+	unfolding abdd_cycle_free_def
+	using reachable_inv_startI
+	proof - qed auto
+lemma cycle_free_inv_start: "abdd_cycle_free \<lparr> nodes = nodes bdd, start = x \<rparr> = abdd_cycle_free bdd"
+	using cycle_free_inv_startI abdd_simp_instance
+	by metis
+
+lemma
+	assumes "abdd_cycle_free bdd"
+	shows "abdd_cycle_free (abdd_restrict_top bdd val)"
+	using assms
+	unfolding abdd_cycle_free_def
+	unfolding abdd_restrict_top_def
+	unfolding abdd.simps
+	unfolding reachable_inv_start[of "nodes bdd" 
+		"((if val then right else left) \<circ> the \<circ> getnode bdd \<circ> start) bdd" _ _ "start bdd"]
+	unfolding abdd_simp_instance
+	.
+
+lemma 
+	assumes "abdd_reference_integrity bdd \<and> abdd_cycle_free bdd"
+	shows "abstract_abdd bdd = abstract_abdd3 bdd"
+unfolding abstract_abdd_def
+using assms
+proof(induction rule: abstract_abdd3.induct)
+	case goal1
+	note val = goal1(3)
+	note mih = goal1(2)[OF goal1(3)] goal1(1)[OF goal1(3)]
+	show ?case
+	proof(cases "start bdd")
+		case goal2 with val show ?case by simp
+	next
+		case goal3 with val show ?case by simp
+	next
+		case goal1
+		note mmih = mih[OF goal1, of "the (getnode bdd (LabeledNode x1))", unfolded cycle_free_inv_start abdd.simps]
+	oops
+
+lemma abstract_abdd_inv_startI: "t = \<lparr> nodes = n, start = x \<rparr> \<Longrightarrow> q = \<lparr> nodes = n, start = y \<rparr> \<Longrightarrow> 
+	abstract_abdd2 t a b \<Longrightarrow> abstract_abdd2 q a b"
+proof(induction rule: abstract_abdd2.induct, simp, simp)
+	case goal1
+	show ?case (is ?kees)
+	proof(cases "abdd_reference_integrity bdd \<and> abdd_cycle_free bdd")
+		have cr: "y \<in> set (abdd_collect_refs \<lparr>nodes = n, start = x\<rparr>)"  sorry
+		case False
+		hence "\<not> (abdd_reference_integrity t \<and> abdd_cycle_free t)" 
+			unfolding goal1(3) goal1(4) using cycle_free_inv_startI ref_integr_inv_startI[OF cr] by blast 
+		thus ?kees
+			using goal1(5) 
+			unfolding abstract_abdd2.simps
+			by(simp only: if_False)
+	next
+		case True
+		note mih = goal1(1)[OF True _ _ goal1(3) goal1(4)]
+oops
+
+lemma 
+	assumes san: "abdd_reference_integrity bdd" "abdd_cycle_free bdd"
+	assumes tv: "k = var (the (getnode bdd (start bdd)))"
+	shows "abstract_abdd (abdd_restrict_top bdd val) as = bf2_restrict k val (abstract_abdd bdd) as"
+proof
+	assume "abstract_abdd (abdd_restrict_top bdd val) as"
+	note k = this[unfolded abstract_abdd_def abdd_restrict_top_def abdd.simps]
+oops
+
+lemma 
+	assumes san: "abdd_reference_integrity bdd" "abdd_cycle_free bdd"
+	assumes tv: "k = var (the (getnode bdd (start bdd)))"
+	shows "abstract_abdd3 (abdd_restrict_top bdd val) as = bf2_restrict k val (abstract_abdd3 bdd) as"
+proof
+	assume "abstract_abdd3 (abdd_restrict_top bdd val) as"
+	note k = this[unfolded abdd_restrict_top_def abdd.simps]
+	thus "bf2_restrict k val (abstract_abdd3 bdd) as"
+		unfolding bf2_restrict_def
+		unfolding tv
+		apply(cases val)
+		apply(simp add: san)
+oops
+
+definition "abstract_abdd4 bdd as = 
+	(let plain = map (\<lambda>node. (label node, if as (var node) then right node else left node)) (nodes bdd) in let tc = trancl (set plain) in
+	case ((start bdd, DTrue) \<in> tc, (start bdd, DFalse) \<in> tc) of
+		(True, False) \<Rightarrow> True |
+		(False, True) \<Rightarrow> False |
+		_ \<Rightarrow> undefined)"
+value "map (abstract_abdd4 abdd_xor) 
+	[(\<lambda>i. [False, False] ! i), (\<lambda>i. [False, True] ! i), (\<lambda>i. [True, False] ! i), (\<lambda>i. [True, True] ! i)]"
+
 
 end
