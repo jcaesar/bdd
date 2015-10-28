@@ -3,7 +3,7 @@ imports BoolFunc
 begin
 
 record abdd_node =
-	var :: nat
+	variable :: nat
 	right :: nat
 	left :: nat
 	
@@ -33,12 +33,19 @@ lemma "abdd_linear bdd \<Longrightarrow> abdd_ref_int bdd"
 			unfolding i(2)
 		.
 	qed
+lemma abdd_linear_le: "2 \<le> x \<Longrightarrow> abdd_linear bdd \<and> x < nodecount bdd \<Longrightarrow> left (nodes bdd x) < x \<and> right (nodes bdd x) < x"
+	unfolding abdd_linear_def Let_def
+	proof -
+		case goal1
+		hence "x \<in> {2..<nodecount bdd}" by simp
+		thus ?case using goal1(2) by fastforce
+	qed
 		
 definition "abdd_terminal state = (state \<le> 1)" 
 definition "abdd_xor \<equiv> \<lparr> nodecount = 5, nodes = (\<lambda>i. [undefined, undefined,
-	\<lparr> var = 1, right = 1, left = 0 \<rparr>,
-	\<lparr> var = 1, right = 0, left = 1 \<rparr>,
-	\<lparr> var = 0, right = 3, left = 2 \<rparr>] ! i)
+	\<lparr> variable = 1, right = 1, left = 0 \<rparr>,
+	\<lparr> variable = 1, right = 0, left = 1 \<rparr>,
+	\<lparr> variable = 0, right = 3, left = 2 \<rparr>] ! i)
 \<rparr>"
 lemma[code]: "abdd_linear abdd_xor = True"
 	unfolding eq_True
@@ -56,7 +63,7 @@ function abstract_abdd :: "abdd \<Rightarrow> nat \<Rightarrow> boolfunc2" where
 "abstract_abdd bdd 0 = (\<lambda>_. False)" |
 "abstract_abdd bdd (Suc 0) = (\<lambda>_. True)" |
 "abstract_abdd bdd (Suc (Suc dn)) = (let n = Suc (Suc dn) in (if abdd_linear bdd \<and> n < nodecount bdd
-	then (\<lambda>as. let nod = nodes bdd n in (if as (var nod) then abstract_abdd bdd (right nod) as else abstract_abdd bdd (left nod) as))
+	then (\<lambda>as. let nod = nodes bdd n in (if as (variable nod) then abstract_abdd bdd (right nod) as else abstract_abdd bdd (left nod) as))
 	else undefined))"
 by pat_completeness auto
 
@@ -73,44 +80,51 @@ proof(relation "measure (\<lambda>(bdd, nl). nl)",	rule wf_measure, unfold in_me
 		using val unfolding abdd_linear_def unfolding Let_def by(simp_all add: xbd)
 qed
 
-(*
-definition "abdd_restrict_top bdd val = \<lparr> nodes = nodes bdd, 
-	start = ((if val then right else left) \<circ> the \<circ> getnode bdd \<circ> start) bdd  \<rparr>"
+(* In hindsight: Why do I need a function? *)
+fun abstract_abdd3 :: "abdd \<Rightarrow> nat \<Rightarrow> boolfunc2" where
+"abstract_abdd3 bdd 0 = (\<lambda>_. False)" |
+"abstract_abdd3 bdd (Suc 0) = (\<lambda>_. True)" |
+"abstract_abdd3 bdd (Suc (Suc dn)) = (*(let n = Suc (Suc dn) in 
+		(\<lambda>as. let nod = nodes bdd n ; next = (if as (variable nod) then right nod else left nod) in (if next < n then abstract_abdd3 bdd next as else undefined)))*)
+		(\<lambda>as. if (if as (variable (nodes bdd (Suc (Suc dn)))) then right (nodes bdd (Suc (Suc dn))) else left (nodes bdd (Suc (Suc dn)))) < Suc (Suc dn)
+         then abstract_abdd3 bdd (if as (variable (nodes bdd (Suc (Suc dn)))) then right (nodes bdd (Suc (Suc dn))) else left (nodes bdd (Suc (Suc dn)))) as else undefined)
+		"
 
-lemma 
-	assumes san: "abdd_reference_integrity bdd" "abdd_cycle_free bdd"
-	assumes tv: "k = var (the (getnode bdd (start bdd)))"
-	shows "abstract_abdd (abdd_restrict_top bdd val) as = bf2_restrict k val (abstract_abdd bdd) as"
-proof
-	assume "abstract_abdd (abdd_restrict_top bdd val) as"
-	note k = this[unfolded abstract_abdd_def abdd_restrict_top_def abdd.simps]
-oops
+lemma abdd_linear_3_eq: "abdd_linear bdd \<and> n < nodecount bdd \<Longrightarrow> abstract_abdd bdd n as = abstract_abdd3 bdd n as"
+proof(induction rule: abstract_abdd3.induct)
+	case goal3
+	have dnle: "2 \<le> Suc (Suc dn)" by simp
+	note k = goal3(1)[of as]
+	thus ?case (is ?kees)
+	proof(cases "as (variable (nodes bdd (Suc (Suc dn))))")
+		case True
+		have le: "right (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" "right (nodes bdd (Suc (Suc dn))) < nodecount bdd"
+			using abdd_linear_le[OF dnle goal3(2)] goal3(2) by simp_all
+		show ?kees using k 
+			by(simp only: True if_True le goal3(2) simp_thms abstract_abdd.simps abstract_abdd3.simps Let_def)
+	next
+		case False
+		have le: "left (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" "left (nodes bdd (Suc (Suc dn))) < nodecount bdd"
+			using abdd_linear_le[OF dnle goal3(2)] goal3(2) by simp_all
+		show ?kees using k 
+			by(simp only: False if_True if_False le goal3(2) simp_thms abstract_abdd.simps abstract_abdd3.simps Let_def)
+	qed
+qed simp_all
 
-lemma 
-	assumes san: "abdd_reference_integrity bdd" "abdd_cycle_free bdd"
-	assumes tv: "k = var (the (getnode bdd (start bdd)))"
-	shows "abstract_abdd3 (abdd_restrict_top bdd val) as = bf2_restrict k val (abstract_abdd3 bdd) as"
-proof
-	assume "abstract_abdd3 (abdd_restrict_top bdd val) as"
-	note k = this[unfolded abdd_restrict_top_def abdd.simps]
-	thus "bf2_restrict k val (abstract_abdd3 bdd) as"
-		unfolding bf2_restrict_def
-		unfolding tv
-		apply(cases val)
-		apply(simp add: san)
-oops
-*)
-term "if as (var node) then right (nodes bdd nl) else left (nodes bdd nl)"
+
+definition "abdd_to_graph bdd as \<equiv> 
+	(let plain = map (\<lambda>nl. (nl, if as (variable (nodes bdd nl)) then right (nodes bdd nl) else left (nodes bdd nl))) (upt 2 (nodecount bdd)) 
+	in {(0,0),(1,1)} \<union> trancl (set plain))"
+
 definition "abstract_abdd2 bdd start as = 
-	(let plain = map (\<lambda>nl. (nl, if as (var (nodes bdd nl)) then right (nodes bdd nl) else left (nodes bdd nl))) (upt 2 (nodecount bdd)); tc = {(0,0),(1,1)} \<union> trancl (set plain) in
-	case ((start, 1) \<in> tc, (start, 0) \<in> tc) of
+	(case ((start, 1) \<in> abdd_to_graph bdd as, (start, 0) \<in> abdd_to_graph bdd as) of
 		(True, False) \<Rightarrow> True |
 		(False, True) \<Rightarrow> False |
-		_ \<Rightarrow> False)" (* miraculously more helpful than undefined *)
+		_ \<Rightarrow> False)" (* miraculously more helpful than undefined *)		
 
 value "map (abstract_abdd2 abdd_xor (nodecount abdd_xor - 1)) 
 	[(\<lambda>i. [False, False] ! i), (\<lambda>i. [False, True] ! i), (\<lambda>i. [True, False] ! i), (\<lambda>i. [True, True] ! i)]" (* meh. :( *)
-value "(\<lambda>bdd start as. let plain = map (\<lambda>nl. (nl, if as (var (nodes bdd nl)) then right (nodes bdd nl) else left (nodes bdd nl))) (upt 2 (nodecount bdd));
+value "(\<lambda>bdd start as. let plain = map (\<lambda>nl. (nl, if as (variable (nodes bdd nl)) then right (nodes bdd nl) else left (nodes bdd nl))) (upt 2 (nodecount bdd));
 	tc = trancl (set plain) in (plain)) abdd_xor 5 (\<lambda>i. [True, True] ! i)"
 	
 lemma notin_un: "x \<notin> a \<Longrightarrow> x \<notin> b \<Longrightarrow> x \<notin> (a \<union> b)" by simp
@@ -141,7 +155,7 @@ proof -
 		qed
 		thus ?case unfolding mn[symmetric] by blast
 	qed
-	let ?foo = "{(0, 0), (1, 1)} \<union> (set (map (\<lambda>nl. (nl, if as (var (nodes bdd nl)) then right (nodes bdd nl) else left (nodes bdd nl))) [2..<nodecount bdd]))\<^sup>+"
+	let ?foo = "{(0, 0), (1, 1)} \<union> (set (map (\<lambda>nl. (nl, if as (variable (nodes bdd nl)) then right (nodes bdd nl) else left (nodes bdd nl))) [2..<nodecount bdd]))\<^sup>+"
 	have 3: "(0,1) \<notin> ?foo"
 		apply(rule notin_un, eval) 
 		apply(rule contra_subsetD[of _ "{(a,b)|a b. 2 \<le> a}"])
@@ -155,7 +169,7 @@ proof -
 		apply(rule trancl_monoI) 
 		using 1 by fastforce+
 	have 5: "(0,0) \<in> ?foo" "(1,1) \<in> ?foo" by blast+
-	show "\<not>abstract_abdd2 bdd 0 as" "abstract_abdd2 bdd 1 as" unfolding abstract_abdd2_def Let_def  using 3 4 5 by simp_all
+	show "\<not>abstract_abdd2 bdd 0 as" "abstract_abdd2 bdd 1 as" unfolding abstract_abdd2_def abdd_to_graph_def Let_def  using 3 4 5 by simp_all
 qed
 
 lemma case_defeat: "(case (a, b) of 
@@ -170,14 +184,14 @@ lemma trancl_onepath: "(a, c) \<in> trancl x \<Longrightarrow> b \<noteq> c \<Lo
 	(b, c) \<in> trancl x"
 	by (metis rtranclD tranclD)
 
-lemma abstract_abdd2_istep_right: "as (var (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
+lemma abstract_abdd2_istep_right: "as (variable (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
 	abstract_abdd2 bdd (Suc (Suc dn)) as = abstract_abdd2 bdd (right (nodes bdd (Suc (Suc dn)))) as"
 proof -
 	let ?x = "Suc (Suc dn)"
-	let ?bs = "set (map (\<lambda>nl. (nl, if as (var (nodes bdd nl)) 
+	let ?bs = "set (map (\<lambda>nl. (nl, if as (variable (nodes bdd nl)) 
 	then right (nodes bdd nl) else left (nodes bdd nl))) [2..<nodecount bdd])"
 	let ?mors = "{(0, 0), (1, 1)} \<union> ?bs\<^sup>+"
-	note dteam = abstract_abdd2_def Let_def case_defeat
+	note dteam = abstract_abdd2_def abdd_to_graph_def Let_def case_defeat
 	case goal1
 	have pe: "(Suc (Suc dn), right (nodes bdd (Suc (Suc dn)))) \<in> 
 		?bs" (is "?pe \<in> ?bs")
@@ -247,19 +261,19 @@ proof -
 			with 3 show False ..
 		qed
 		show ?case
-			unfolding abstract_abdd2_def Let_def case_defeat
+			unfolding dteam
 			by(simp only: a b if_True if_False)
 	qed
 qed
 
-lemma abstract_abdd2_istep_left: "\<not>as (var (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
+lemma abstract_abdd2_istep_left: "\<not>as (variable (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
 	abstract_abdd2 bdd (Suc (Suc dn)) as = abstract_abdd2 bdd (left (nodes bdd (Suc (Suc dn)))) as"
 proof -
 	let ?x = "Suc (Suc dn)"
-	let ?bs = "set (map (\<lambda>nl. (nl, if as (var (nodes bdd nl)) 
+	let ?bs = "set (map (\<lambda>nl. (nl, if as (variable (nodes bdd nl)) 
 	then right (nodes bdd nl) else left (nodes bdd nl))) [2..<nodecount bdd])"
 	let ?mors = "{(0, 0), (1, 1)} \<union> ?bs\<^sup>+"
-	note dteam = abstract_abdd2_def Let_def case_defeat
+	note dteam = abstract_abdd2_def abdd_to_graph_def Let_def case_defeat
 	case goal1
 	have pe: "(Suc (Suc dn), left (nodes bdd (Suc (Suc dn)))) \<in> 
 		?bs" (is "?pe \<in> ?bs")
@@ -304,36 +318,39 @@ proof -
 			by(simp only: 3 if_True 6 if_False)
 	next
 		case goal2
-		have 1: "(left (nodes bdd (Suc (Suc dn))), 1) \<in> ?mors"
-			using goal2 unfolding dteam
-			by meson
-		have a: "(Suc (Suc dn), 1) \<in> ?mors" 
-			using pe 1
-			by(cases "left (nodes bdd (Suc (Suc dn))) = 1") simp_all
-		have 2: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?bs\<^sup>+"
-			using goal2 unfolding dteam if_cancel by (meson UnI2)
-		have 4: "left (nodes bdd (Suc (Suc dn))) \<noteq> 0"
-		proof(rule ccontr, unfold not_not)
-			case goal1
-			note goal2[unfolded dteam if_cancel goal1]
-			then show False by(cases "(0, 1) \<in> ?mors") simp_all 
+		have a: "(Suc (Suc dn), 1) \<in> ?mors" (is ?theess)
+		proof -
+			have 1: "(left (nodes bdd (Suc (Suc dn))), 1) \<in> ?mors"
+				using goal2 unfolding dteam
+				by meson
+			show ?theess
+				using pe 1
+				by(cases "left (nodes bdd (Suc (Suc dn))) = 1") simp_all
 		qed
-		have 3: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?mors"
-			using 2 4 by simp
 		have b: "(Suc (Suc dn), 0) \<notin> ?mors"
 		proof(rule ccontr, unfold not_not)
+			have 2: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?bs\<^sup>+"
+				using goal2 unfolding dteam if_cancel by (meson UnI2)
+			have 4: "left (nodes bdd (Suc (Suc dn))) \<noteq> 0"
+			proof(rule ccontr, unfold not_not)
+				case goal1
+				note goal2[unfolded dteam if_cancel goal1]
+				then show False by(cases "(0, 1) \<in> ?mors") simp_all 
+			qed
+			have 3: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?mors"
+				using 2 4 by simp
 			case goal1
 			then have "(Suc (Suc dn), 0) \<in> ?bs\<^sup>+" by force
 			with pe have "(left (nodes bdd (Suc (Suc dn))), 0) \<in> ?mors" by (simp add: 4 i trancl_onepath)
 			with 3 show False ..
 		qed
 		show ?case
-			unfolding abstract_abdd2_def Let_def case_defeat
+			unfolding dteam
 			by(simp only: a b if_True if_False)
 	qed
 qed
 
-lemma "abdd_linear bdd \<and> start < nodecount bdd \<Longrightarrow> abstract_abdd bdd start as = abstract_abdd2 bdd start as"
+lemma abstract_abdd_eq: "abdd_linear bdd \<and> start < nodecount bdd \<Longrightarrow> abstract_abdd bdd start as = abstract_abdd2 bdd start as"
 proof(induction rule: abstract_abdd.induct, simp add: abstract_abdd_eq_hlp1(1))
 	case goal1 show ?case using abstract_abdd_eq_hlp1(2) by auto (* try simp. weird. *)
 next
@@ -343,7 +360,7 @@ next
 	have "left (nodes bdd (Suc (Suc dn))) < (Suc (Suc dn))" using goal2(3) unfolding abdd_linear_def Let_def by force
 	then have 2: "abdd_linear bdd \<and> left (nodes bdd (Suc (Suc dn))) < nodecount bdd" using goal2(3) by linarith
 	show ?case (is ?kees)
-	proof(cases "as (var (nodes bdd (Suc (Suc dn))))")
+	proof(cases "as (variable (nodes bdd (Suc (Suc dn))))")
 		case True
 		note k = goal2(1)[OF refl goal2(3) refl _ 1, of as]
 		show ?kees  by(simp only: abstract_abdd.simps Let_def goal2(3) simp_thms if_True True k[OF True] abstract_abdd2_istep_right)
@@ -353,5 +370,38 @@ next
 		show ?kees by(simp only: abstract_abdd.simps Let_def goal2(3) simp_thms if_False if_True False k abstract_abdd2_istep_left)
 	qed
 qed
+
+definition "abdd_restrict bdd var val =
+	\<lparr> nodecount = nodecount bdd, nodes = 
+		(\<lambda>i.(let n = nodes bdd i; ptr = (if val then right else left) n in if variable n = var 
+			then \<lparr> variable = variable n, right = ptr, left = ptr \<rparr> else nodes bdd i))
+	\<rparr>"
+(* Dunno if I'm going to use that. *)
+
+definition "abdd_var_once_at bdd at \<equiv> (let var = variable (nodes bdd at) in \<forall>i \<in> {2..<nodecount bdd}. variable (nodes bdd i) = var \<longrightarrow> i = at)" 
+
+lemma 
+	assumes san: "abdd_linear bdd \<and> x < nodecount bdd" "2 \<le> x"
+	assumes only: "abdd_var_once_at bdd x"
+	shows "abstract_abdd bdd (right (nodes bdd x)) as = bf2_restrict (variable (nodes bdd x)) True (abstract_abdd bdd x) as"
+proof
+	have fish: "right (nodes bdd x) < nodecount bdd"
+	proof -
+		have "x \<in> {2..<nodecount bdd}" using san by simp
+		then show "right (nodes bdd x) < nodecount bdd" using conjunct1[OF san(1), unfolded abdd_linear_def Let_def] by fastforce
+	qed
+	note to2 = abstract_abdd_eq[OF conjI[OF conjunct1[OF san(1)] fish]] abstract_abdd_eq[OF san(1)]
+	case goal1
+	have 1: "(right (nodes bdd x), 1) \<in> abdd_to_graph bdd as" "(right (nodes bdd x), 0) \<notin> abdd_to_graph bdd as"
+		using goal1 unfolding to2 abstract_abdd2_def case_defeat by presburger+
+	let ?uas = "as(variable (nodes bdd x) := True)"
+	from 1(1) have 21: "(right (nodes bdd x), 1) \<in> abdd_to_graph bdd ?uas"
+		unfolding abdd_to_graph_def Let_def
+oops (* doable, but complicated *)
+lemma 
+	assumes san: "abdd_linear bdd \<and> x < nodecount bdd" "2 \<le> x"
+	assumes only: "abdd_var_once_at bdd x"
+	shows "abstract_abdd bdd (right (nodes bdd x)) as = bf2_restrict (variable (nodes bdd x)) True (abstract_abdd bdd x) as"
+proof(induction rule: abstract_abdd.induct)
 
 end
