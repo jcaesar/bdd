@@ -90,22 +90,23 @@ fun abstract_abdd3 :: "abdd \<Rightarrow> nat \<Rightarrow> boolfunc2" where
          then abstract_abdd3 bdd (if as (variable (nodes bdd (Suc (Suc dn)))) then right (nodes bdd (Suc (Suc dn))) else left (nodes bdd (Suc (Suc dn)))) as else undefined)
 		"
 
+lemma twolesucsuc: "2 \<le> Suc (Suc dn)" by simp
+
 lemma abdd_linear_3_eq: "abdd_linear bdd \<and> n < nodecount bdd \<Longrightarrow> abstract_abdd bdd n as = abstract_abdd3 bdd n as"
 proof(induction rule: abstract_abdd3.induct)
 	case goal3
-	have dnle: "2 \<le> Suc (Suc dn)" by simp
 	note k = goal3(1)[of as]
 	thus ?case (is ?kees)
 	proof(cases "as (variable (nodes bdd (Suc (Suc dn))))")
 		case True
 		have le: "right (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" "right (nodes bdd (Suc (Suc dn))) < nodecount bdd"
-			using abdd_linear_le[OF dnle goal3(2)] goal3(2) by simp_all
+			using abdd_linear_le[OF twolesucsuc goal3(2)] goal3(2) by simp_all
 		show ?kees using k 
 			by(simp only: True if_True le goal3(2) simp_thms abstract_abdd.simps abstract_abdd3.simps Let_def)
 	next
 		case False
 		have le: "left (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" "left (nodes bdd (Suc (Suc dn))) < nodecount bdd"
-			using abdd_linear_le[OF dnle goal3(2)] goal3(2) by simp_all
+			using abdd_linear_le[OF twolesucsuc goal3(2)] goal3(2) by simp_all
 		show ?kees using k 
 			by(simp only: False if_True if_False le goal3(2) simp_thms abstract_abdd.simps abstract_abdd3.simps Let_def)
 	qed
@@ -398,10 +399,49 @@ proof
 	from 1(1) have 21: "(right (nodes bdd x), 1) \<in> abdd_to_graph bdd ?uas"
 		unfolding abdd_to_graph_def Let_def
 oops (* doable, but complicated *)
+
+lemma nat_2_case: "(x = 0 \<Longrightarrow> P) \<Longrightarrow> (x = Suc 0 \<Longrightarrow> P) \<Longrightarrow> (\<And>va. x = Suc (Suc va) \<Longrightarrow> P) \<Longrightarrow> P"
+using not0_implies_Suc by blast
+
+lemma "abdd_linear bdd \<and> x < nodecount bdd \<Longrightarrow> x < k \<Longrightarrow> abdd_var_once_at bdd k \<Longrightarrow>
+	abstract_abdd3 bdd x (as(variable (nodes bdd k) := v)) = abstract_abdd3 bdd x as"
+proof(induction rule: abstract_abdd3.induct, simp, simp)
+	case goal1
+	let ?mors = "(if as (variable (nodes bdd (Suc (Suc dn)))) then right (nodes bdd (Suc (Suc dn))) else left (nodes bdd (Suc (Suc dn))))"
+	have 1: "?mors < Suc (Suc dn)" using abdd_linear_le[OF twolesucsuc goal1(2)] by presburger
+	then have 2: "abdd_linear bdd \<and> ?mors < nodecount bdd" using goal1(2) by simp
+	have 3: "?mors < k" using 1 goal1(3) by simp
+	have "variable (nodes bdd (Suc (Suc dn))) \<noteq> "
+	have "(as(k := v)) (variable (nodes bdd (Suc (Suc dn)))) = as (variable (nodes bdd (Suc (Suc dn))))"
+	sorry
+	show ?case
+	apply(simp only: abstract_abdd3.simps)
+oops
+
 lemma 
 	assumes san: "abdd_linear bdd \<and> x < nodecount bdd" "2 \<le> x"
 	assumes only: "abdd_var_once_at bdd x"
 	shows "abstract_abdd bdd (right (nodes bdd x)) as = bf2_restrict (variable (nodes bdd x)) True (abstract_abdd bdd x) as"
-proof(induction rule: abstract_abdd.induct)
+using assms
+proof(induction rule: abstract_abdd3.induct, simp, simp)
+	case goal1
+	note goal = goal1
+	note to3 = abdd_linear_3_eq[OF goal1(2)]
+	have le: "right (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" "right (nodes bdd (Suc (Suc dn))) < nodecount bdd"
+	using abdd_linear_le[OF twolesucsuc goal(2)] goal(2) by simp_all
+	show ?case unfolding bf2_restrict_def to3
+	proof(cases "as (variable (nodes bdd (Suc (Suc dn))))")
+		case goal1
+		thus ?case
+			apply(simp only: abstract_abdd3.simps fun_upd_idem if_True le)
+			apply(case_tac "right (nodes bdd (Suc (Suc dn)))" rule: nat_2_case)
+			apply simp
+			apply simp
+			using abdd_linear_3_eq goal(2) le(2) by blast
+	next
+		case goal2
+		thus ?case
+			apply(simp add: le)
+oops
 
 end
