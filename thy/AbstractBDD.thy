@@ -170,12 +170,7 @@ lemma trancl_onepath: "(a, c) \<in> trancl x \<Longrightarrow> b \<noteq> c \<Lo
 	(b, c) \<in> trancl x"
 	by (metis rtranclD tranclD)
 
-(*lemma trancl_onepath_no: "(a, c) \<notin> trancl x \<Longrightarrow> b \<noteq> c \<Longrightarrow> a \<noteq> c \<Longrightarrow> (\<And>k. (a,k) \<in> x \<Longrightarrow> k = b) \<Longrightarrow>
-	(b, c) \<notin> trancl x"
-	sorry
-*)
-
-lemma abstract_abdd2_istep: "as (var (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
+lemma abstract_abdd2_istep_right: "as (var (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
 	abstract_abdd2 bdd (Suc (Suc dn)) as = abstract_abdd2 bdd (right (nodes bdd (Suc (Suc dn)))) as"
 proof -
 	let ?x = "Suc (Suc dn)"
@@ -204,7 +199,7 @@ proof -
 	show ?case proof
 		case goal1
 		have 0: "(Suc (Suc dn), 0) \<notin> ?mors" "(Suc (Suc dn), 1) \<in> ?mors" 
-			using goal1 
+			using goal1
 			unfolding dteam
 			by presburger+
 		then have 1: "(Suc (Suc dn), 0) \<notin> ?bs\<^sup>+" "(Suc (Suc dn), 1) \<in> ?bs\<^sup>+" by simp_all
@@ -257,6 +252,87 @@ proof -
 	qed
 qed
 
+lemma abstract_abdd2_istep_left: "\<not>as (var (nodes bdd (Suc (Suc dn)))) \<Longrightarrow> Suc (Suc dn) < nodecount bdd \<Longrightarrow>
+	abstract_abdd2 bdd (Suc (Suc dn)) as = abstract_abdd2 bdd (left (nodes bdd (Suc (Suc dn)))) as"
+proof -
+	let ?x = "Suc (Suc dn)"
+	let ?bs = "set (map (\<lambda>nl. (nl, if as (var (nodes bdd nl)) 
+	then right (nodes bdd nl) else left (nodes bdd nl))) [2..<nodecount bdd])"
+	let ?mors = "{(0, 0), (1, 1)} \<union> ?bs\<^sup>+"
+	note dteam = abstract_abdd2_def Let_def case_defeat
+	case goal1
+	have pe: "(Suc (Suc dn), left (nodes bdd (Suc (Suc dn)))) \<in> 
+		?bs" (is "?pe \<in> ?bs")
+		using goal1
+		proof -
+			have s: "[2..<nodecount bdd] = [2..<?x] @ (?x # [Suc ?x..<nodecount bdd])"
+				unfolding upt_conv_Cons[OF goal1(2), symmetric]
+				using upt_add_eq_append[of 2 ?x "nodecount bdd - ?x"] goal1(2)
+				by (metis Suc_le_mono le0 le_add_diff_inverse less_imp_le numeral_2_eq_2)
+			case goal1 show ?case
+				unfolding s
+				unfolding map_append list.map(2)
+				unfolding set_map set_append set_simps
+				by(simp only: goal1(1) if_False) blast
+		qed
+	have i: "\<And>k. (Suc (Suc dn), k) \<in> ?bs \<Longrightarrow> k = left (nodes bdd (Suc (Suc dn)))"
+		using pe by auto
+	show ?case proof
+		case goal1
+		have 0: "(Suc (Suc dn), 0) \<notin> ?mors" "(Suc (Suc dn), 1) \<in> ?mors"
+			using goal1
+			unfolding dteam
+			by presburger+
+		then have 1: "(Suc (Suc dn), 0) \<notin> ?bs\<^sup>+" "(Suc (Suc dn), 1) \<in> ?bs\<^sup>+" by simp_all
+		have 2: "?pe \<in> ?mors" using pe by simp
+		have 3: "(left (nodes bdd (Suc (Suc dn))), 1) \<in> ?mors"
+			using trancl_onepath[OF 1(2) _ i]
+			by(cases "(left (nodes bdd (Suc (Suc dn)))) = 1") simp_all
+		have 4: "left (nodes bdd (Suc (Suc dn))) \<noteq> 0" 
+			using goal1
+			unfolding dteam if_cancel
+			using 2 by metis
+		have 5: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?bs\<^sup>+"
+		proof(rule ccontr, unfold not_not)
+			case goal1
+			hence "(Suc (Suc dn), 0) \<in> ?bs\<^sup>+" using pe by simp
+			thus False using 1(1) by blast
+		qed
+		with 4 have 6: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?mors" by force
+		show ?case
+			unfolding dteam
+			by(simp only: 3 if_True 6 if_False)
+	next
+		case goal2
+		have 1: "(left (nodes bdd (Suc (Suc dn))), 1) \<in> ?mors"
+			using goal2 unfolding dteam
+			by meson
+		have a: "(Suc (Suc dn), 1) \<in> ?mors" 
+			using pe 1
+			by(cases "left (nodes bdd (Suc (Suc dn))) = 1") simp_all
+		have 2: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?bs\<^sup>+"
+			using goal2 unfolding dteam if_cancel by (meson UnI2)
+		have 4: "left (nodes bdd (Suc (Suc dn))) \<noteq> 0"
+		proof(rule ccontr, unfold not_not)
+			case goal1
+			note goal2[unfolded dteam if_cancel goal1]
+			then show False by(cases "(0, 1) \<in> ?mors") simp_all 
+		qed
+		have 3: "(left (nodes bdd (Suc (Suc dn))), 0) \<notin> ?mors"
+			using 2 4 by simp
+		have b: "(Suc (Suc dn), 0) \<notin> ?mors"
+		proof(rule ccontr, unfold not_not)
+			case goal1
+			then have "(Suc (Suc dn), 0) \<in> ?bs\<^sup>+" by force
+			with pe have "(left (nodes bdd (Suc (Suc dn))), 0) \<in> ?mors" by (simp add: 4 i trancl_onepath)
+			with 3 show False ..
+		qed
+		show ?case
+			unfolding abstract_abdd2_def Let_def case_defeat
+			by(simp only: a b if_True if_False)
+	qed
+qed
+
 lemma "abdd_linear bdd \<and> start < nodecount bdd \<Longrightarrow> abstract_abdd bdd start as = abstract_abdd2 bdd start as"
 proof(induction rule: abstract_abdd.induct, simp add: abstract_abdd_eq_hlp1(1))
 	case goal1 show ?case using abstract_abdd_eq_hlp1(2) by auto (* try simp. weird. *)
@@ -264,11 +340,18 @@ next
 	case goal2
 	have "right (nodes bdd (Suc (Suc dn))) < (Suc (Suc dn))" using goal2(3) unfolding abdd_linear_def Let_def by force
 	then have 1: "abdd_linear bdd \<and> right (nodes bdd (Suc (Suc dn))) < nodecount bdd" using goal2(3) by linarith
+	have "left (nodes bdd (Suc (Suc dn))) < (Suc (Suc dn))" using goal2(3) unfolding abdd_linear_def Let_def by force
+	then have 2: "abdd_linear bdd \<and> left (nodes bdd (Suc (Suc dn))) < nodecount bdd" using goal2(3) by linarith
 	show ?case (is ?kees)
 	proof(cases "as (var (nodes bdd (Suc (Suc dn))))")
 		case True
 		note k = goal2(1)[OF refl goal2(3) refl _ 1, of as]
-		show ?kees  by(simp only: abstract_abdd.simps Let_def goal2(3) simp_thms if_True True k[OF True] abstract_abdd2_istep)
-	
+		show ?kees  by(simp only: abstract_abdd.simps Let_def goal2(3) simp_thms if_True True k[OF True] abstract_abdd2_istep_right)
+	next
+		case False
+		note k = goal2(2)[OF refl _ refl _ 2, of as]
+		show ?kees by(simp only: abstract_abdd.simps Let_def goal2(3) simp_thms if_False if_True False k abstract_abdd2_istep_left)
+	qed
+qed
 
 end
