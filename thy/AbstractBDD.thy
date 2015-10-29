@@ -43,9 +43,9 @@ lemma abdd_linear_le: "2 \<le> x \<Longrightarrow> abdd_linear bdd \<and> x < no
 		
 definition "abdd_terminal state = (state \<le> 1)" 
 definition "abdd_xor \<equiv> \<lparr> nodecount = 5, nodes = (\<lambda>i. [undefined, undefined,
-	\<lparr> variable = 1, right = 1, left = 0 \<rparr>,
-	\<lparr> variable = 1, right = 0, left = 1 \<rparr>,
-	\<lparr> variable = 0, right = 3, left = 2 \<rparr>] ! i)
+	\<lparr> variable = 0, right = 1, left = 0 \<rparr>,
+	\<lparr> variable = 0, right = 0, left = 1 \<rparr>,
+	\<lparr> variable = 1, right = 3, left = 2 \<rparr>] ! i)
 \<rparr>"
 lemma[code]: "abdd_linear abdd_xor = True"
 	unfolding eq_True
@@ -379,48 +379,92 @@ definition "abdd_restrict bdd var val =
 	\<rparr>"
 (* Dunno if I'm going to use that. *)
 
-definition "abdd_var_once_at bdd at \<equiv> (let var = variable (nodes bdd at) in \<forall>i \<in> {2..<nodecount bdd}. variable (nodes bdd i) = var \<longrightarrow> i = at)" 
-
-lemma 
-	assumes san: "abdd_linear bdd \<and> x < nodecount bdd" "2 \<le> x"
-	assumes only: "abdd_var_once_at bdd x"
-	shows "abstract_abdd bdd (right (nodes bdd x)) as = bf2_restrict (variable (nodes bdd x)) True (abstract_abdd bdd x) as"
-proof
-	have fish: "right (nodes bdd x) < nodecount bdd"
-	proof -
-		have "x \<in> {2..<nodecount bdd}" using san by simp
-		then show "right (nodes bdd x) < nodecount bdd" using conjunct1[OF san(1), unfolded abdd_linear_def Let_def] by fastforce
-	qed
-	note to2 = abstract_abdd_eq[OF conjI[OF conjunct1[OF san(1)] fish]] abstract_abdd_eq[OF san(1)]
-	case goal1
-	have 1: "(right (nodes bdd x), 1) \<in> abdd_to_graph bdd as" "(right (nodes bdd x), 0) \<notin> abdd_to_graph bdd as"
-		using goal1 unfolding to2 abstract_abdd2_def case_defeat by presburger+
-	let ?uas = "as(variable (nodes bdd x) := True)"
-	from 1(1) have 21: "(right (nodes bdd x), 1) \<in> abdd_to_graph bdd ?uas"
-		unfolding abdd_to_graph_def Let_def
-oops (* doable, but complicated *)
+definition "abdd_ordered bdd \<equiv> (\<forall>i \<in> {2..<nodecount bdd}. 
+	let nd = (\<lambda>f i. f (nodes bdd i));
+	c = (\<lambda>f. abdd_terminal (nd f i) \<or> nd variable (nd f i) < nd variable i)
+	in (c left \<and> c right))"
+lemma "abdd_ordered abdd_xor"
+	unfolding abdd_ordered_def abdd_xor_def Let_def abdd_terminal_def
+	apply clarify
+	apply(case_tac "i = 2", simp)
+	apply(case_tac "i = 3", simp)
+	apply(case_tac "i = 4", simp)
+	apply(simp)
+done
 
 lemma nat_2_case: "(x = 0 \<Longrightarrow> P) \<Longrightarrow> (x = Suc 0 \<Longrightarrow> P) \<Longrightarrow> (\<And>va. x = Suc (Suc va) \<Longrightarrow> P) \<Longrightarrow> P"
 using not0_implies_Suc by blast
 
-lemma "abdd_linear bdd \<and> x < nodecount bdd \<Longrightarrow> x < k \<Longrightarrow> abdd_var_once_at bdd k \<Longrightarrow>
-	abstract_abdd3 bdd x (as(variable (nodes bdd k) := v)) = abstract_abdd3 bdd x as"
+lemma "abdd_linear bdd \<Longrightarrow> abdd_ordered bdd \<Longrightarrow> 2 \<le> x \<Longrightarrow> x < y \<Longrightarrow> y < nodecount bdd \<Longrightarrow>
+	variable (nodes bdd x) < variable (nodes bdd y)"
+oops (* This might be another interesting restriction to make\<dots> Let's try *)
+definition "abdd_lp bdd = (\<forall>i \<in> {2..<nodecount bdd}. (\<forall>j \<in> {2..<i}. variable (nodes bdd j) \<le> variable (nodes bdd i)))"
+(* maybe not so usefull. *)
+
+lemma nat_2_case_only: "\<not>2 \<le> x \<Longrightarrow> (x = 0 \<Longrightarrow> P) \<Longrightarrow> (x = Suc 0 \<Longrightarrow> P) \<Longrightarrow> P" by fastforce
+
+lemma linear_notouch: "abdd_linear bdd \<and> x < nodecount bdd \<Longrightarrow> variable (nodes bdd x) < k 
+		\<Longrightarrow> abdd_ordered bdd \<Longrightarrow>
+       abstract_abdd3 bdd x (as(k := True)) = abstract_abdd3 bdd x as"
 proof(induction rule: abstract_abdd3.induct, simp, simp)
 	case goal1
-	let ?mors = "(if as (variable (nodes bdd (Suc (Suc dn)))) then right (nodes bdd (Suc (Suc dn))) else left (nodes bdd (Suc (Suc dn))))"
-	have 1: "?mors < Suc (Suc dn)" using abdd_linear_le[OF twolesucsuc goal1(2)] by presburger
-	then have 2: "abdd_linear bdd \<and> ?mors < nodecount bdd" using goal1(2) by simp
-	have 3: "?mors < k" using 1 goal1(3) by simp
-	have "variable (nodes bdd (Suc (Suc dn))) \<noteq> "
-	have "(as(k := v)) (variable (nodes bdd (Suc (Suc dn)))) = as (variable (nodes bdd (Suc (Suc dn))))"
-	sorry
-	show ?case
-	apply(simp only: abstract_abdd3.simps)
-oops
+	thus ?case (is ?kees)
+	proof(cases "as (variable (nodes bdd (Suc (Suc dn))))")
+		case True
+		have 1: "right (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" using goal1(2) by (simp add: abdd_linear_le)
+		have 3: "(as(k := True)) (variable (nodes bdd (Suc (Suc dn)))) = as (variable (nodes bdd (Suc (Suc dn))))"
+			using goal1(3) by auto
+		note magicsimpset = True if_True 1 goal1(2) goal1(4) less_trans[OF 1] abstract_abdd3.simps 3
+		show ?kees
+		proof(cases "2 \<le> right (nodes bdd (Suc (Suc dn)))")
+			case True
+			have 2: "variable (nodes bdd (right (nodes bdd (Suc (Suc dn))))) < variable (nodes bdd (Suc (Suc dn)))"
+				using goal1(4)[unfolded abdd_ordered_def] True goal1(2)
+				unfolding Let_def abdd_terminal_def
+				by (metis One_nat_def atLeastLessThan_iff not_less_eq_eq numeral_2_eq_2 twolesucsuc) 
+			show ?kees
+				using goal1(1)[of as]
+				by(simp only: magicsimpset less_trans[OF 2 goal1(3)])
+		next
+			{
+				fix x P
+				have "\<not>2 \<le> x \<Longrightarrow> (x = 0 \<Longrightarrow> P) \<Longrightarrow> (x = Suc 0 \<Longrightarrow> P) \<Longrightarrow> P" by fastforce
+			} note twocase = this
+			case False
+			show ?kees
+				unfolding abstract_abdd3.simps
+				unfolding 3
+				by (cases rule: twocase[OF False]) (simp_all only: magicsimpset)
+		qed
+	next
+		case False
+		have 1: "left (nodes bdd (Suc (Suc dn))) < Suc (Suc dn)" using goal1(2) by (simp add: abdd_linear_le)
+		have 3: "(as(k := True)) (variable (nodes bdd (Suc (Suc dn)))) = as (variable (nodes bdd (Suc (Suc dn))))"
+			using goal1(3) by auto
+		note magicsimpset = False if_False if_True 1 goal1(2) goal1(4) less_trans[OF 1] abstract_abdd3.simps 3
+		show ?kees
+		proof(cases "2 \<le> left (nodes bdd (Suc (Suc dn)))")
+			case True
+			have 2: "variable (nodes bdd (left (nodes bdd (Suc (Suc dn))))) < variable (nodes bdd (Suc (Suc dn)))"
+				using goal1(4)[unfolded abdd_ordered_def] True goal1(2)
+				unfolding Let_def abdd_terminal_def
+				by (metis One_nat_def atLeastLessThan_iff not_less_eq_eq numeral_2_eq_2 twolesucsuc)
+			show ?kees
+				using goal1(1)[of as]
+				by(simp only: magicsimpset less_trans[OF 2 goal1(3)] simp_thms)
+		next
+			case False
+			show ?kees
+				unfolding abstract_abdd3.simps
+				unfolding 3
+				by(cases rule: nat_2_case_only[OF False]) (simp_all only: magicsimpset)
+		qed
+	qed
+qed
 
 lemma 
 	assumes san: "abdd_linear bdd \<and> x < nodecount bdd" "2 \<le> x"
-	assumes only: "abdd_var_once_at bdd x"
+	assumes only: "abdd_ordered bdd"
 	shows "abstract_abdd bdd (right (nodes bdd x)) as = bf2_restrict (variable (nodes bdd x)) True (abstract_abdd bdd x) as"
 using assms
 proof(induction rule: abstract_abdd3.induct, simp, simp)
@@ -439,9 +483,25 @@ proof(induction rule: abstract_abdd3.induct, simp, simp)
 			apply simp
 			using abdd_linear_3_eq goal(2) le(2) by blast
 	next
-		case goal2
-		thus ?case
-			apply(simp add: le)
-oops
+		have 1: "abdd_linear bdd \<and> right (nodes bdd (Suc (Suc dn))) < nodecount bdd" using goal(2) by (simp add: le(2))
+		case goal2 show ?case (is ?kees)
+		proof(cases "2 \<le> right (nodes bdd (Suc (Suc dn)))")
+			case True
+			have 2: "variable (nodes bdd (right (nodes bdd (Suc (Suc dn))))) < variable (nodes bdd (Suc (Suc dn)))"
+				using goal(4) goal(2) goal(3) True
+				unfolding abdd_ordered_def Let_def
+			proof -
+				case goal1
+				have "Suc (Suc dn) \<in> {2..<nodecount bdd}" using goal1 by force
+				hence "abdd_terminal (right (nodes bdd (Suc (Suc dn)))) \<or> ?case" using goal1(1) by blast
+				thus ?case unfolding abdd_terminal_def using goal1(4) by linarith
+			qed
+			thus ?kees
+				by(simp add: le linear_notouch[OF 1 2 goal(4), of as] abdd_linear_3_eq goal1(2))
+		next
+			case False thus ?kees by(cases rule: nat_2_case_only[OF False]) simp_all
+		qed
+	qed
+qed
 
 end
