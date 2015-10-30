@@ -3,13 +3,16 @@ imports BoolFunc
 begin
 
 record abdd_node =
-	variable :: nat
-	right :: nat
-	left :: nat
+	variable :: nat (* evaluated variable *)
+	right :: nat (* true branch *)
+	left :: nat (* false branch *)
 	
 record abdd =
 	nodecount :: "nat"
 	nodes :: "nat \<Rightarrow> abdd_node"
+(* the idea is that the bdd is written down as a linear program with a decreasing pointer to a node *)
+(* node 0 is always just false and 1 just true and does not have to be defined *)
+(* I'm not sure that the nodecount should be part of the thing. Sometimes we don't need it, and then proofs get ugly. *)
 
 value "upt 3 5"
 value "upt 0 0"
@@ -80,7 +83,7 @@ proof(relation "measure (\<lambda>(bdd, nl). nl)",	rule wf_measure, unfold in_me
 		using val unfolding abdd_linear_def unfolding Let_def by(simp_all add: xbd)
 qed
 
-(* In hindsight: Why do I need a function? *)
+(* In hindsight: Why do I need a function? fun does the trick. *)
 fun abstract_abdd3 :: "abdd \<Rightarrow> nat \<Rightarrow> boolfunc2" where
 "abstract_abdd3 bdd 0 = (\<lambda>_. False)" |
 "abstract_abdd3 bdd (Suc 0) = (\<lambda>_. True)" |
@@ -395,12 +398,6 @@ done
 lemma nat_2_case: "(x = 0 \<Longrightarrow> P) \<Longrightarrow> (x = Suc 0 \<Longrightarrow> P) \<Longrightarrow> (\<And>va. x = Suc (Suc va) \<Longrightarrow> P) \<Longrightarrow> P"
 using not0_implies_Suc by blast
 
-lemma "abdd_linear bdd \<Longrightarrow> abdd_ordered bdd \<Longrightarrow> 2 \<le> x \<Longrightarrow> x < y \<Longrightarrow> y < nodecount bdd \<Longrightarrow>
-	variable (nodes bdd x) < variable (nodes bdd y)"
-oops (* This might be another interesting restriction to make\<dots> Let's try *)
-definition "abdd_lp bdd = (\<forall>i \<in> {2..<nodecount bdd}. (\<forall>j \<in> {2..<i}. variable (nodes bdd j) \<le> variable (nodes bdd i)))"
-(* maybe not so usefull. *)
-
 lemma nat_2_case_only: "\<not>2 \<le> x \<Longrightarrow> (x = 0 \<Longrightarrow> P) \<Longrightarrow> (x = Suc 0 \<Longrightarrow> P) \<Longrightarrow> P" by fastforce
 
 lemma linear_notouch: "abdd_linear bdd \<and> x < nodecount bdd \<Longrightarrow> variable (nodes bdd x) < k 
@@ -503,5 +500,106 @@ proof(induction rule: abstract_abdd3.induct, simp, simp)
 		qed
 	qed
 qed
+(* Todo: Versions of these two proofs with False. Should be C&P. Then maybe even make a version of these for abdd_restrict_top *)
+
+(* Now, let's hack around\<dots> the predecessor of the nodecount is the first node. *)
+(* We may want to change that up, i.e. decrease the nodecount by one and adjust all the definitions *)
+
+definition "abdd_restrict_top bdd var val = 
+	(let nod = nodes bdd (nat.pred (nodecount bdd)) in if variable nod = var then \<lparr> nodecount = Suc ((if val then right else left) nod), nodes = nodes bdd\<rparr> else bdd)
+"
+value "(op - 5) 10 :: nat"
+definition "abdd_move bdd n = \<lparr> nodecount = nodecount bdd + n, nodes = (\<lambda>nod. 
+	let m = (\<lambda>p. if abdd_terminal (p nod) then p nod else p nod + n) in
+	\<lparr> variable = variable nod, right = m right, left = m left \<rparr> ) \<circ> nodes bdd \<circ> (\<lambda>x. x - n) \<rparr>"
+(* sanity check *)
+lemma [simp]: "abdd_move bdd 0 = bdd"
+	unfolding abdd_move_def
+	unfolding Let_def comp_def
+	unfolding add_0_right diff_zero
+	unfolding if_cancel
+	by(rule abdd.equality) auto
+
+lemma abstract_moved: "2 < k \<Longrightarrow> (nat.pred (nodecount bdd)) = k \<Longrightarrow> abdd_linear bdd \<Longrightarrow>
+	(let m = (abdd_move bdd n) in abstract_abdd3 m (nat.pred (nodecount m)) as)	= abstract_abdd3 bdd k as"
+unfolding Let_def
+proof(induction rule: abstract_abdd3.induct, simp add: abdd_move_def, simp add: abdd_move_def)
+	case goal1
+	have les: "Suc (Suc dn) < nodecount bdd" by (metis goal1(3) le_less less_eq_Suc_le nat.split_sels(1) nat_neq_iff old.nat.distinct(2) pred_def)
+	have bos: "(if as (variable (nodes bdd (Suc (Suc dn)))) then right (nodes bdd (Suc (Suc dn))) else left (nodes bdd (Suc (Suc dn))))
+  < Suc (Suc dn)" (is "?mors < _") using abdd_linear_le[OF _ conjI, OF twolesucsuc goal1(4) les] by presburger
+	show ?case
+		(*unfolding abdd_move_def abdd_terminal_def*)
+		unfolding abstract_abdd3.simps
+		unfolding abdd.simps comp_def
+		unfolding Let_def
+		using goal1(1)[of as, OF bos]
+sorry (* looks like a lot of fun *)
+qed
+
+lemma nat_sel: "nat.pred (Suc x) = x" by simp
+(* try this: thm Nat.nat.sel - WTF? *)
+
+lemma abstract_abdd3_inv: "m = \<lparr> nodecount = foo, nodes = n2 \<rparr> \<Longrightarrow> abdd_ordered bdd \<Longrightarrow> \<forall>x \<in> {2..k}. n2 x = nodes bdd x \<Longrightarrow> 
+	abstract_abdd3 m k as = abstract_abdd3 bdd k as"
+apply(induction rule: abstract_abdd3.induct, simp, simp)
+sorry
+
+abbreviation "Suc2 x \<equiv> Suc (Suc x)"
+abbreviation "Suc3 x \<equiv> Suc2 (Suc x)" 
+definition "abdd_merge T Ebase maxs = (let E = abdd_move Ebase (nodecount T) in \<lparr> nodecount = Suc (nodecount E), nodes = 
+					(\<lambda>n. if n = nodecount E then \<lparr> variable = maxs, right = nat.pred (nodecount T), left = nat.pred (nodecount E) \<rparr> 
+					else (if n < nodecount T then nodes T n else nodes E n)) \<rparr>)"
+lemma abstract_merge: "2 < nodecount T \<Longrightarrow> 2 < nodecount E \<Longrightarrow> abdd_ordered T \<Longrightarrow>
+	(let M = (abdd_merge T E var) in abstract_abdd3 M (nat.pred (nodecount M))) as = abstract_abdd3 T (nat.pred (nodecount T)) as"
+proof(cases "as var")
+	case goal1
+	from goal1(1) obtain x where x: "nodecount T = Suc3 x" by (metis add_2_eq_Suc less_imp_Suc_add)
+	obtain y where y: "nodecount (abdd_move E (Suc3 x)) = Suc2 y" by (simp add: abdd_move_def)
+	have le1: "Suc2 x < Suc2 y" using x y unfolding abdd_move_def abdd.simps using goal1(2) by simp
+	have "\<forall>n \<in>{2..Suc2 x}. (if n = Suc2 y then \<lparr>variable = var, right = Suc2 x, left = nat.pred (Suc2 y)\<rparr> 
+		else if n < Suc3 x then nodes T n else nodes (abdd_move E (Suc3 x)) n) = nodes T n"
+		using le1 by simp
+	note hel = abstract_abdd3_inv[OF refl goal1(3) this]
+	show ?case
+		unfolding abdd_merge_def
+		unfolding Let_def
+		unfolding abdd.simps
+		unfolding x
+		unfolding nat_sel
+		unfolding y
+		unfolding abstract_abdd3.simps
+		by(simp only: refl if_True le1 abdd.simps abdd_node.simps goal1(4) hel, simp)
+next
+	case goal2 thus ?case sorry (* should basically be similar, just that you'd have to unfold abstract_moved *)
+qed
+
+
+fun abdd_ite where "abdd_ite F G H lastmax = (
+	let gsv = (\<lambda>d. variable (nodes d (nat.pred (nodecount d))));
+	maxs = max (gsv F) (max (gsv G) (gsv H)) in
+	if maxs < lastmax then
+		(if nodecount F = 1 then
+			H
+		else if nodecount F = 2 then 
+			G
+		else 
+			let r = (\<lambda>v. abdd_ite (abdd_restrict_top F maxs v) (abdd_restrict_top G maxs v) (abdd_restrict_top H maxs v) maxs);
+				T = r True; 
+				E = r False in 
+				abdd_merge T E maxs 
+			)
+	else undefined)"
+(* Instead of having three bdds, we may instead want to pass around three "pointers" into one bdd.
+   This would save us this crazy move function and be a closer to what we actually want to implement.
+   (I just lack the creativity of how to do that right now. I have an idea though, ask me if in doubt.)
+*)
+
+theorem "abstract_abdd (abdd_ite F G H l) k = bf_ite (abstract_abdd F k) (abstract_abdd G k) (abstract_abdd H k)"
+(* 
+	Todo: Find meaningful expressions or conditions for k, l and meaningful sanity assumptions 
+	And then: Fucking have fun!
+*)
+sorry
 
 end
