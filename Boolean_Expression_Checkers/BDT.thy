@@ -195,12 +195,50 @@ proof -
 		with goal1(1)[OF refl] rel_if[OF goal1(4), of ia ta]
 	oops
 
-inductive dings' :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
+
+(* INDUCTIVE DEFINITION *)
+
+
+inductive dings' :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
 dings_true:   "dings' t Trueif t e" |
 dings_false:  "dings' e Falseif t e" |
-dings_if:     "x \<in> \<Union>(ifex_variable_set ` {i,t,e}) \<Longrightarrow> i = IF iv tv ev \<Longrightarrow>
+dings_if:     "x \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e) \<Longrightarrow>
+   \<forall>v \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e). x \<le> v \<Longrightarrow>
+   i = IF iv tv ev \<Longrightarrow>
    dings' l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
    dings' r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
    dings' (IF x l r) i t e"
+
+lemma "dings' b i t e \<longleftrightarrow> dings i t e = b"
+ (* proven by nitpick finding nothing *)
+  oops 
+
+lemma "ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e =
+       \<Union>(ifex_variable_set ` {i,t,e})"
+  by blast
+
+lemma "dings' Falseif Trueif Falseif Trueif" apply(rule dings_true) done
+
+lemma "dings' (IF 1 (IF 2 Falseif Trueif) Trueif) 
+              (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
+  apply(rule) apply(force) apply(auto) apply(rule) apply(auto) using dings'.intros apply(auto) done
+
+value "dings (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
+
+lemma dings'_variables_subset: "dings' b i t e \<Longrightarrow> 
+  ifex_variable_set b \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+  proof(induction rule: dings'.induct)
+  case(dings_if x i t e iv tv ev l r) 
+    from this(6,7) have 
+         "ifex_variable_set (IF x l r) = {x} \<union> ifex_variable_set l \<union> ifex_variable_set r"
+         "ifex_variable_set l \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+         "ifex_variable_set r \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+        using restrict_variables_subset[of i x True] restrict_variables_subset[of t x True] 
+              restrict_variables_subset[of e x True] restrict_variables_subset[of i x False]
+              restrict_variables_subset[of t x False] restrict_variables_subset[of e x False]
+        by auto
+     with dings_if(1) show ?case by simp
+qed (auto)
+    
 
 end
