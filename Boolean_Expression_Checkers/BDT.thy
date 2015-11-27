@@ -18,9 +18,8 @@ fun ordner :: "('a::linorder) ifex \<Rightarrow> bool" where
   "ordner Trueif = True" |
   "ordner Falseif = True"
 
-
 definition ifex_bf2_rel where
-  "ifex_bf2_rel = {(a,b) | a b. (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass)  \<and> ordner b}"
+  "ifex_bf2_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ordner b}"
 
 definition select where "select a = undefined"
 
@@ -28,15 +27,33 @@ fun restrict where
   "restrict (IF v t e) var val = (let rt = restrict t var val; re = restrict e var val in
                    (if v = var then (if val then rt else re) else (IF v rt re)))" |
   "restrict i _ _ = i"
-  
+
 value "ordner (IF 1 Falseif (IF (0::nat) (IF 0 Falseif Falseif) Falseif))"
 value "restrict (IF (1::nat) Falseif (IF 0 (IF 0 Falseif Falseif) Falseif)) 1 False"
 (* definition "bf2_restrict (i::nat) (val::bool) (func::boolfunc2) \<equiv> (\<lambda>v. func (v(i:=val)))" *)
 value "ordner (IF (0::nat) (IF 0 Falseif Falseif) Falseif)"
 
-lemma "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> restrict b var val = b' \<Longrightarrow> bf2_restrict var val a = a' \<Longrightarrow> (a', b') \<in> ifex_bf2_rel"
-  unfolding ifex_bf2_rel_def 
-oops
+declare Let_def[simp]
+
+lemma not_element_restrict: "var \<notin> ifex_variable_set (restrict b var val)"
+  by (induction b) auto
+
+lemma restrict_assignment: "val_ifex b (ass(var := val)) = val_ifex (restrict b var val) ass"
+  by (induction b) auto
+
+lemma restrict_variables_subset: "ifex_variable_set (restrict b var val) \<subseteq> ifex_variable_set b"
+  by (induction b) auto
+
+lemma restrict_ordner_invar: "ordner b \<Longrightarrow> ordner (restrict b var val)"
+  apply (induction b arbitrary: b') using restrict_variables_subset by (fastforce)+
+
+lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow> 
+      (bf2_restrict var val a) ass = val_ifex (restrict b var val) ass"
+  unfolding bf2_restrict_def using restrict_assignment by simp
+
+lemma restrict_ifex_bf2_rel: 
+"(a, b) \<in> ifex_bf2_rel \<Longrightarrow> (bf2_restrict var val a, restrict b var val) \<in> ifex_bf2_rel"
+  unfolding ifex_bf2_rel_def using restrict_ordner_invar restrict_val_invar by auto
 
 function dings :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex" where
   "dings Trueif t e = t" |
