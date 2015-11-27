@@ -46,7 +46,33 @@ function dings :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightar
                                (dings (restrict i x False) (restrict t x False) (restrict e x False))))"
 by pat_completeness auto
 
-lemma "x \<in> ifex_variable_set k \<Longrightarrow> size (restrict k x val) < size k"
+lemma restrict_size_le: "size (restrict k x val) \<le> size k"
+by(induction k) (simp_all, force)
+lemma restrict_size_less: "x \<in> ifex_variable_set k \<Longrightarrow> size (restrict k x val) < size k"
+proof(induction k)
+	case (IF v t e)
+	thus ?case
+	proof(cases "v = x")
+		case True
+		show ?thesis by(simp only: True restrict.simps refl if_True) (cases val, simp_all add: preorder_class.le_less_trans[OF restrict_size_le])
+	next
+		case False note of = this
+		show ?thesis
+		proof(cases "x \<in> ifex_variable_set t")
+			case True
+			show ?thesis by(simp only: restrict.simps False if_False ifex.size) (simp add: IF.IH(1)[OF True] restrict_size_le add.commute add_le_less_mono)
+		next
+			case False
+			have *: "x \<in> ifex_variable_set e"
+			proof(rule ccontr)
+				assume "x \<notin> ifex_variable_set e"
+				note this False `v \<noteq> x`
+				with IF.prems show False by simp
+			qed
+			show ?thesis by(simp only: restrict.simps of if_False ifex.size) (simp add: IF.IH(2)[OF *] add_mono_thms_linordered_field(4) restrict_size_le)
+		qed
+	qed
+qed simp_all
 
 termination dings
 apply(relation "measure size", rule wf_measure)
