@@ -26,6 +26,9 @@ definition select where "select a = undefined"
 fun restrict where
   "restrict (IF v t e) var val = (if v = var then restrict (if val then t else e) var val else (IF v (restrict t var val) (restrict e var val)))" |
   "restrict i _ _ = i"
+  
+lemma "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> restrict b var val = b' \<Longrightarrow> bf2_restrict var val a = a' \<Longrightarrow> (a', b') \<in> ifex_bf2_rel"
+oops (* TODO *)
 
 function dings :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex" where
   "dings Trueif t e = t" |
