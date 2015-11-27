@@ -1,6 +1,6 @@
 theory BDT
 imports Boolean_Expression_Checkers
-        "../ibdd/thy/BoolFunc"
+        "../thy/BoolFunc"
 begin
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
@@ -23,22 +23,22 @@ definition ifex_bf2_rel where
 
 definition select where "select a = undefined"
 
-fun restrict_true where
-  "restrict_true (IF v t e) var = (if v = var then t else (IF v t e))" |
-  "restrict_true i _ = i"
-
-fun restrict_false where
-  "restrict_false (IF v t e) var = (if v = var then e else (IF v t e))" |
-  "restrict_false i _ = i"
+fun restrict where
+  "restrict (IF v t e) var val = (if v = var then restrict (if val then t else e) var val else (IF v (restrict t var val) (restrict e var val)))" |
+  "restrict i _ _ = i"
 
 function dings :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex" where
   "dings Trueif t e = t" |
   "dings Falseif t e = e" |
-  "dings i t e = (let x = select (ifex_variable_set ` {i,t,e}) in 
-                         (IF x (dings (restrict_true i x) (restrict_true t x) (restrict_true e x))
-                               (dings (restrict_false i x) (restrict_false t x) (restrict_false e x))))"
+  "dings (IF iv it ie) t e = (let i = (IF iv it ie); x = select (ifex_variable_set ` {i,t,e}) in 
+                         (IF x (dings (restrict i x True) (restrict t x True) (restrict e x True))
+                               (dings (restrict i x False) (restrict t x False) (restrict e x False))))"
 by pat_completeness auto
 
+lemma "x \<in> ifex_variable_set k \<Longrightarrow> size (restrict k x val) < size k"
+
+termination dings
+apply(relation "measure size", rule wf_measure)
 
 
 end
