@@ -214,4 +214,12 @@ lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_
 
 
 
+inductive dings' :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
+dings_true:   "dings' t Trueif t e" |
+dings_false:  "dings' e Falseif t e" |
+dings_if:     "x \<in> \<Union>(ifex_variable_set ` {i,t,e}) \<Longrightarrow> i = IF iv tv ev \<Longrightarrow>
+   dings' l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
+   dings' r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
+   dings' (IF x l r) i t e"
+
 end
