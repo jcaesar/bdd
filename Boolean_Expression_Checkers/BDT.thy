@@ -13,7 +13,7 @@ fun ifex_variable_set :: "'a ifex \<Rightarrow> 'a set" where
   "ifex_variable_set Falseif = {}"
 
 fun ordner :: "('a::linorder) ifex \<Rightarrow> bool" where
-  "ordner (IF v t e) = ((\<forall>tv \<in> ifex_variable_set t. v < tv) \<and> (\<forall>ev \<in> ifex_variable_set t. v < ev)
+  "ordner (IF v t e) = ((\<forall>tv \<in> (ifex_variable_set t \<union> ifex_variable_set e). v < tv)
                        \<and> ordner t \<and> ordner e)" |
   "ordner Trueif = True" |
   "ordner Falseif = True"
@@ -80,14 +80,14 @@ declare Let_def[simp]
 lemma not_element_restrict: "var \<notin> ifex_variable_set (restrict b var val)"
   by (induction b) auto
 
-lemma restrict_assignment: "val_ifex b (ass(var := val)) = val_ifex (restrict b var val) ass"
+lemma restrict_assignment: "val_ifex b (ass(var := val)) \<longleftrightarrow> val_ifex (restrict b var val) ass"
   by (induction b) auto
 
 lemma restrict_variables_subset: "ifex_variable_set (restrict b var val) \<subseteq> ifex_variable_set b"
   by (induction b) auto
 
 lemma restrict_ordner_invar: "ordner b \<Longrightarrow> ordner (restrict b var val)"
-  apply (induction b arbitrary: b') using restrict_variables_subset by (fastforce)+
+  using restrict_variables_subset by (induction b) (fastforce)+
 
 lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow> 
       (bf2_restrict var val a) ass = val_ifex (restrict b var val) ass"
@@ -95,7 +95,8 @@ lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow
 
 lemma restrict_ifex_bf2_rel: 
 "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> (bf2_restrict var val a, restrict b var val) \<in> ifex_bf2_rel"
-  unfolding ifex_bf2_rel_def using restrict_ordner_invar restrict_val_invar by auto
+  unfolding ifex_bf2_rel_def using restrict_ordner_invar restrict_val_invar
+  by (clarsimp simp add: bf2_restrict_def restrict_assignment)
 
 function dings :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
   "dings Trueif t e = t" |
@@ -176,23 +177,41 @@ unfolding bf2_restrict_def
 oops
 	
 lemma "
-	dings ib tb eb = rb \<Longrightarrow>
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
-	bf_ite ia ta ea = ra \<Longrightarrow> (ra, rb) \<in> ifex_bf2_rel"
-apply(induction ib arbitrary: rb)
-apply(drule rel_true_false(1))
+	(bf_ite ia ta ea, dings ib tb eb) \<in> ifex_bf2_rel"
+apply(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
+apply(frule rel_true_false(1))
 apply(simp only: dings.simps bf_ite_def const_def if_True)
 apply(drule rel_true_false(2))
 apply(simp only: dings.simps bf_ite_def const_def if_False)
 proof -
-	case goal1 (* this looks just slightly hard. is the lemma not general enough or something? anyway, I'm stuck *)
-	note goal1(3)[unfolded dings.simps]
-	{
-		fix as
-		assume "as x1"
-		with goal1(1)[OF refl] rel_if[OF goal1(4), of ia ta]
-	oops
+	case goal1
+	let ?strtr = "select_lowest (\<Union>(ifex_variable_set ` {IF iv it ie, tb, eb}))"
+	note goal1(1)[OF refl _ restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+	     goal1(2)[OF refl _ restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+	thus ?case
+	unfolding dings.simps
+	apply(subst Let_def)
+oops
+
+fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> bool \<Rightarrow> 'a ifex" where
+  "restrict_top (IF v t e) val = (if val then t else e)" |
+  "restrict_top i _ = i"
+  
+lemma restrict_untouched_id: "x \<notin> ifex_variable_set t \<Longrightarrow> restrict t x val = t" (* umkehrung gilt auch\<dots> *)
+proof(induction t)
+	case (IF v t e)
+	from IF.prems have "x \<notin> ifex_variable_set t" "x \<notin> ifex_variable_set e" by auto
+	note mIH = IF.IH(1)[OF this(1)] IF.IH(2)[OF this(2)]
+	from IF.prems have "x \<noteq> v" by simp
+	thus ?case unfolding restrict.simps Let_def mIH  by simp
+qed simp_all
+
+lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) val"
+	using restrict_untouched_id by fastforce (* fastforce ftw *)
+
+
 
 end
