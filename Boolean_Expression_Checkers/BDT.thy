@@ -20,7 +20,7 @@ fun ordner :: "('a::linorder) ifex \<Rightarrow> bool" where
 
 
 definition ifex_bf2_rel where
-  "ifex_bf2_rel = {(a,b) | a b. (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass)  \<and> ordner b}"
+  "ifex_bf2_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass)  \<and> ordner b}"
 
 (* had we done ifex_variable_list instead of _set, we would have gotten out way easier\<dots> *)
 definition "is_lowest_element e S = (e \<in> S \<and> (\<forall>oe \<in> S. e \<le> oe))"
@@ -139,5 +139,43 @@ lemma termlemma: "xa = select_lowest (\<Union>(ifex_variable_set ` {(IF iv it ie
        (case (restrict (IF iv it ie) xa val, restrict t xa val, restrict e xa val) of (i, t, e) \<Rightarrow> size i + size t + size e) < (case (IF iv it ie, t, e) of (i, t, e) \<Rightarrow> size i + size t + size e)"
 using termlemma2 by fast
 termination dings by(relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) (simp_all only: termlemma)+
+
+definition "const x _ = x" (* Mehr Haskell wagen *)
+lemma rel_true_false: "(a, Trueif) \<in> ifex_bf2_rel \<Longrightarrow> a = const True" "(a, Falseif) \<in> ifex_bf2_rel \<Longrightarrow> a = const False"
+	unfolding fun_eq_iff const_def
+	unfolding ifex_bf2_rel_def 
+	by simp_all
+lemma rel_if: "(a, IF v t e) \<in> ifex_bf2_rel \<Longrightarrow> (ta, t) \<in> ifex_bf2_rel \<Longrightarrow> (ea, e) \<in> ifex_bf2_rel \<Longrightarrow> a = (\<lambda>as. if as v then ta as else ea as)"
+	unfolding fun_eq_iff const_def
+	unfolding ifex_bf2_rel_def 
+	by simp_all
+lemma "as v \<Longrightarrow> (a, (IF v t e)) \<in> ifex_bf2_rel \<Longrightarrow> (bf2_restrict v True a, t) \<in> ifex_bf2_rel"
+unfolding in_rel_def[symmetric]
+unfolding ifex_bf2_rel_def
+unfolding in_rel_Collect_split_eq
+unfolding val_ifex.simps
+unfolding ordner.simps
+unfolding bf2_restrict_def
+oops
+	
+lemma "
+	dings ib tb eb = rb \<Longrightarrow>
+	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
+	(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
+	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
+	bf_ite ia ta ea = ra \<Longrightarrow> (ra, rb) \<in> ifex_bf2_rel"
+apply(induction ib arbitrary: rb)
+apply(drule rel_true_false(1))
+apply(simp only: dings.simps bf_ite_def const_def if_True)
+apply(drule rel_true_false(2))
+apply(simp only: dings.simps bf_ite_def const_def if_False)
+proof -
+	case goal1 (* this looks just slightly hard. is the lemma not general enough or something? anyway, I'm stuck *)
+	note goal1(3)[unfolded dings.simps]
+	{
+		fix as
+		assume "as x1"
+		with goal1(1)[OF refl] rel_if[OF goal1(4), of ia ta]
+	oops
 
 end
