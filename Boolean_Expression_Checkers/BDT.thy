@@ -340,13 +340,6 @@ proof(induction rule: ind_ite.induct)
     from this ind_ite_if(3,6,7) show ?case by simp
 qed (auto)
 
-thm ind_ite.induct
-thm dings.induct
-
-lemma "dings i t e = b \<Longrightarrow> ind_ite b i t e"
-proof(induction arbitrary: b rule: dings.induct)
-case ("3") thus ?case
-
 lemma "ind_ite Falseif Trueif Falseif Trueif" apply(rule ind_ite_true) done
 
 lemma "ind_ite (IF 1 (IF 2 Falseif Trueif) Trueif) 
@@ -400,7 +393,7 @@ lemma helperino: "ass y = x \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_
                      (bf2_restrict y x ea) ass"
   unfolding bf_ite_def bf2_restrict_def by force
 declare[[show_types]]
-lemma ind_ite_val_invar: "ind_ite (b::nat ifex) ib tb eb \<Longrightarrow>
+lemma ind_ite_val_invar: "ind_ite b ib tb eb \<Longrightarrow>
        \<forall>ass. ia ass = val_ifex ib ass \<Longrightarrow>
        \<forall>ass. ta ass = val_ifex tb ass \<Longrightarrow>
        \<forall>ass. ea ass = val_ifex eb ass \<Longrightarrow>
@@ -414,7 +407,6 @@ proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
          "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
                      (bf2_restrict y False ea) ass 
               = val_ifex r ass"
-    sorry
   have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
                      (bf2_restrict y True ea) ass"
                     "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
