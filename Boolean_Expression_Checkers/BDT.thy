@@ -378,7 +378,7 @@ qed (simp)
 lemma helperino: "ass y = x \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y x ia) (bf2_restrict y x ta) 
                      (bf2_restrict y x ea) ass"
   unfolding bf_ite_def bf2_restrict_def by force
-
+declare[[show_types]]
 lemma ind_ite_val_invar: "ind_ite (b::nat ifex) ib tb eb \<Longrightarrow>
        \<forall>ass. ia ass = val_ifex ib ass \<Longrightarrow>
        \<forall>ass. ta ass = val_ifex tb ass \<Longrightarrow>
@@ -393,7 +393,7 @@ proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
          "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
                      (bf2_restrict y False ea) ass 
               = val_ifex r ass"
-    by fastforce+
+    sorry
   have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
                      (bf2_restrict y True ea) ass"
                     "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
