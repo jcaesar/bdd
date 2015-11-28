@@ -327,7 +327,7 @@ lemma ifex_variable_set_union_image_equi:
    ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
   by blast
 
-lemma "ind_ite b i t e \<Longrightarrow> dings i t e = b"
+lemma pleasecombinemewith2: "ind_ite b i t e \<Longrightarrow> dings i t e = b"
 proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tifex eifex l r)
     from this(3) have "ifex_variables_ite i t e \<noteq> {}" "finite (ifex_variables_ite i t e)"
@@ -339,6 +339,31 @@ proof(induction rule: ind_ite.induct)
       have "select_lowest (\<Union>(ifex_variable_set ` {IF iv tifex eifex, t, e})) = x" by simp
     from this ind_ite_if(3,6,7) show ?case by simp
 qed (auto)
+
+lemma pleasecombinemewith1: "dings i t e = b \<Longrightarrow> ind_ite b i t e"
+proof(induct arbitrary: b rule: dings.induct)
+  case("3" iv tifex eifex t e) note dings_IF = "3"
+  obtain i where i_def: "i = IF iv tifex eifex" by simp
+  then obtain y where y_def: "y = select_lowest (\<Union>(ifex_variable_set ` {i,t,e}))" by simp
+  from i_def have "finite (ifex_variables_ite i t e)" "ifex_variables_ite i t e \<noteq> {}"
+    by (simp_all add: finite_ifex_variable_set)
+  from select_is_lowest[OF this(1) this(2)] y_def
+    have smallest: "y \<in> ifex_variables_ite i t e" "\<forall>v \<in> ifex_variables_ite i t e. y \<le> v"
+    unfolding is_lowest_element_def by (simp_all only: ifex_variable_set_union_image_equi) (simp)
+  obtain l where l_def: "l = dings (restrict i y True) (restrict t y True) (restrict e y True)"
+    by simp
+  with i_def y_def dings_IF(1)[of i y l] 
+    have left: "ind_ite l (restrict i y True) (restrict t y True) (restrict e y True)" by simp
+  obtain r where r_def: "r = dings (restrict i y False) (restrict t y False) (restrict e y False)" 
+    by simp
+  with i_def y_def dings_IF(2)[of i y r] 
+    have right: "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" by simp
+  from dings_IF(3) l_def r_def y_def i_def have "b = IF y l r" by simp
+  with ind_ite_if[OF smallest i_def left right] show ?case using i_def by simp
+qed (auto simp add: ind_ite.intros)
+
+lemma "dings i t e = b \<longleftrightarrow> ind_ite b i t e"
+  using pleasecombinemewith1 pleasecombinemewith2 by blast
 
 lemma "ind_ite Falseif Trueif Falseif Trueif" apply(rule ind_ite_true) done
 
