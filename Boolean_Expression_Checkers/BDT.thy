@@ -224,7 +224,8 @@ lemma Let2assm: "(\<And>x. x = foo \<Longrightarrow> f x) \<Longrightarrow> let 
 
 lemma hlp1: 
 	assumes fin: "finite k"
-	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)"
+	assumes el: "(IF v t e) \<in> k"
+	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)" (is "x \<in> ?a1s")
 	shows "select_lowest (\<Union>(ifex_variable_set ` k)) < x"
 proof(cases "k = {}")
 	case True
@@ -235,8 +236,18 @@ next
 	let ?vs = "\<Union>(ifex_variable_set ` k)"
 	have "is_lowest_element (select_lowest ?vs) ?vs" 
 		apply(rule select_is_lowest) 
-		using finite_ifex_variable_set fin apply blast sorry
-	thus ?thesis sorry
+		using finite_ifex_variable_set fin apply blast 
+		using el apply force
+	done
+	moreover have ne: "select_lowest ?vs \<notin> ?a1s" using not_element_restrict by fast
+	moreover have "\<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_variable_set ` k))" 
+		using restrict_variables_subset by fast
+	moreover have "x \<noteq> select_lowest ?vs" using a1 ne by fast
+	ultimately show ?thesis
+				using a1 
+		unfolding is_lowest_element_def
+		unfolding Ball_def
+		by fastforce
 qed
 
 lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
@@ -247,16 +258,11 @@ lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> 
 	apply(subst ordner.simps)
 	apply(rule Let2assm)+
 	apply rule
-	 apply rule
-	 apply(unfold Un_iff)
-	 apply(erule disjE)
-	  apply(drule subsetD[OF ifex_variable_set_dings_ss])
-	  apply(blast intro: hlp1[OF finite_three, where vl=True])
-	 apply(blast intro: hlp1[OF finite_three, where vl=False] dest: subsetD[OF ifex_variable_set_dings_ss])
+	 apply(blast intro: hlp1[OF finite_three] dest: subsetD[OF ifex_variable_set_dings_ss])
 	apply(meson restrict_ordner_invar)
 done
 
-lemma "
+theorem "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
@@ -269,7 +275,7 @@ proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
 		unfolding ordner.simps
 		by(rule conjI, rule, unfold Un_iff, erule disjE)
 		    (((drule subsetD[OF ifex_variable_set_dings_ss], 
-			unfold img_three, meson hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three])+),
+			unfold img_three, blast intro: hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three])+),
 			metis restrict_ordner_invar order_dings_invar ordner_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
