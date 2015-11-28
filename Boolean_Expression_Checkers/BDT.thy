@@ -392,7 +392,6 @@ qed (simp)
 lemma helperino: "ass y = x \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y x ia) (bf2_restrict y x ta) 
                      (bf2_restrict y x ea) ass"
   unfolding bf_ite_def bf2_restrict_def by force
-declare[[show_types]]
 lemma ind_ite_val_invar: "ind_ite b ib tb eb \<Longrightarrow>
        \<forall>ass. ia ass = val_ifex ib ass \<Longrightarrow>
        \<forall>ass. ta ass = val_ifex tb ass \<Longrightarrow>
@@ -400,22 +399,32 @@ lemma ind_ite_val_invar: "ind_ite b ib tb eb \<Longrightarrow>
        \<forall>ass. (bf_ite ia ta ea) ass = val_ifex b ass"
 proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
   case(ind_ite_if y i t e iv tv ev l r)
-  from ind_ite_if(6,7,8,9,10) restrict_val_invar
+  note ffs1 = restrict_val_invar[OF ind_ite_if(8)] and (* ffs = for fucks sake *)
+       ffs2 = restrict_val_invar[OF ind_ite_if(9)] and
+       ffs3 = restrict_val_invar[OF ind_ite_if(10)]
+  from ind_ite_if(6)[of "bf2_restrict y True ia" "bf2_restrict y True ta" "bf2_restrict y True ea"]
+       ffs1[of y True] ffs2 [of y True] ffs3[of y True]
   have 0: "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
                      (bf2_restrict y True ea) ass 
-              = val_ifex l ass"
-         "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
+              = val_ifex l ass" by fastforce
+  note ffs1 = restrict_val_invar[OF ind_ite_if(8)] and (* ffs = for fucks sake *)
+       ffs2 = restrict_val_invar[OF ind_ite_if(9)] and
+       ffs3 = restrict_val_invar[OF ind_ite_if(10)]
+  from ind_ite_if(7)[of "bf2_restrict y False ia" 
+                        "bf2_restrict y False ta" "bf2_restrict y False ea"]
+       ffs1[of y False] ffs2 [of y False] ffs3[of y False]
+  have 1: "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
                      (bf2_restrict y False ea) ass 
-              = val_ifex r ass"
+              = val_ifex r ass" by fastforce
   have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
                      (bf2_restrict y True ea) ass"
                     "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
                      (bf2_restrict y False ea) ass" using helperino[of _ y True ia ta ea]
                                                           helperino[of _ y False ia ta ea] by force+
-  from 0 this show ?case by simp
+  from 0 1 this show ?case by simp
 qed (auto simp add: bf_ite_def)
 
-lemma "ind_ite (b::nat ifex) ib tb eb \<Longrightarrow>
+lemma "ind_ite b ib tb eb \<Longrightarrow>
        (ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
 	     (ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	     (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
