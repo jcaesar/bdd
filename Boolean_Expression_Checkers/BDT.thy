@@ -7,19 +7,19 @@ begin
 (* type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool" *)
 
 
-fun ifex_variable_set :: "'a ifex \<Rightarrow> 'a set" where
-  "ifex_variable_set (IF v t e) = {v} \<union> ifex_variable_set t \<union> ifex_variable_set e" |
-  "ifex_variable_set Trueif = {}" |
-  "ifex_variable_set Falseif = {}"
+fun ifex_var_set :: "'a ifex \<Rightarrow> 'a set" where
+  "ifex_var_set (IF v t e) = {v} \<union> ifex_var_set t \<union> ifex_var_set e" |
+  "ifex_var_set Trueif = {}" |
+  "ifex_var_set Falseif = {}"
 
-fun ordner :: "('a::linorder) ifex \<Rightarrow> bool" where
-  "ordner (IF v t e) = ((\<forall>tv \<in> (ifex_variable_set t \<union> ifex_variable_set e). v < tv)
-                       \<and> ordner t \<and> ordner e)" |
-  "ordner Trueif = True" |
-  "ordner Falseif = True"
+fun ifex_ordered :: "('a::linorder) ifex \<Rightarrow> bool" where
+  "ifex_ordered (IF v t e) = ((\<forall>tv \<in> (ifex_var_set t \<union> ifex_var_set e). v < tv)
+                       \<and> ifex_ordered t \<and> ifex_ordered e)" |
+  "ifex_ordered Trueif = True" |
+  "ifex_ordered Falseif = True"
 
 definition ifex_bf2_rel where
-  "ifex_bf2_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ordner b}"
+  "ifex_bf2_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ifex_ordered b}"
 
 (* had we done ifex_variable_list instead of _set, we would have gotten out way easier\<dots> *)
 definition "is_lowest_element e S = (e \<in> S \<and> (\<forall>oe \<in> S. e \<le> oe))"
@@ -60,33 +60,33 @@ proof -
 	then obtain l where l: "{m \<in> S. \<forall>om\<in>S. m \<le> om} = {l}" by (metis (no_types, lifting) One_nat_def card_eq_SucD)
 	thus ?case unfolding select_lowest_def by auto 
 qed
-lemma finite_ifex_variable_set: "finite (ifex_variable_set k)" by(induction k) simp_all
-lemma nonempty_if_variable_set: "ifex_variable_set (IF v t e) \<noteq> {}" by simp
-lemma dings_select_helper: "i = (IF iv it ie) \<Longrightarrow> k = (\<Union>(ifex_variable_set ` {i,t,e})) \<Longrightarrow> finite k \<and> k \<noteq> {}"
-	using finite_ifex_variable_set nonempty_if_variable_set by auto
+lemma finite_ifex_var_set: "finite (ifex_var_set k)" by(induction k) simp_all
+lemma nonempty_if_var_set: "ifex_var_set (IF v t e) \<noteq> {}" by simp
+lemma ifex_ite_select_helper: "i = (IF iv it ie) \<Longrightarrow> k = (\<Union>(ifex_var_set ` {i,t,e})) \<Longrightarrow> finite k \<and> k \<noteq> {}"
+	using finite_ifex_var_set nonempty_if_var_set by auto
 
 fun restrict where
   "restrict (IF v t e) var val = (let rt = restrict t var val; re = restrict e var val in
                    (if v = var then (if val then rt else re) else (IF v rt re)))" |
   "restrict i _ _ = i"
 
-value "ordner (IF 1 Falseif (IF (0::nat) (IF 0 Falseif Falseif) Falseif))"
+value "ifex_ordered (IF 1 Falseif (IF (0::nat) (IF 0 Falseif Falseif) Falseif))"
 value "restrict (IF (1::nat) Falseif (IF 0 (IF 0 Falseif Falseif) Falseif)) 1 False"
 (* definition "bf2_restrict (i::nat) (val::bool) (func::boolfunc2) \<equiv> (\<lambda>v. func (v(i:=val)))" *)
-value "ordner (IF (0::nat) (IF 0 Falseif Falseif) Falseif)"
+value "ifex_ordered (IF (0::nat) (IF 0 Falseif Falseif) Falseif)"
 
 declare Let_def[simp]
 
-lemma not_element_restrict: "var \<notin> ifex_variable_set (restrict b var val)"
+lemma not_element_restrict: "var \<notin> ifex_var_set (restrict b var val)"
   by (induction b) auto
 
 lemma restrict_assignment: "val_ifex b (ass(var := val)) \<longleftrightarrow> val_ifex (restrict b var val) ass"
   by (induction b) auto
 
-lemma restrict_variables_subset: "ifex_variable_set (restrict b var val) \<subseteq> ifex_variable_set b"
+lemma restrict_variables_subset: "ifex_var_set (restrict b var val) \<subseteq> ifex_var_set b"
   by (induction b) auto
 
-lemma restrict_ordner_invar: "ordner b \<Longrightarrow> ordner (restrict b var val)"
+lemma restrict_ifex_ordered_invar: "ifex_ordered b \<Longrightarrow> ifex_ordered (restrict b var val)"
   using restrict_variables_subset by (induction b) (fastforce)+
 
 lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow> 
@@ -95,20 +95,20 @@ lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow
 
 lemma restrict_ifex_bf2_rel:
 "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> (bf2_restrict var val a, restrict b var val) \<in> ifex_bf2_rel"
-  unfolding ifex_bf2_rel_def using restrict_ordner_invar restrict_val_invar
+  unfolding ifex_bf2_rel_def using restrict_ifex_ordered_invar restrict_val_invar
   by (clarsimp simp add: bf2_restrict_def restrict_assignment)
 
-function dings :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
-  "dings Trueif t e = t" |
-  "dings Falseif t e = e" |
-  "dings (IF iv it ie) t e = (let i = (IF iv it ie); x = select_lowest (\<Union>(ifex_variable_set ` {i,t,e})) in 
-                         (IF x (dings (restrict i x True) (restrict t x True) (restrict e x True))
-                               (dings (restrict i x False) (restrict t x False) (restrict e x False))))"
+function ifex_ite :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
+  "ifex_ite Trueif t e = t" |
+  "ifex_ite Falseif t e = e" |
+  "ifex_ite (IF iv it ie) t e = (let i = (IF iv it ie); x = select_lowest (\<Union>(ifex_var_set ` {i,t,e})) in 
+                         (IF x (ifex_ite (restrict i x True) (restrict t x True) (restrict e x True))
+                               (ifex_ite (restrict i x False) (restrict t x False) (restrict e x False))))"
 by pat_completeness auto
 
 lemma restrict_size_le: "size (restrict k x val) \<le> size k"
 by(induction k) (auto)
-lemma restrict_size_less: "x \<in> ifex_variable_set k \<Longrightarrow> size (restrict k x val) < size k"
+lemma restrict_size_less: "x \<in> ifex_var_set k \<Longrightarrow> size (restrict k x val) < size k"
 proof(induction k)
 	case (IF v t e)
 	thus ?case
@@ -118,14 +118,14 @@ proof(induction k)
 	next
 		case False note of = this
 		show ?thesis
-		proof(cases "x \<in> ifex_variable_set t")
+		proof(cases "x \<in> ifex_var_set t")
 			case True
 			show ?thesis by(simp only: restrict.simps False if_False ifex.size) (simp add: IF.IH(1)[OF True] restrict_size_le add.commute add_le_less_mono)
 		next
 			case False
-			have *: "x \<in> ifex_variable_set e"
+			have *: "x \<in> ifex_var_set e"
 			proof(rule ccontr)
-				assume "x \<notin> ifex_variable_set e"
+				assume "x \<notin> ifex_var_set e"
 				note this False `v \<noteq> x`
 				with IF.prems show False by simp
 			qed
@@ -133,10 +133,10 @@ proof(induction k)
 		qed
 	qed
 qed simp_all
-lemma restrict_size_eqE: "size k = size (restrict k x val) \<Longrightarrow> x \<notin> ifex_variable_set k"
+lemma restrict_size_eqE: "size k = size (restrict k x val) \<Longrightarrow> x \<notin> ifex_var_set k"
 	using less_not_refl restrict_size_less by metis
 
-lemma termlemma2: "xa = select_lowest (\<Union>(ifex_variable_set ` {(IF iv it ie), t, e})) \<Longrightarrow>
+lemma termlemma2: "xa = select_lowest (\<Union>(ifex_var_set ` {(IF iv it ie), t, e})) \<Longrightarrow>
        (size (restrict (IF iv it ie) xa val) + size (restrict t xa val) + size (restrict e xa val)) < (size (IF iv it ie) + size t + size e)"
 proof(rule ccontr, unfold not_less)
 	case goal1 thus ?case
@@ -147,16 +147,16 @@ proof(rule ccontr, unfold not_less)
 		have 2: "size t = size (restrict t xa val)" using restrict_size_le * by (metis False add.commute add_less_le_mono order.not_eq_order_implies_strict)
 		have 3: "size e = size (restrict e xa val)" using * 1 2 by linarith
 		note restrict_size_eqE[OF 1] restrict_size_eqE[OF 2] restrict_size_eqE[OF 3]
-		then show False unfolding goal1 using dings_select_helper[OF refl refl] 
-			conjunct1[OF select_is_lowest[unfolded is_lowest_element_def], of "(\<Union>(ifex_variable_set ` {(IF iv it ie), t, e}))"] by auto 
+		then show False unfolding goal1 using ifex_ite_select_helper[OF refl refl] 
+			conjunct1[OF select_is_lowest[unfolded is_lowest_element_def], of "(\<Union>(ifex_var_set ` {(IF iv it ie), t, e}))"] by auto 
 	next
 		case True thus False using restrict_size_le by (metis add_mono_thms_linordered_semiring(1) leD)
 	qed
 qed
-lemma termlemma: "xa = select_lowest (\<Union>(ifex_variable_set ` {(IF iv it ie), t, e})) \<Longrightarrow>
+lemma termlemma: "xa = select_lowest (\<Union>(ifex_var_set ` {(IF iv it ie), t, e})) \<Longrightarrow>
        (case (restrict (IF iv it ie) xa val, restrict t xa val, restrict e xa val) of (i, t, e) \<Rightarrow> size i + size t + size e) < (case (IF iv it ie, t, e) of (i, t, e) \<Rightarrow> size i + size t + size e)"
 using termlemma2 by fast
-termination dings by(relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) (simp_all only: termlemma)+
+termination ifex_ite by(relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) (simp_all only: termlemma)+
 
 definition "const x _ = x" (* Mehr Haskell wagen *)
 lemma rel_true_false: "(a, Trueif) \<in> ifex_bf2_rel \<Longrightarrow> a = const True" "(a, Falseif) \<in> ifex_bf2_rel \<Longrightarrow> a = const False"
@@ -172,15 +172,15 @@ unfolding in_rel_def[symmetric]
 unfolding ifex_bf2_rel_def
 unfolding in_rel_Collect_split_eq
 unfolding val_ifex.simps
-unfolding ordner.simps
+unfolding ifex_ordered.simps
 unfolding bf2_restrict_def
 oops
-lemma ifex_bf2_construct: "(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow> (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow> ordner (IF x tb eb) \<Longrightarrow> (\<lambda>as. if as x then ta as else ea as, IF x tb eb) \<in> ifex_bf2_rel"
+lemma ifex_bf2_construct: "(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow> (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow> ifex_ordered (IF x tb eb) \<Longrightarrow> (\<lambda>as. if as x then ta as else ea as, IF x tb eb) \<in> ifex_bf2_rel"
 	unfolding fun_eq_iff const_def
 	unfolding ifex_bf2_rel_def
 	by simp
 	
-lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unfolding ifex_bf2_rel_def by simp
+lemma ifex_ordered_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ifex_ordered b" unfolding ifex_bf2_rel_def by simp
 
 lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
 lemma Un_three: "\<Union>{a, b, c} = a \<union> b \<union> c" by auto
@@ -193,17 +193,17 @@ lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 	unfolding in_rel_def[symmetric]  in_rel_Collect_split_eq
 	by blast
 
-lemma ifex_variable_set_dings_ss: "ifex_variable_set (dings i t e) \<subseteq> \<Union>(ifex_variable_set ` {i, t, e})"
-apply(induction i t e rule: dings.induct)
-apply simp_all[2]
-apply(subst dings.simps)
-apply(unfold Let_def)
-apply(subst ifex_variable_set.simps)
-apply(rule le_supI)
-apply(rule le_supI)
-apply rule
-apply(unfold singleton_iff)
-apply(meson dings_select_helper is_lowest_element_def select_is_lowest)
+lemma ifex_var_set_ifex_ite_ss: "ifex_var_set (ifex_ite i t e) \<subseteq> \<Union>(ifex_var_set ` {i, t, e})"
+	apply(induction i t e rule: ifex_ite.induct)
+	  apply simp_all[2]
+	apply(subst ifex_ite.simps)
+	apply(unfold Let_def)
+	apply(subst ifex_var_set.simps)
+	apply(rule le_supI)
+	 apply(rule le_supI)
+	  apply rule
+	  apply(unfold singleton_iff)
+	  apply(meson ifex_ite_select_helper is_lowest_element_def select_is_lowest)
 proof -
 	case goal1
 	show ?case
@@ -225,20 +225,20 @@ lemma Let2assm: "(\<And>x. x = foo \<Longrightarrow> f x) \<Longrightarrow> let 
 lemma hlp1: 
 	assumes fin: "finite k"
 	assumes el: "(IF v t e) \<in> k"
-	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)" (is "x \<in> ?a1s")
-	shows "select_lowest (\<Union>(ifex_variable_set ` k)) < x"
+	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_var_set (restrict vr (select_lowest (\<Union>(ifex_var_set ` k))) vl)) ` k)" (is "x \<in> ?a1s")
+	shows "select_lowest (\<Union>(ifex_var_set ` k)) < x"
 proof(cases "k = {}")
 	case True
 	have False using a1 unfolding True by simp
 	thus ?thesis ..
 next
 	case False
-	let ?vs = "\<Union>(ifex_variable_set ` k)"
+	let ?vs = "\<Union>(ifex_var_set ` k)"
 	have "is_lowest_element (select_lowest ?vs) ?vs" 
-		using finite_ifex_variable_set fin el 
+		using finite_ifex_var_set fin el 
 		by(force intro: select_is_lowest)
 	moreover have ne: "select_lowest ?vs \<notin> ?a1s" using not_element_restrict by fast
-	moreover have "\<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_variable_set ` k))" 
+	moreover have "\<Union>((\<lambda>vr. ifex_var_set (restrict vr (select_lowest (\<Union>(ifex_var_set ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_var_set ` k))" 
 		using restrict_variables_subset by fast
 	moreover have "x \<noteq> select_lowest ?vs" using a1 ne by fast
 	ultimately show ?thesis
@@ -248,33 +248,33 @@ next
 		by(auto dest: le_neq_trans)
 qed
 
-lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
-	apply(induction i t e rule: dings.induct)
+lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered (ifex_ite i t e)"
+	apply(induction i t e rule: ifex_ite.induct)
 	  apply simp_all[2]
-	apply(subst dings.simps)
+	apply(subst ifex_ite.simps)
 	apply(unfold Let_keeper)
-	apply(subst ordner.simps)
+	apply(subst ifex_ordered.simps)
 	apply(rule Let2assm)+
 	apply rule
-	 apply(blast intro: hlp1[OF finite_three] dest: subsetD[OF ifex_variable_set_dings_ss])
-	apply(meson restrict_ordner_invar)
+	 apply(blast intro: hlp1[OF finite_three] dest: subsetD[OF ifex_var_set_ifex_ite_ss])
+	apply(meson restrict_ifex_ordered_invar)
 done
 
 theorem "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
-	(bf_ite ia ta ea, dings ib tb eb) \<in> ifex_bf2_rel"
-proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
+	(bf_ite ia ta ea, ifex_ite ib tb eb) \<in> ifex_bf2_rel"
+proof(induction ib tb eb arbitrary: ia ta ea rule: ifex_ite.induct)
 	case goal3 note goal1 = goal3
-	let ?strtr = "select_lowest (\<Union>(ifex_variable_set ` {IF iv it ie, t, e}))"
-	have mrdr: "ordner (IF ?strtr (dings (restrict (IF iv it ie) ?strtr True) (restrict t ?strtr True) (restrict e ?strtr True))
-                                  (dings (restrict (IF iv it ie) ?strtr False) (restrict t ?strtr False) (restrict e ?strtr False)))"
-		unfolding ordner.simps
+	let ?strtr = "select_lowest (\<Union>(ifex_var_set ` {IF iv it ie, t, e}))"
+	have mrdr: "ifex_ordered (IF ?strtr (ifex_ite (restrict (IF iv it ie) ?strtr True) (restrict t ?strtr True) (restrict e ?strtr True))
+                                  (ifex_ite (restrict (IF iv it ie) ?strtr False) (restrict t ?strtr False) (restrict e ?strtr False)))"
+		unfolding ifex_ordered.simps
 		by(rule conjI, rule, unfold Un_iff, erule disjE)
-		    (((drule subsetD[OF ifex_variable_set_dings_ss], 
+		    (((drule subsetD[OF ifex_var_set_ifex_ite_ss], 
 			unfold img_three, blast intro: hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three])+),
-			metis restrict_ordner_invar order_dings_invar ordner_implied goal1(3,4,5))
+			metis restrict_ifex_ordered_invar order_ifex_ite_invar ifex_ordered_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
                = bf_ite ia ta ea"
@@ -284,23 +284,23 @@ proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
 		goal1(1)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
 		goal1(2)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
 	note ifex_bf2_construct(* this is basically the central property *)[OF this mrdr] 
-	thus ?case unfolding dings.simps Let_def kll by blast
-qed (frule rel_true_false, simp only: dings.simps bf_ite_def const_def if_True if_False)+
+	thus ?case unfolding ifex_ite.simps Let_def kll by blast
+qed (frule rel_true_false, simp only: ifex_ite.simps bf_ite_def const_def if_True if_False)+
 
 fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> bool \<Rightarrow> 'a ifex" where
   "restrict_top (IF v t e) val = (if val then t else e)" |
   "restrict_top i _ = i"
   
-lemma restrict_untouched_id: "x \<notin> ifex_variable_set t \<Longrightarrow> restrict t x val = t" (* umkehrung gilt auch\<dots> *)
+lemma restrict_untouched_id: "x \<notin> ifex_var_set t \<Longrightarrow> restrict t x val = t" (* umkehrung gilt auch\<dots> *)
 proof(induction t)
 	case (IF v t e)
-	from IF.prems have "x \<notin> ifex_variable_set t" "x \<notin> ifex_variable_set e" by auto
+	from IF.prems have "x \<notin> ifex_var_set t" "x \<notin> ifex_var_set e" by auto
 	note mIH = IF.IH(1)[OF this(1)] IF.IH(2)[OF this(2)]
 	from IF.prems have "x \<noteq> v" by simp
 	thus ?case unfolding restrict.simps Let_def mIH  by simp
 qed simp_all
 
-lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) val"
+lemma "ifex_ordered (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) val"
 	using restrict_untouched_id by fastforce (* fastforce ftw *)
 
 
@@ -308,7 +308,7 @@ lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_
 
 abbreviation ifex_variables_ite where 
   "ifex_variables_ite i t e \<equiv> 
-   ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+   ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
 
 inductive ind_ite :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
 ind_ite_true:   "ind_ite t Trueif t e" |
@@ -320,47 +320,47 @@ ind_ite_if:     "x \<in> ifex_variables_ite i t e \<Longrightarrow>
    ind_ite r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
    ind_ite (IF x l r) i t e"
 
-lemma ifex_variable_set_union_image_equi:
-  "\<Union>(ifex_variable_set ` {i,t,e}) =
-   ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+lemma ifex_var_set_union_image_equi:
+  "\<Union>(ifex_var_set ` {i,t,e}) =
+   ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
   by blast
 
-lemma pleasecombinemewith2: "ind_ite b i t e \<Longrightarrow> dings i t e = b"
+lemma pleasecombinemewith2: "ind_ite b i t e \<Longrightarrow> ifex_ite i t e = b"
 proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tifex eifex l r)
     from this(3) have "ifex_variables_ite i t e \<noteq> {}" "finite (ifex_variables_ite i t e)"
-      using finite_ifex_variable_set by auto
+      using finite_ifex_var_set by auto
     from  select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2)
-      have "select_lowest (\<Union>(ifex_variable_set ` {i, t, e})) = x"
-      unfolding is_lowest_element_def by (subst ifex_variable_set_union_image_equi) force
+      have "select_lowest (\<Union>(ifex_var_set ` {i, t, e})) = x"
+      unfolding is_lowest_element_def by (subst ifex_var_set_union_image_equi) force
     from this ind_ite_if(3)
-      have "select_lowest (\<Union>(ifex_variable_set ` {IF iv tifex eifex, t, e})) = x" by simp
+      have "select_lowest (\<Union>(ifex_var_set ` {IF iv tifex eifex, t, e})) = x" by simp
     from this ind_ite_if(3,6,7) show ?case by simp
 qed (auto)
 
-lemma pleasecombinemewith1: "dings i t e = b \<Longrightarrow> ind_ite b i t e"
-proof(induct arbitrary: b rule: dings.induct)
-  case("3" iv tifex eifex t e) note dings_IF = "3"
+lemma pleasecombinemewith1: "ifex_ite i t e = b \<Longrightarrow> ind_ite b i t e"
+proof(induct arbitrary: b rule: ifex_ite.induct)
+  case("3" iv tifex eifex t e) note ifex_ite_IF = "3"
   obtain i where i_def: "i = IF iv tifex eifex" by simp
-  then obtain y where y_def: "y = select_lowest (\<Union>(ifex_variable_set ` {i,t,e}))" by simp
+  then obtain y where y_def: "y = select_lowest (\<Union>(ifex_var_set ` {i,t,e}))" by simp
   from i_def have "finite (ifex_variables_ite i t e)" "ifex_variables_ite i t e \<noteq> {}"
-    by (simp_all add: finite_ifex_variable_set)
+    by (simp_all add: finite_ifex_var_set)
   from select_is_lowest[OF this(1) this(2)] y_def
     have smallest: "y \<in> ifex_variables_ite i t e" "\<forall>v \<in> ifex_variables_ite i t e. y \<le> v"
-    unfolding is_lowest_element_def by (simp_all only: ifex_variable_set_union_image_equi) (simp)
-  obtain l where l_def: "l = dings (restrict i y True) (restrict t y True) (restrict e y True)"
+    unfolding is_lowest_element_def by (simp_all only: ifex_var_set_union_image_equi) (simp)
+  obtain l where l_def: "l = ifex_ite (restrict i y True) (restrict t y True) (restrict e y True)"
     by simp
-  with i_def y_def dings_IF(1)[of i y l] 
+  with i_def y_def ifex_ite_IF(1)[of i y l] 
     have left: "ind_ite l (restrict i y True) (restrict t y True) (restrict e y True)" by simp
-  obtain r where r_def: "r = dings (restrict i y False) (restrict t y False) (restrict e y False)" 
+  obtain r where r_def: "r = ifex_ite (restrict i y False) (restrict t y False) (restrict e y False)" 
     by simp
-  with i_def y_def dings_IF(2)[of i y r] 
+  with i_def y_def ifex_ite_IF(2)[of i y r] 
     have right: "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" by simp
-  from dings_IF(3) l_def r_def y_def i_def have "b = IF y l r" by simp
+  from ifex_ite_IF(3) l_def r_def y_def i_def have "b = IF y l r" by simp
   with ind_ite_if[OF smallest i_def left right] show ?case using i_def by simp
 qed (auto simp add: ind_ite.intros)
 
-lemma "dings i t e = b \<longleftrightarrow> ind_ite b i t e"
+lemma "ifex_ite i t e = b \<longleftrightarrow> ind_ite b i t e"
   using pleasecombinemewith1 pleasecombinemewith2 by blast
 
 lemma "ind_ite Falseif Trueif Falseif Trueif" by(force intro: ind_ite.intros)
@@ -368,17 +368,17 @@ lemma "ind_ite Falseif Trueif Falseif Trueif" by(force intro: ind_ite.intros)
 lemma "ind_ite (IF 1 (IF 2 Falseif Trueif) Trueif) 
               (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)" by(force intro: ind_ite.intros)
 
-value "dings (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
+value "ifex_ite (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
 
 (* The following proofs could probably be very easily automated *)
 
 lemma ind_ite_variables_subset: "ind_ite b i t e \<Longrightarrow> 
-  ifex_variable_set b \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+  ifex_var_set b \<subseteq> ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
 proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tv ev l r) 
     from this(6,7) have 
-         "ifex_variable_set l \<subseteq> ifex_variables_ite i t e"
-         "ifex_variable_set r \<subseteq> ifex_variables_ite i t e"
+         "ifex_var_set l \<subseteq> ifex_variables_ite i t e"
+         "ifex_var_set r \<subseteq> ifex_variables_ite i t e"
         using restrict_variables_subset[of i x True] restrict_variables_subset[of t x True] 
               restrict_variables_subset[of e x True] restrict_variables_subset[of i x False]
               restrict_variables_subset[of t x False] restrict_variables_subset[of e x False]
@@ -387,25 +387,25 @@ proof(induction rule: ind_ite.induct)
 qed (auto)
 
 lemma ind_ite_not_element: "ind_ite b i t e \<Longrightarrow> x \<notin> ifex_variables_ite i t e  \<Longrightarrow>
-                            x \<notin> ifex_variable_set b"
+                            x \<notin> ifex_var_set b"
 proof(induction arbitrary: x rule: ind_ite.induct)
   case(ind_ite_if y i t e iv tv ev l r) 
     from this(1,8) this(6)[of x] this(7)[of x]
-    have "x \<noteq> y" "x \<notin> ifex_variable_set l" "x \<notin> ifex_variable_set r"
+    have "x \<noteq> y" "x \<notin> ifex_var_set l" "x \<notin> ifex_var_set r"
       using restrict_variables_subset contra_subsetD by (fastforce)+
     thus ?case by simp
 qed (auto)
 
-lemma ind_ite_ordner: "ind_ite b i t e \<Longrightarrow> ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner b"
+lemma ind_ite_ifex_ordered: "ind_ite b i t e \<Longrightarrow> ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered b"
 proof(induction rule: ind_ite.induct)
-  case(ind_ite_if x i t e iv tv ev l r) from this(6,7,8,9,10) have 0: "ordner l" "ordner r" 
-    using restrict_ordner_invar by auto
-  from ind_ite_if(4,5) have 1:"x \<notin> ifex_variable_set l" "x \<notin> ifex_variable_set r" 
+  case(ind_ite_if x i t e iv tv ev l r) from this(6,7,8,9,10) have 0: "ifex_ordered l" "ifex_ordered r" 
+    using restrict_ifex_ordered_invar by auto
+  from ind_ite_if(4,5) have 1:"x \<notin> ifex_var_set l" "x \<notin> ifex_var_set r" 
      using ind_ite_not_element not_element_restrict by fastforce+
   from ind_ite_if(2) ind_ite_variables_subset[OF ind_ite_if(4)]
-    have 2: "\<forall>y \<in> ifex_variable_set l. x \<le> y" using restrict_variables_subset by fast
+    have 2: "\<forall>y \<in> ifex_var_set l. x \<le> y" using restrict_variables_subset by fast
   from ind_ite_if(2) ind_ite_variables_subset[OF ind_ite_if(5)]
-    have 3: "\<forall>y \<in> ifex_variable_set r. x \<le> y" using restrict_variables_subset by fast
+    have 3: "\<forall>y \<in> ifex_var_set r. x \<le> y" using restrict_variables_subset by fast
   from 0 1 2 3 show ?case using le_neq_trans by fastforce
 qed (simp)
 
@@ -449,6 +449,6 @@ lemma "ind_ite b ib tb eb \<Longrightarrow>
 	     (ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	     (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
 	     (bf_ite ia ta ea, b) \<in> ifex_bf2_rel"
-  unfolding ifex_bf2_rel_def by (simp add: ind_ite_ordner ind_ite_val_invar)
+  unfolding ifex_bf2_rel_def by (simp add: ind_ite_ifex_ordered ind_ite_val_invar)
 
 end
