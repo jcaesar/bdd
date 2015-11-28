@@ -58,8 +58,7 @@ lemma "bf_ite (concretize_bf2_bf bf1) (concretize_bf2_bf bf2) (concretize_bf2_bf
 
 (* Some more Brace90's Section 4.4: This is basically how to recursively implement ite *)
 lemma bf_ite_rec:
-	assumes "Z = bf_ite F G H"
-	shows "Z = bf_ite (bf2_ithvar i) 
+	shows "bf_ite F G H = bf_ite (bf2_ithvar i) 
 	                  (bf_ite (bf2_restrict i True F) (bf2_restrict i True G) (bf2_restrict i True H))
 	                  (bf_ite (bf2_restrict i False F) (bf2_restrict i False G) (bf2_restrict i False H))"
 	using assms
@@ -67,6 +66,4 @@ lemma bf_ite_rec:
 	unfolding bf2_decompose_def bf2_restrict_def bf2_ithvar_def
 	unfolding bf_or_def bf_and_def bf_not_def bf_ite_def bf_True_def bf_False_def
 	by(simp_all add: fun_upd_idem)
-	
-
 end
