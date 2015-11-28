@@ -185,6 +185,8 @@ lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unf
 lemma restrict_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
 sorry
 
+lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
+
 lemma ifex_variable_set_dings_ss: "ifex_variable_set (dings i t e) \<subseteq> \<Union>(ifex_variable_set ` {i, t, e})"
 apply(induction i t e rule: dings.induct)
 apply simp_all[2]
@@ -196,12 +198,23 @@ apply(rule le_supI)
 apply rule
 apply(unfold singleton_iff)
 apply(meson dings_select_helper is_lowest_element_def select_is_lowest)
-sorry
+proof -
+	case goal1
+	show ?case
+		apply(rule subset_trans[OF goal1(1)[OF refl refl]])
+		apply(unfold img_three)
+		using restrict_variables_subset by fastforce
+next
+	case goal2
+	show ?case
+		apply(rule subset_trans[OF goal2(2)[OF refl refl]])
+		apply(unfold img_three)
+		using restrict_variables_subset by fastforce
+qed
 
-lemma hlp1: "x \<in> \<Union>(ifex_variable_set ` (\<lambda>vr. restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl) ` k)
+lemma hlp1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)
 	\<Longrightarrow> select_lowest (\<Union>(ifex_variable_set ` k)) < x"
 sorry
-lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
 
 lemma "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
