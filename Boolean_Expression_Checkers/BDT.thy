@@ -208,38 +208,27 @@ lemma "
 	(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(bf_ite ia ta ea, dings ib tb eb) \<in> ifex_bf2_rel"
-apply(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
-apply(frule rel_true_false, simp only: dings.simps bf_ite_def const_def if_True if_False)
-apply(frule rel_true_false, simp only: dings.simps bf_ite_def const_def if_True if_False)
-proof -
-	case goal1
+proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
+	case goal3 note goal1 = goal3
 	let ?strtr = "select_lowest (\<Union>(ifex_variable_set ` {IF iv it ie, t, e}))"
 	have mrdr: "ordner (IF ?strtr (dings (restrict (IF iv it ie) ?strtr True) (restrict t ?strtr True) (restrict e ?strtr True))
                                   (dings (restrict (IF iv it ie) ?strtr False) (restrict t ?strtr False) (restrict e ?strtr False)))"
 		unfolding ordner.simps
-		apply -
-		apply(rule conjI) defer
-		apply(metis restrict_ordner_invar restrict_dings_invar ordner_implied
-			goal1(3) goal1(4) goal1(5))
-		apply rule
-		apply(unfold Un_iff)
-		apply(erule disjE)
-		apply(drule subsetD[OF ifex_variable_set_dings_ss]) defer
-		apply(drule subsetD[OF ifex_variable_set_dings_ss])
-		apply(unfold img_three)
-		apply(meson hlp1[where k = "{IF iv it ie, t, e}", unfolded img_three])
-		apply(meson hlp1[where k = "{IF iv it ie, t, e}", unfolded img_three])
-		done
+		by(rule conjI, rule, unfold Un_iff, erule disjE)
+		    (((drule subsetD[OF ifex_variable_set_dings_ss], 
+			unfold img_three, meson hlp1[where k = "{IF iv it ie, t, e}", unfolded img_three])+),
+			metis restrict_ordner_invar restrict_dings_invar ordner_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
                = bf_ite ia ta ea"
                unfolding bf_ite_def bf2_restrict_def fun_eq_iff
                by(simp add: fun_upd_idem)+
-	note goal1(1)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
-	     goal1(2)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
-	note ifex_bf2_construct[OF this mrdr] 
+	note (* free the induction hypotheses *)  
+		goal1(1)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+		goal1(2)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+	note ifex_bf2_construct(* this is basically the central property *)[OF this mrdr] 
 	thus ?case unfolding dings.simps Let_def kll by blast
-oops
+qed (frule rel_true_false, simp only: dings.simps bf_ite_def const_def if_True if_False)+
 
 fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> bool \<Rightarrow> 'a ifex" where
   "restrict_top (IF v t e) val = (if val then t else e)" |
