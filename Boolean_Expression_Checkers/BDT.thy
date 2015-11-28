@@ -229,17 +229,17 @@ lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_
 
 (* INDUCTIVE DEFINITION *)
 
-inductive dings' :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
-dings_true:   "dings' t Trueif t e" |
-dings_false:  "dings' e Falseif t e" |
-dings_if:     "x \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e) \<Longrightarrow>
+inductive ind_ite :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
+ind_ite_true:   "ind_ite t Trueif t e" |
+ind_ite_false:  "ind_ite e Falseif t e" |
+ind_ite_if:     "x \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e) \<Longrightarrow>
    \<forall>v \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e). x \<le> v \<Longrightarrow>
    i = IF iv tv ev \<Longrightarrow>
-   dings' l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
-   dings' r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
-   dings' (IF x l r) i t e"
+   ind_ite l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
+   ind_ite r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
+   ind_ite (IF x l r) i t e"
 
-lemma "dings' b i t e \<longleftrightarrow> dings i t e = b"
+lemma "ind_ite b i t e \<longleftrightarrow> dings i t e = b"
  (* proven by nitpick finding nothing *)
   oops 
 
@@ -247,18 +247,18 @@ lemma "ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_s
        \<Union>(ifex_variable_set ` {i,t,e})"
   by blast
 
-lemma "dings' Falseif Trueif Falseif Trueif" apply(rule dings_true) done
+lemma "ind_ite Falseif Trueif Falseif Trueif" apply(rule ind_ite_true) done
 
-lemma "dings' (IF 1 (IF 2 Falseif Trueif) Trueif) 
+lemma "ind_ite (IF 1 (IF 2 Falseif Trueif) Trueif) 
               (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
-  apply(rule) apply(force) apply(auto) apply(rule) apply(auto) using dings'.intros apply(auto) done
+  apply(rule) apply(force) apply(auto) apply(rule) apply(auto) using ind_ite.intros apply(auto) done
 
 value "dings (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
 
-lemma dings'_variables_subset: "dings' b i t e \<Longrightarrow> 
+lemma ind_ite_variables_subset: "ind_ite b i t e \<Longrightarrow> 
   ifex_variable_set b \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
-  proof(induction rule: dings'.induct)
-  case(dings_if x i t e iv tv ev l r) 
+  proof(induction rule: ind_ite.induct)
+  case(ind_ite_if x i t e iv tv ev l r) 
     from this(6,7) have 
          "ifex_variable_set (IF x l r) = {x} \<union> ifex_variable_set l \<union> ifex_variable_set r"
          "ifex_variable_set l \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
@@ -267,7 +267,7 @@ lemma dings'_variables_subset: "dings' b i t e \<Longrightarrow>
               restrict_variables_subset[of e x True] restrict_variables_subset[of i x False]
               restrict_variables_subset[of t x False] restrict_variables_subset[of e x False]
         by auto
-     with dings_if(1) show ?case by simp
+     with ind_ite_if(1) show ?case by simp
 qed (auto)
 
 
