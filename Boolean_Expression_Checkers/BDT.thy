@@ -257,12 +257,49 @@ qed simp_all
 lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) val"
 	using restrict_untouched_id by fastforce (* fastforce ftw *)
 
-inductive dings' :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
-dings_true:   "dings' t Trueif t e" |
-dings_false:  "dings' e Falseif t e" |
-dings_if:     "x \<in> \<Union>(ifex_variable_set ` {i,t,e}) \<Longrightarrow> i = IF iv tv ev \<Longrightarrow>
-   dings' l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
-   dings' r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
-   dings' (IF x l r) i t e"
+
+(* INDUCTIVE DEFINITION *)
+
+inductive ind_ite :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
+ind_ite_true:   "ind_ite t Trueif t e" |
+ind_ite_false:  "ind_ite e Falseif t e" |
+ind_ite_if:     "x \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e) \<Longrightarrow>
+   \<forall>v \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e). x \<le> v \<Longrightarrow>
+   i = IF iv tv ev \<Longrightarrow>
+   ind_ite l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
+   ind_ite r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
+   ind_ite (IF x l r) i t e"
+
+lemma "ind_ite b i t e \<longleftrightarrow> dings i t e = b"
+ (* proven by nitpick finding nothing *)
+  oops 
+
+lemma "ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e =
+       \<Union>(ifex_variable_set ` {i,t,e})"
+  by blast
+
+lemma "ind_ite Falseif Trueif Falseif Trueif" apply(rule ind_ite_true) done
+
+lemma "ind_ite (IF 1 (IF 2 Falseif Trueif) Trueif) 
+              (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
+  apply(rule) apply(force) apply(auto) apply(rule) apply(auto) using ind_ite.intros apply(auto) done
+
+value "dings (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
+
+lemma ind_ite_variables_subset: "ind_ite b i t e \<Longrightarrow> 
+  ifex_variable_set b \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+  proof(induction rule: ind_ite.induct)
+  case(ind_ite_if x i t e iv tv ev l r) 
+    from this(6,7) have 
+         "ifex_variable_set (IF x l r) = {x} \<union> ifex_variable_set l \<union> ifex_variable_set r"
+         "ifex_variable_set l \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+         "ifex_variable_set r \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+        using restrict_variables_subset[of i x True] restrict_variables_subset[of t x True] 
+              restrict_variables_subset[of e x True] restrict_variables_subset[of i x False]
+              restrict_variables_subset[of t x False] restrict_variables_subset[of e x False]
+        by auto
+     with ind_ite_if(1) show ?case by simp
+qed (auto)
+
 
 end
