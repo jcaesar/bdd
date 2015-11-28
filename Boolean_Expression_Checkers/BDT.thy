@@ -184,6 +184,7 @@ lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unf
 
 lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
 lemma Un_three: "\<Union>{a, b, c} = a \<union> b \<union> c" by auto
+lemma finite_three: "finite {a, b, c}" by simp
 
 lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 	unfolding single_valued_def
@@ -221,9 +222,33 @@ lemma Let_keeper: "f (let x = a in b x) = (let x = a in f (b x))" by simp
 lemma Let_ander: "(let x = a in b x \<and> c x) = ((let x = a in b x) \<and> (let x = a in c x))" by simp
 lemma Let2assm: "(\<And>x. x = foo \<Longrightarrow> f x) \<Longrightarrow> let x = foo in f x" by simp
 
-lemma hlp1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)
-	\<Longrightarrow> select_lowest (\<Union>(ifex_variable_set ` k)) < x"
-sorry
+lemma hlp1: 
+	assumes fin: "finite k"
+	assumes el: "(IF v t e) \<in> k"
+	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)" (is "x \<in> ?a1s")
+	shows "select_lowest (\<Union>(ifex_variable_set ` k)) < x"
+proof(cases "k = {}")
+	case True
+	have False using a1 unfolding True by simp
+	thus ?thesis ..
+next
+	case False
+	let ?vs = "\<Union>(ifex_variable_set ` k)"
+	have "is_lowest_element (select_lowest ?vs) ?vs" 
+		apply(rule select_is_lowest) 
+		using finite_ifex_variable_set fin apply blast 
+		using el apply force
+	done
+	moreover have ne: "select_lowest ?vs \<notin> ?a1s" using not_element_restrict by fast
+	moreover have "\<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_variable_set ` k))" 
+		using restrict_variables_subset by fast
+	moreover have "x \<noteq> select_lowest ?vs" using a1 ne by fast
+	ultimately show ?thesis
+				using a1 
+		unfolding is_lowest_element_def
+		unfolding Ball_def
+		by fastforce
+qed
 
 lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
 	apply(induction i t e rule: dings.induct)
@@ -233,23 +258,11 @@ lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> 
 	apply(subst ordner.simps)
 	apply(rule Let2assm)+
 	apply rule
-	 apply rule
-	 apply(unfold Un_iff)
-	 apply(erule disjE)
-	  apply(drule subsetD[OF ifex_variable_set_dings_ss])
-	  apply(subgoal_tac "select_lowest (\<Union>(ifex_variable_set ` {x, t, e})) < xb")
-	   apply fast
-	  apply(rule hlp1)
-	  apply blast
-	 apply(subgoal_tac "select_lowest (\<Union>(ifex_variable_set ` {x, t, e})) < xb")
-	  apply fast
-	 apply(rule hlp1[where vl=False])
-	 apply(drule subsetD[OF ifex_variable_set_dings_ss])
-	 apply blast
+	 apply(blast intro: hlp1[OF finite_three] dest: subsetD[OF ifex_variable_set_dings_ss])
 	apply(meson restrict_ordner_invar)
 done
 
-lemma "
+theorem "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
@@ -262,7 +275,7 @@ proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
 		unfolding ordner.simps
 		by(rule conjI, rule, unfold Un_iff, erule disjE)
 		    (((drule subsetD[OF ifex_variable_set_dings_ss], 
-			unfold img_three, meson hlp1[where k = "{IF iv it ie, t, e}", unfolded img_three])+),
+			unfold img_three, blast intro: hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three])+),
 			metis restrict_ordner_invar order_dings_invar ordner_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
@@ -386,7 +399,7 @@ qed (simp)
 lemma helperino: "ass y = x \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y x ia) (bf2_restrict y x ta) 
                      (bf2_restrict y x ea) ass"
   unfolding bf_ite_def bf2_restrict_def by force
-
+declare[[show_types]]
 lemma ind_ite_val_invar: "ind_ite (b::nat ifex) ib tb eb \<Longrightarrow>
        \<forall>ass. ia ass = val_ifex ib ass \<Longrightarrow>
        \<forall>ass. ta ass = val_ifex tb ass \<Longrightarrow>
@@ -401,7 +414,7 @@ proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
          "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
                      (bf2_restrict y False ea) ass 
               = val_ifex r ass"
-    by fastforce+
+    sorry
   have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
                      (bf2_restrict y True ea) ass"
                     "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
