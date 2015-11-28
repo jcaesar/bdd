@@ -57,7 +57,7 @@ lemma "bf_ite (concretize_bf2_bf bf1) (concretize_bf2_bf bf2) (concretize_bf2_bf
 	by clarify
 
 (* Some more Brace90's Section 4.4: This is basically how to recursively implement ite *)
-lemma 
+lemma bf_ite_rec:
 	assumes "Z = bf_ite F G H"
 	shows "Z = bf_ite (bf2_ithvar i) 
 	                  (bf_ite (bf2_restrict i True F) (bf2_restrict i True G) (bf2_restrict i True H))
