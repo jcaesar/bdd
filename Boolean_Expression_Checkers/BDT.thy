@@ -300,18 +300,39 @@ ind_ite_true:   "ind_ite t Trueif t e" |
 ind_ite_false:  "ind_ite e Falseif t e" |
 ind_ite_if:     "x \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e) \<Longrightarrow>
    \<forall>v \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e). x \<le> v \<Longrightarrow>
-   i = IF iv tv ev \<Longrightarrow>
+   i = IF iv tifex eifex \<Longrightarrow>
    ind_ite l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
    ind_ite r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
    ind_ite (IF x l r) i t e"
 
-lemma "ind_ite b i t e \<longleftrightarrow> dings i t e = b"
- (* proven by nitpick finding nothing *)
-  oops 
+abbreviation ifex_variables_ite where 
+  "ifex_variables_ite i t e \<equiv> 
+   ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
 
-lemma "ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e =
-       \<Union>(ifex_variable_set ` {i,t,e})"
+lemma ifex_variable_set_union_image_equi:
+  "\<Union>(ifex_variable_set ` {i,t,e}) =
+   ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
   by blast
+
+lemma "ind_ite b i t e \<Longrightarrow> dings i t e = b"
+proof(induction rule: ind_ite.induct)
+  case(ind_ite_if x i t e iv tifex eifex l r)
+    from this(3) have "ifex_variables_ite i t e \<noteq> {}" "finite (ifex_variables_ite i t e)"
+      using finite_ifex_variable_set by auto
+    from  select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2)
+      have "select_lowest (\<Union>(ifex_variable_set ` {i, t, e})) = x"
+      unfolding is_lowest_element_def by (subst ifex_variable_set_union_image_equi) force
+    from this ind_ite_if(3)
+      have "select_lowest (\<Union>(ifex_variable_set ` {IF iv tifex eifex, t, e})) = x" by simp
+    from this ind_ite_if(3,6,7) show ?case by simp
+qed (auto)
+
+thm ind_ite.induct
+thm dings.induct
+
+lemma "dings i t e = b \<Longrightarrow> ind_ite b i t e"
+proof(induction arbitrary: b rule: dings.induct)
+case ("3") thus ?case
 
 lemma "ind_ite Falseif Trueif Falseif Trueif" apply(rule ind_ite_true) done
 
