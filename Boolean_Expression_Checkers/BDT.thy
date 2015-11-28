@@ -183,6 +183,7 @@ lemma ifex_bf2_construct: "(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow> (ea, eb
 lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unfolding ifex_bf2_rel_def by simp
 
 lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
+lemma Un_three: "\<Union>{a, b, c} = a \<union> b \<union> c" by auto
 
 lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 	unfolding single_valued_def
@@ -216,15 +217,37 @@ next
 		using restrict_variables_subset by fastforce
 qed
 
-
-lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
-apply(induction i t e rule: dings.induct)
-apply simp_all[2]
-sorry
+lemma Let_keeper: "f (let x = a in b x) = (let x = a in f (b x))" by simp
+lemma Let_ander: "(let x = a in b x \<and> c x) = ((let x = a in b x) \<and> (let x = a in c x))" by simp
+lemma Let2assm: "(\<And>x. x = foo \<Longrightarrow> f x) \<Longrightarrow> let x = foo in f x" by simp
 
 lemma hlp1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)
 	\<Longrightarrow> select_lowest (\<Union>(ifex_variable_set ` k)) < x"
 sorry
+
+lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
+	apply(induction i t e rule: dings.induct)
+	  apply simp_all[2]
+	apply(subst dings.simps)
+	apply(unfold Let_keeper)
+	apply(subst ordner.simps)
+	apply(rule Let2assm)+
+	apply rule
+	 apply rule
+	 apply(unfold Un_iff)
+	 apply(erule disjE)
+	  apply(drule subsetD[OF ifex_variable_set_dings_ss])
+	  apply(subgoal_tac "select_lowest (\<Union>(ifex_variable_set ` {x, t, e})) < xb")
+	   apply fast
+	  apply(rule hlp1)
+	  apply blast
+	 apply(subgoal_tac "select_lowest (\<Union>(ifex_variable_set ` {x, t, e})) < xb")
+	  apply fast
+	 apply(rule hlp1[where vl=False])
+	 apply(drule subsetD[OF ifex_variable_set_dings_ss])
+	 apply blast
+	apply(meson restrict_ordner_invar)
+done
 
 lemma "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
