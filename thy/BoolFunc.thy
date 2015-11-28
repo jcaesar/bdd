@@ -29,9 +29,9 @@ definition "bf_xor a b \<equiv> bf_ite a (bf_not b) b"
 definition "bf_bipl a b \<equiv> bf_ite a b (bf_not b)"
 
 (* Just some fun with Shannon, for the sake of Brace90's Section 4.4. *)
-type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool"
-definition "bf2_ithvar i \<equiv> (\<lambda>v. v i) :: boolfunc2"
-definition "bf2_restrict (i::nat) (val::bool) (func::boolfunc2) \<equiv> (\<lambda>v. func (v(i:=val)))"
+type_synonym 'a boolfunc2 = "('a \<Rightarrow> bool) \<Rightarrow> bool"
+definition "bf2_ithvar i \<equiv> (\<lambda>v. v i) :: 'a boolfunc2"
+definition "bf2_restrict (i::'a) (val::bool) (func::'a boolfunc2) \<equiv> (\<lambda>v. func (v(i:=val)))"
 definition "bf2_decompose f i \<equiv> bf_or (bf_and (bf2_restrict i True f) (bf2_ithvar i)) 
                                       (bf_and (bf2_restrict i False f) (bf_not (bf2_ithvar i)))"
 lemma shannon_decomposition: "bf2_decompose f i = f"
@@ -43,9 +43,9 @@ lemma shannon_decomposition: "bf2_decompose f i = f"
 
 (* so technically, boolfunc2 is abstract and boolfunc is an implementation? Or is it the other way? *)
 value "upt 3 10"
-definition abstract_bf_bf2 :: "nat \<Rightarrow> boolfunc \<Rightarrow> boolfunc2"
+definition abstract_bf_bf2 :: "nat \<Rightarrow> boolfunc \<Rightarrow> nat boolfunc2"
 where "abstract_bf_bf2 arity bf v = bf (map v (upt 0 arity))"
-definition concretize_bf2_bf :: "boolfunc2 \<Rightarrow> boolfunc"
+definition concretize_bf2_bf :: "nat boolfunc2 \<Rightarrow> boolfunc"
 where "concretize_bf2_bf bf l = bf (\<lambda>i. l ! i)"
 lemma "concretize_bf2_bf (abstract_bf_bf2 (length l) bf) l = bf l"
 	unfolding abstract_bf_bf2_def concretize_bf2_bf_def
@@ -57,8 +57,9 @@ lemma "bf_ite (concretize_bf2_bf bf1) (concretize_bf2_bf bf2) (concretize_bf2_bf
 	by clarify
 
 (* Some more Brace90's Section 4.4: This is basically how to recursively implement ite *)
-lemma bf_ite_rec:
-	shows "bf_ite F G H = bf_ite (bf2_ithvar i) 
+lemma brace90shannon:
+	assumes "Z = bf_ite F G H"
+	shows "Z = bf_ite (bf2_ithvar i) 
 	                  (bf_ite (bf2_restrict i True F) (bf2_restrict i True G) (bf2_restrict i True H))
 	                  (bf_ite (bf2_restrict i False F) (bf2_restrict i False G) (bf2_restrict i False H))"
 	using assms
@@ -66,4 +67,6 @@ lemma bf_ite_rec:
 	unfolding bf2_decompose_def bf2_restrict_def bf2_ithvar_def
 	unfolding bf_or_def bf_and_def bf_not_def bf_ite_def bf_True_def bf_False_def
 	by(simp_all add: fun_upd_idem)
+	
+
 end
