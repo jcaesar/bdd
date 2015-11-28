@@ -175,6 +175,12 @@ unfolding val_ifex.simps
 unfolding ordner.simps
 unfolding bf2_restrict_def
 oops
+lemma ifex_bf2_construct: "(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow> (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow> ordner (IF x tb eb) \<Longrightarrow> (\<lambda>as. if as x then ta as else ea as, IF x tb eb) \<in> ifex_bf2_rel"
+	unfolding fun_eq_iff const_def
+	unfolding ifex_bf2_rel_def
+	by simp
+	
+lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unfolding ifex_bf2_rel_def by simp
 	
 lemma "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
@@ -182,18 +188,26 @@ lemma "
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(bf_ite ia ta ea, dings ib tb eb) \<in> ifex_bf2_rel"
 apply(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
-apply(frule rel_true_false(1))
-apply(simp only: dings.simps bf_ite_def const_def if_True)
-apply(drule rel_true_false(2))
-apply(simp only: dings.simps bf_ite_def const_def if_False)
+apply(frule rel_true_false, simp only: dings.simps bf_ite_def const_def if_True if_False)
+apply(frule rel_true_false, simp only: dings.simps bf_ite_def const_def if_True if_False)
 proof -
 	case goal1
-	let ?strtr = "select_lowest (\<Union>(ifex_variable_set ` {IF iv it ie, tb, eb}))"
-	note goal1(1)[OF refl _ restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
-	     goal1(2)[OF refl _ restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+	let ?strtr = "select_lowest (\<Union>(ifex_variable_set ` {IF iv it ie, t, e}))"
+	have mrdr: "ordner (IF ?strtr (dings (restrict (IF iv it ie) ?strtr True) (restrict t ?strtr True) (restrict e ?strtr True))
+                                  (dings (restrict (IF iv it ie) ?strtr False) (restrict t ?strtr False) (restrict e ?strtr False)))"
+                                  unfolding ordner.simps
+                                  using ordner_implied[OF goal1(3)] ordner_implied[OF goal1(4)] ordner_implied[OF goal1(5)] 
+                                  sorry
+    have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
+                                   else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
+               = bf_ite ia ta ea"
+               unfolding bf_ite_def bf2_restrict_def fun_eq_iff
+               by(simp add: fun_upd_idem)+
+	note goal1(1)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+	     goal1(2)[OF refl refl restrict_ifex_bf2_rel[OF goal1(3)] restrict_ifex_bf2_rel[OF goal1(4)] restrict_ifex_bf2_rel [OF goal1(5)]]
+	note ifex_bf2_construct[OF this mrdr] 
 	thus ?case
-	unfolding dings.simps
-	apply(subst Let_def)
+	unfolding dings.simps Let_def kll by blast
 oops
 
 fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> bool \<Rightarrow> 'a ifex" where
@@ -211,8 +225,6 @@ qed simp_all
 
 lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) val"
 	using restrict_untouched_id by fastforce (* fastforce ftw *)
-
-
 
 inductive dings' :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
 dings_true:   "dings' t Trueif t e" |
