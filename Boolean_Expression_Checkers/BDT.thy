@@ -308,19 +308,19 @@ lemma "ordner (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_
 
 (* INDUCTIVE DEFINITION *)
 
+abbreviation ifex_variables_ite where 
+  "ifex_variables_ite i t e \<equiv> 
+   ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+
 inductive ind_ite :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
 ind_ite_true:   "ind_ite t Trueif t e" |
 ind_ite_false:  "ind_ite e Falseif t e" |
-ind_ite_if:     "x \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e) \<Longrightarrow>
-   \<forall>v \<in> (ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e). x \<le> v \<Longrightarrow>
+ind_ite_if:     "x \<in> ifex_variables_ite i t e \<Longrightarrow>
+   \<forall>v \<in> ifex_variables_ite i t e. x \<le> v \<Longrightarrow>
    i = IF iv tifex eifex \<Longrightarrow>
    ind_ite l (restrict i x True) (restrict t x True) (restrict e x True) \<Longrightarrow>
    ind_ite r (restrict i x False) (restrict t x False) (restrict e x False) \<Longrightarrow>
    ind_ite (IF x l r) i t e"
-
-abbreviation ifex_variables_ite where 
-  "ifex_variables_ite i t e \<equiv> 
-   ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
 
 lemma ifex_variable_set_union_image_equi:
   "\<Union>(ifex_variable_set ` {i,t,e}) =
@@ -377,29 +377,27 @@ value "dings (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
 
 lemma ind_ite_variables_subset: "ind_ite b i t e \<Longrightarrow> 
   ifex_variable_set b \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
-  proof(induction rule: ind_ite.induct)
+proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tv ev l r) 
     from this(6,7) have 
-         "ifex_variable_set (IF x l r) = {x} \<union> ifex_variable_set l \<union> ifex_variable_set r"
-         "ifex_variable_set l \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
-         "ifex_variable_set r \<subseteq> ifex_variable_set i \<union> ifex_variable_set t \<union> ifex_variable_set e"
+         "ifex_variable_set l \<subseteq> ifex_variables_ite i t e"
+         "ifex_variable_set r \<subseteq> ifex_variables_ite i t e"
         using restrict_variables_subset[of i x True] restrict_variables_subset[of t x True] 
               restrict_variables_subset[of e x True] restrict_variables_subset[of i x False]
               restrict_variables_subset[of t x False] restrict_variables_subset[of e x False]
-        by auto
+        by (auto)
      with ind_ite_if(1) show ?case by simp
 qed (auto)
 
-lemma ind_ite_not_element: "ind_ite b i t e \<Longrightarrow>
-  x \<notin> ifex_variable_set  i \<Longrightarrow> x \<notin> ifex_variable_set t  \<Longrightarrow> x \<notin> ifex_variable_set e  \<Longrightarrow>
-  x \<notin> ifex_variable_set b"
+lemma ind_ite_not_element: "ind_ite b i t e \<Longrightarrow> x \<notin> ifex_variables_ite i t e  \<Longrightarrow>
+                            x \<notin> ifex_variable_set b"
 proof(induction arbitrary: x rule: ind_ite.induct)
   case(ind_ite_if y i t e iv tv ev l r) 
-    from this(1,8,9,10) this(6)[of x] this(7)[of x]
+    from this(1,8) this(6)[of x] this(7)[of x]
     have "x \<noteq> y" "x \<notin> ifex_variable_set l" "x \<notin> ifex_variable_set r"
-      using restrict_variables_subset contra_subsetD by(fastforce)+
+      using restrict_variables_subset contra_subsetD by (fastforce)+
     thus ?case by simp
-qed (blast)
+qed (auto)
 
 lemma ind_ite_ordner: "ind_ite b i t e \<Longrightarrow> ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner b"
 proof(induction rule: ind_ite.induct)
