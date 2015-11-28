@@ -235,10 +235,8 @@ next
 	case False
 	let ?vs = "\<Union>(ifex_variable_set ` k)"
 	have "is_lowest_element (select_lowest ?vs) ?vs" 
-		apply(rule select_is_lowest) 
-		using finite_ifex_variable_set fin apply blast 
-		using el apply force
-	done
+		using finite_ifex_variable_set fin el 
+		by(force intro: select_is_lowest)
 	moreover have ne: "select_lowest ?vs \<notin> ?a1s" using not_element_restrict by fast
 	moreover have "\<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_variable_set ` k))" 
 		using restrict_variables_subset by fast
@@ -247,7 +245,7 @@ next
 				using a1 
 		unfolding is_lowest_element_def
 		unfolding Ball_def
-		by fastforce
+		by(auto dest: le_neq_trans)
 qed
 
 lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
@@ -365,11 +363,10 @@ qed (auto simp add: ind_ite.intros)
 lemma "dings i t e = b \<longleftrightarrow> ind_ite b i t e"
   using pleasecombinemewith1 pleasecombinemewith2 by blast
 
-lemma "ind_ite Falseif Trueif Falseif Trueif" apply(rule ind_ite_true) done
+lemma "ind_ite Falseif Trueif Falseif Trueif" by(force intro: ind_ite.intros)
 
 lemma "ind_ite (IF 1 (IF 2 Falseif Trueif) Trueif) 
-              (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
-  apply(rule) apply(force) apply(auto) apply(rule) apply(auto) using ind_ite.intros apply(auto) done
+              (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)" by(force intro: ind_ite.intros)
 
 value "dings (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
 
