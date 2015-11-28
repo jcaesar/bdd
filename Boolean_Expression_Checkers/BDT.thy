@@ -182,10 +182,14 @@ lemma ifex_bf2_construct: "(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow> (ea, eb
 	
 lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unfolding ifex_bf2_rel_def by simp
 
-lemma restrict_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
-sorry
-
 lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
+
+lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
+	unfolding single_valued_def
+	unfolding ifex_bf2_rel_def
+	unfolding converse_unfold
+	unfolding in_rel_def[symmetric]  in_rel_Collect_split_eq
+	by blast
 
 lemma ifex_variable_set_dings_ss: "ifex_variable_set (dings i t e) \<subseteq> \<Union>(ifex_variable_set ` {i, t, e})"
 apply(induction i t e rule: dings.induct)
@@ -212,6 +216,12 @@ next
 		using restrict_variables_subset by fastforce
 qed
 
+
+lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
+apply(induction i t e rule: dings.induct)
+apply simp_all[2]
+sorry
+
 lemma hlp1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)
 	\<Longrightarrow> select_lowest (\<Union>(ifex_variable_set ` k)) < x"
 sorry
@@ -230,7 +240,7 @@ proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
 		by(rule conjI, rule, unfold Un_iff, erule disjE)
 		    (((drule subsetD[OF ifex_variable_set_dings_ss], 
 			unfold img_three, meson hlp1[where k = "{IF iv it ie, t, e}", unfolded img_three])+),
-			metis restrict_ordner_invar restrict_dings_invar ordner_implied goal1(3,4,5))
+			metis restrict_ordner_invar order_dings_invar ordner_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
                = bf_ite ia ta ea"
