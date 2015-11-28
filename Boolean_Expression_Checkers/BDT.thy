@@ -184,6 +184,7 @@ lemma ordner_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ordner b" unf
 
 lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
 lemma Un_three: "\<Union>{a, b, c} = a \<union> b \<union> c" by auto
+lemma finite_three: "finite {a, b, c}" by simp
 
 lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 	unfolding single_valued_def
@@ -221,9 +222,22 @@ lemma Let_keeper: "f (let x = a in b x) = (let x = a in f (b x))" by simp
 lemma Let_ander: "(let x = a in b x \<and> c x) = ((let x = a in b x) \<and> (let x = a in c x))" by simp
 lemma Let2assm: "(\<And>x. x = foo \<Longrightarrow> f x) \<Longrightarrow> let x = foo in f x" by simp
 
-lemma hlp1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)
-	\<Longrightarrow> select_lowest (\<Union>(ifex_variable_set ` k)) < x"
-sorry
+lemma hlp1: 
+	assumes fin: "finite k"
+	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_variable_set (restrict vr (select_lowest (\<Union>(ifex_variable_set ` k))) vl)) ` k)"
+	shows "select_lowest (\<Union>(ifex_variable_set ` k)) < x"
+proof(cases "k = {}")
+	case True
+	have False using a1 unfolding True by simp
+	thus ?thesis ..
+next
+	case False
+	let ?vs = "\<Union>(ifex_variable_set ` k)"
+	have "is_lowest_element (select_lowest ?vs) ?vs" 
+		apply(rule select_is_lowest) 
+		using finite_ifex_variable_set fin apply blast sorry
+	thus ?thesis sorry
+qed
 
 lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> ordner e \<Longrightarrow> ordner (dings i t e)"
 	apply(induction i t e rule: dings.induct)
@@ -237,15 +251,8 @@ lemma order_dings_invar: "ordner i \<Longrightarrow> ordner t \<Longrightarrow> 
 	 apply(unfold Un_iff)
 	 apply(erule disjE)
 	  apply(drule subsetD[OF ifex_variable_set_dings_ss])
-	  apply(subgoal_tac "select_lowest (\<Union>(ifex_variable_set ` {x, t, e})) < xb")
-	   apply fast
-	  apply(rule hlp1)
-	  apply blast
-	 apply(subgoal_tac "select_lowest (\<Union>(ifex_variable_set ` {x, t, e})) < xb")
-	  apply fast
-	 apply(rule hlp1[where vl=False])
-	 apply(drule subsetD[OF ifex_variable_set_dings_ss])
-	 apply blast
+	  apply(blast intro: hlp1[OF finite_three, where vl=True])
+	 apply(blast intro: hlp1[OF finite_three, where vl=False] dest: subsetD[OF ifex_variable_set_dings_ss])
 	apply(meson restrict_ordner_invar)
 done
 
@@ -262,7 +269,7 @@ proof(induction ib tb eb arbitrary: ia ta ea rule: dings.induct)
 		unfolding ordner.simps
 		by(rule conjI, rule, unfold Un_iff, erule disjE)
 		    (((drule subsetD[OF ifex_variable_set_dings_ss], 
-			unfold img_three, meson hlp1[where k = "{IF iv it ie, t, e}", unfolded img_three])+),
+			unfold img_three, meson hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three])+),
 			metis restrict_ordner_invar order_dings_invar ordner_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
