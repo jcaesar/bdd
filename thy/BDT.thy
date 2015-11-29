@@ -285,64 +285,50 @@ lemma ifex_var_set_union_image_equi:
    ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
   by blast
 
-lemma pleasecombinemewith2: "ind_ite b i t e \<Longrightarrow> ifex_ite i t e = b"
+lemma "ifex_ite i t e = b \<longleftrightarrow> ind_ite b i t e"
+proof(rule iffI)
+assume "ifex_ite i t e = b" thus "ind_ite b i t e"
+proof(induct arbitrary: b rule: ifex_ite.induct)
+  case("3" iv tifex eifex t e) note ifex_ite_IF = "3"
+  obtain i y l r 
+    where i_def: "i = IF iv tifex eifex" and
+          y_def: "y = select_lowest (\<Union>(ifex_var_set ` {i,t,e}))" and
+          r_def: "r = ifex_ite (restrict i y False) (restrict t y False) (restrict e y False)" and
+          l_def: "l = ifex_ite (restrict i y True) (restrict t y True) (restrict e y True)" by simp
+  from i_def have "finite (ifex_variables_ite i t e)" "ifex_variables_ite i t e \<noteq> {}"
+    by (simp_all add: finite_ifex_var_set)
+  from select_is_lowest[OF this(1) this(2)] y_def
+    have smallest: "y \<in> ifex_variables_ite i t e" "\<forall>v \<in> ifex_variables_ite i t e. y \<le> v"
+    unfolding is_lowest_element_def by (simp_all only: ifex_var_set_union_image_equi) (simp)
+  from l_def r_def i_def y_def ifex_ite_IF(1)[of i y l] ifex_ite_IF(2)[of i y r] 
+    have landr: "ind_ite l (restrict i y True) (restrict t y True) (restrict e y True)"
+                "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" by auto
+  from ifex_ite_IF(3) l_def r_def y_def i_def have "b = IF y l r" by simp
+  with ind_ite_if[OF smallest i_def landr] show ?case using i_def by simp
+qed (auto simp add: ind_ite.intros)
+next
+assume "ind_ite b i t e" thus "ifex_ite i t e = b"
 proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tifex eifex l r)
     from this(3) have "ifex_variables_ite i t e \<noteq> {}" "finite (ifex_variables_ite i t e)"
       using finite_ifex_var_set by auto
-    from  select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2)
+    from select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2)
       have "select_lowest (\<Union>(ifex_var_set ` {i, t, e})) = x"
       unfolding is_lowest_element_def by (subst ifex_var_set_union_image_equi) force
     from this ind_ite_if(3)
       have "select_lowest (\<Union>(ifex_var_set ` {IF iv tifex eifex, t, e})) = x" by simp
     from this ind_ite_if(3,6,7) show ?case by simp
 qed (auto)
-
-lemma pleasecombinemewith1: "ifex_ite i t e = b \<Longrightarrow> ind_ite b i t e"
-proof(induct arbitrary: b rule: ifex_ite.induct)
-  case("3" iv tifex eifex t e) note ifex_ite_IF = "3"
-  obtain i where i_def: "i = IF iv tifex eifex" by simp
-  then obtain y where y_def: "y = select_lowest (\<Union>(ifex_var_set ` {i,t,e}))" by simp
-  from i_def have "finite (ifex_variables_ite i t e)" "ifex_variables_ite i t e \<noteq> {}"
-    by (simp_all add: finite_ifex_var_set)
-  from select_is_lowest[OF this(1) this(2)] y_def
-    have smallest: "y \<in> ifex_variables_ite i t e" "\<forall>v \<in> ifex_variables_ite i t e. y \<le> v"
-    unfolding is_lowest_element_def by (simp_all only: ifex_var_set_union_image_equi) (simp)
-  obtain l where l_def: "l = ifex_ite (restrict i y True) (restrict t y True) (restrict e y True)"
-    by simp
-  with i_def y_def ifex_ite_IF(1)[of i y l] 
-    have left: "ind_ite l (restrict i y True) (restrict t y True) (restrict e y True)" by simp
-  obtain r where r_def: "r = ifex_ite (restrict i y False) (restrict t y False) (restrict e y False)" 
-    by simp
-  with i_def y_def ifex_ite_IF(2)[of i y r] 
-    have right: "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" by simp
-  from ifex_ite_IF(3) l_def r_def y_def i_def have "b = IF y l r" by simp
-  with ind_ite_if[OF smallest i_def left right] show ?case using i_def by simp
-qed (auto simp add: ind_ite.intros)
-
-lemma "ifex_ite i t e = b \<longleftrightarrow> ind_ite b i t e"
-  using pleasecombinemewith1 pleasecombinemewith2 by blast
-
-lemma "ind_ite Falseif Trueif Falseif Trueif" by(force intro: ind_ite.intros)
-
-lemma "ind_ite (IF 1 (IF 2 Falseif Trueif) Trueif) 
-              (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)" by(force intro: ind_ite.intros)
-
-value "ifex_ite (IF (1::nat) (IF 2 Trueif Falseif) Falseif) (Falseif) (Trueif)"
-
-(* The following proofs could probably be very easily automated *)
+qed
 
 lemma ind_ite_variables_subset: "ind_ite b i t e \<Longrightarrow> 
   ifex_var_set b \<subseteq> ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
 proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tv ev l r) 
-    from this(6,7) have 
+    from this(6,7) restrict_variables_subset[of _ x _] have 
          "ifex_var_set l \<subseteq> ifex_variables_ite i t e"
          "ifex_var_set r \<subseteq> ifex_variables_ite i t e"
-        using restrict_variables_subset[of i x True] restrict_variables_subset[of t x True] 
-              restrict_variables_subset[of e x True] restrict_variables_subset[of i x False]
-              restrict_variables_subset[of t x False] restrict_variables_subset[of e x False]
-        by (auto)
+        by (blast)+
      with ind_ite_if(1) show ?case by simp
 qed (auto)
 
@@ -356,9 +342,12 @@ proof(induction arbitrary: x rule: ind_ite.induct)
     thus ?case by simp
 qed (auto)
 
-lemma ind_ite_ifex_ordered: "ind_ite b i t e \<Longrightarrow> ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered b"
+lemma ind_ite_ifex_ordered: "ind_ite b i t e \<Longrightarrow> 
+                             ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> 
+                             ifex_ordered b"
 proof(induction rule: ind_ite.induct)
-  case(ind_ite_if x i t e iv tv ev l r) from this(6,7,8,9,10) have 0: "ifex_ordered l" "ifex_ordered r" 
+  case(ind_ite_if x i t e iv tv ev l r) from this(6,7,8,9,10) 
+    have 0: "ifex_ordered l" "ifex_ordered r" 
     using restrict_ifex_ordered_invar by auto
   from ind_ite_if(4,5) have 1:"x \<notin> ifex_var_set l" "x \<notin> ifex_var_set r" 
      using ind_ite_not_element not_element_restrict by fastforce+
@@ -369,35 +358,43 @@ proof(induction rule: ind_ite.induct)
   from 0 1 2 3 show ?case using le_neq_trans by fastforce
 qed (simp)
 
-lemma helperino: "ass y = x \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y x ia) (bf2_restrict y x ta) 
-                     (bf2_restrict y x ea) ass"
+lemma bf_ite_assignment_invar:
+  "ass y = x \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y x ia) (bf2_restrict y x ta) 
+                                              (bf2_restrict y x ea) ass"
   unfolding bf_ite_def bf2_restrict_def by force
+
 lemma ind_ite_val_invar: "ind_ite b ib tb eb \<Longrightarrow>
-       \<forall>ass. ia ass = val_ifex ib ass \<Longrightarrow>
-       \<forall>ass. ta ass = val_ifex tb ass \<Longrightarrow>
-       \<forall>ass. ea ass = val_ifex eb ass \<Longrightarrow>
-       \<forall>ass. (bf_ite ia ta ea) ass = val_ifex b ass"
+  \<forall>ass. ia ass = val_ifex ib ass \<Longrightarrow>
+  \<forall>ass. ta ass = val_ifex tb ass \<Longrightarrow>
+  \<forall>ass. ea ass = val_ifex eb ass \<Longrightarrow>
+  \<forall>ass. (bf_ite ia ta ea) ass = val_ifex b ass"
 proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
   case(ind_ite_if y i t e iv tv ev l r)
-  note ffs = restrict_val_invar[OF ind_ite_if(8)] restrict_val_invar[OF ind_ite_if(9)] restrict_val_invar[OF ind_ite_if(10)]
-  from ind_ite_if(6)[of "bf2_restrict y True ia" "bf2_restrict y True ta" "bf2_restrict y True ea"] ffs[of y True]
-  have 0: "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) (bf2_restrict y True ea) ass 
-              = val_ifex l ass" by fastforce
-  note ffs = restrict_val_invar[OF ind_ite_if(8)] restrict_val_invar[OF ind_ite_if(9)] restrict_val_invar[OF ind_ite_if(10)]
-  from ind_ite_if(7)[of "bf2_restrict y False ia" "bf2_restrict y False ta" "bf2_restrict y False ea"] ffs[of y False]
-  have 1: "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) (bf2_restrict y False ea) ass 
-              = val_ifex r ass" by fastforce
-  have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia)  (bf2_restrict y True ta)  (bf2_restrict y True ea) ass"
-     "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) (bf2_restrict y False ea) ass"
-     using helperino[of _ y _ ia ta ea] by force+
-  with 0 1 show ?case by simp
+  note rvi_spec = restrict_val_invar[OF ind_ite_if(8)]
+                  restrict_val_invar[OF ind_ite_if(9)]
+                  restrict_val_invar[OF ind_ite_if(10)]
+  from ind_ite_if(6) ind_ite_if(7) rvi_spec
+    have 0: "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta)
+                          (bf2_restrict y True ea) ass
+                   = val_ifex l ass" 
+            "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta)
+                          (bf2_restrict y False ea) ass
+                   = val_ifex r ass" by fastforce+
+  have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass =
+                         bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta)
+                                (bf2_restrict y True ea) ass"
+       "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass =
+                           bf_ite (bf2_restrict y False ia)
+                                  (bf2_restrict y False ta) (bf2_restrict y False ea) ass"
+     using bf_ite_assignment_invar[of _ y _ ia ta ea] by force+
+  with 0 show ?case by simp
 qed (auto simp add: bf_ite_def)
 
 lemma "ind_ite b ib tb eb \<Longrightarrow>
        (ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
-	     (ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
-	     (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
-	     (bf_ite ia ta ea, b) \<in> ifex_bf2_rel"
+       (ta, tb) \<in> ifex_bf2_rel \<Longrightarrow>
+       (ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
+       (bf_ite ia ta ea, b) \<in> ifex_bf2_rel"
   unfolding ifex_bf2_rel_def by (simp add: ind_ite_ifex_ordered ind_ite_val_invar)
 
 end
