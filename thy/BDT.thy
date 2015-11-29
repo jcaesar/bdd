@@ -27,14 +27,14 @@ definition select_lowest :: "'a set \<Rightarrow> 'a :: linorder" where "select_
 lemma select_hlp_ex: "finite (S :: ('a :: linorder) set)  \<Longrightarrow> S \<noteq> {} \<Longrightarrow> \<exists>k. k \<in> {m. m \<in> S \<and> (\<forall>om \<in> S. m \<le> om)}"
 using Min.coboundedI Min_in mem_Collect_eq by blast
 lemma card2: "2 \<le> card (S :: ('a :: linorder) set) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> a < b"
-proof - (* might be more beautifully reprovable under the use of *) thm card_eq_SucD
-	assume a: "2 \<le> card S"
-	then obtain x where x: "x \<in> S" using card_eq_0_iff by fastforce
-	then obtain S' where S': "x \<notin> S'" "S = S' \<union> {x}" using mk_disjoint_insert by force
-	with a have "1 \<le> card S'" by (metis One_nat_def Suc_1 Un_insert_right card_infinite card_insert_disjoint finite_Un not_less_eq_eq one_le_numeral sup_bot.right_neutral)
-	then obtain y where y: "y \<in> S'" using card_eq_0_iff by fastforce
-	then have "x \<noteq> y" "y \<in> S" using S' by blast+
-	with x show ?thesis by (meson neq_iff)
+proof -
+	assume "2 \<le> card S"
+	then obtain k where a: "card S = Suc (Suc k)" using Nat.le_iff_add by auto
+	from card_eq_SucD[OF this]    obtain a B  where aB: "S = insert a B"  "a \<notin> B"  "card B = Suc k" by blast
+	from card_eq_SucD[OF this(3)] obtain b B' where bB: "B = insert b B'" "b \<notin> B'" "card B' = k"    by blast
+	have "a \<noteq> b" using aB(2) bB(1) by simp
+	moreover have "a \<in> S" "b \<in> S" using aB(1) bB(1) by simp_all
+	ultimately show ?thesis using aB(1) bB(1) by(meson neq_iff)
 qed
 lemma select_set_ov: "finite a \<Longrightarrow> (a :: ('a :: linorder) set) \<noteq> {} \<Longrightarrow> card {m. m \<in> a \<and> (\<forall>om \<in> a. m \<le> om)} = 1"
 proof(rule ccontr)
@@ -419,29 +419,18 @@ lemma ind_ite_val_invar: "ind_ite b ib tb eb \<Longrightarrow>
        \<forall>ass. (bf_ite ia ta ea) ass = val_ifex b ass"
 proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
   case(ind_ite_if y i t e iv tv ev l r)
-  note ffs1 = restrict_val_invar[OF ind_ite_if(8)] and (* ffs = for fucks sake *)
-       ffs2 = restrict_val_invar[OF ind_ite_if(9)] and
-       ffs3 = restrict_val_invar[OF ind_ite_if(10)]
-  from ind_ite_if(6)[of "bf2_restrict y True ia" "bf2_restrict y True ta" "bf2_restrict y True ea"]
-       ffs1[of y True] ffs2 [of y True] ffs3[of y True]
-  have 0: "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
-                     (bf2_restrict y True ea) ass 
+  note ffs = restrict_val_invar[OF ind_ite_if(8)] restrict_val_invar[OF ind_ite_if(9)] restrict_val_invar[OF ind_ite_if(10)]
+  from ind_ite_if(6)[of "bf2_restrict y True ia" "bf2_restrict y True ta" "bf2_restrict y True ea"] ffs[of y True]
+  have 0: "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) (bf2_restrict y True ea) ass 
               = val_ifex l ass" by fastforce
-  note ffs1 = restrict_val_invar[OF ind_ite_if(8)] and (* ffs = for fucks sake *)
-       ffs2 = restrict_val_invar[OF ind_ite_if(9)] and
-       ffs3 = restrict_val_invar[OF ind_ite_if(10)]
-  from ind_ite_if(7)[of "bf2_restrict y False ia" 
-                        "bf2_restrict y False ta" "bf2_restrict y False ea"]
-       ffs1[of y False] ffs2 [of y False] ffs3[of y False]
-  have 1: "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
-                     (bf2_restrict y False ea) ass 
+  note ffs = restrict_val_invar[OF ind_ite_if(8)] restrict_val_invar[OF ind_ite_if(9)] restrict_val_invar[OF ind_ite_if(10)]
+  from ind_ite_if(7)[of "bf2_restrict y False ia" "bf2_restrict y False ta" "bf2_restrict y False ea"] ffs[of y False]
+  have 1: "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) (bf2_restrict y False ea) ass 
               = val_ifex r ass" by fastforce
-  have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta) 
-                     (bf2_restrict y True ea) ass"
-                    "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
-                     (bf2_restrict y False ea) ass" using helperino[of _ y True ia ta ea]
-                                                          helperino[of _ y False ia ta ea] by force+
-  from 0 1 this show ?case by simp
+  have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y True ia)  (bf2_restrict y True ta)  (bf2_restrict y True ea) ass"
+     "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass = bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) (bf2_restrict y False ea) ass"
+     using helperino[of _ y _ ia ta ea] by force+
+  with 0 1 show ?case by simp
 qed (auto simp add: bf_ite_def)
 
 lemma "ind_ite b ib tb eb \<Longrightarrow>
