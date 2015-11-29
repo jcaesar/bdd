@@ -312,11 +312,9 @@ proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tifex eifex l r)
     from this(3) have "ifex_variables_ite i t e \<noteq> {}" "finite (ifex_variables_ite i t e)"
       using finite_ifex_var_set by auto
-    from select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2)
-      have "select_lowest (\<Union>(ifex_var_set ` {i, t, e})) = x"
+    from select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2,3)
+      have "select_lowest (\<Union>(ifex_var_set ` {IF iv tifex eifex, t, e})) = x"
       unfolding is_lowest_element_def by (subst ifex_var_set_union_image_equi) force
-    from this ind_ite_if(3)
-      have "select_lowest (\<Union>(ifex_var_set ` {IF iv tifex eifex, t, e})) = x" by simp
     from this ind_ite_if(3,6,7) show ?case by simp
 qed (auto)
 qed
