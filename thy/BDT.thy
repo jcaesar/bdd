@@ -26,7 +26,7 @@ definition "is_lowest_element e S = (e \<in> S \<and> (\<forall>oe \<in> S. e \<
 definition select_lowest :: "'a set \<Rightarrow> 'a :: linorder" where "select_lowest a = the_elem {m. m \<in> a \<and> (\<forall>om \<in> a. m \<le> om)}"
 lemma select_hlp_ex: "finite (S :: ('a :: linorder) set)  \<Longrightarrow> S \<noteq> {} \<Longrightarrow> \<exists>k. k \<in> {m. m \<in> S \<and> (\<forall>om \<in> S. m \<le> om)}"
 using Min.coboundedI Min_in mem_Collect_eq by blast
-lemma card2: "2 \<le> card (S :: ('a :: linorder) set) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> a < b"
+lemma card2_ordered_pair: "2 \<le> card (S :: ('a :: linorder) set) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> a < b"
 proof -
 	assume "2 \<le> card S"
 	then obtain k where a: "card S = Suc (Suc k)" using Nat.le_iff_add by auto
@@ -47,7 +47,7 @@ proof(rule ccontr)
 	proof(rule ccontr)
 		case goal1
 		obtain a b where ab: "a \<in> ?m" "b \<in> ?m" "a < b" 
-		using card2[OF leI[OF goal1]] by blast
+		using card2_ordered_pair[OF leI[OF goal1]] by blast
 		thus False by fastforce
 	qed
 	ultimately show False using goal1(3) by linarith
@@ -60,10 +60,15 @@ proof -
 	then obtain l where l: "{m \<in> S. \<forall>om\<in>S. m \<le> om} = {l}" by (metis (no_types, lifting) One_nat_def card_eq_SucD)
 	thus ?case unfolding select_lowest_def by auto 
 qed
+(* Yes, this is the same as Min, but it works without 'a sort *)
+lemma "finite S \<Longrightarrow> S \<noteq> {} \<Longrightarrow> Min S = select_lowest S"
+	by (meson Min_eqI is_lowest_element_def select_is_lowest)
+
 lemma finite_ifex_var_set: "finite (ifex_var_set k)" by(induction k) simp_all
 lemma nonempty_if_var_set: "ifex_var_set (IF v t e) \<noteq> {}" by simp
 lemma ifex_ite_select_helper: "i = (IF iv it ie) \<Longrightarrow> k = (\<Union>(ifex_var_set ` {i,t,e})) \<Longrightarrow> finite k \<and> k \<noteq> {}"
 	using finite_ifex_var_set nonempty_if_var_set by auto
+
 
 fun restrict where
   "restrict (IF v t e) var val = (let rt = restrict t var val; re = restrict e var val in
