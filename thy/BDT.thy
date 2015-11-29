@@ -370,24 +370,24 @@ lemma ind_ite_val_invar: "ind_ite b ib tb eb \<Longrightarrow>
   \<forall>ass. (bf_ite ia ta ea) ass = val_ifex b ass"
 proof(induction arbitrary: ia ta ea rule: ind_ite.induct)
   case(ind_ite_if y i t e iv tv ev l r)
-  note rvi_spec = restrict_val_invar[OF ind_ite_if(8)]
+  note rvi_mult = restrict_val_invar[OF ind_ite_if(8)]
                   restrict_val_invar[OF ind_ite_if(9)]
                   restrict_val_invar[OF ind_ite_if(10)]
-  from ind_ite_if(6) ind_ite_if(7) rvi_spec
-    have 0: "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta)
-                          (bf2_restrict y True ea) ass
-                   = val_ifex l ass" 
-            "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta)
-                          (bf2_restrict y False ea) ass
-                   = val_ifex r ass" by fastforce+
-  have "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass =
-                         bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta)
-                                (bf2_restrict y True ea) ass"
-       "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass =
-                           bf_ite (bf2_restrict y False ia)
-                                  (bf2_restrict y False ta) (bf2_restrict y False ea) ass"
-     using bf_ite_assignment_invar[of _ y _ ia ta ea] by force+
-  with 0 show ?case by simp
+  from ind_ite_if(6) ind_ite_if(7) rvi_mult bf_ite_assignment_invar[of _ y _ ia ta ea]
+    have "\<forall>ass. bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta)
+                       (bf2_restrict y True ea) ass
+                 = val_ifex l ass" 
+         "\<forall>ass. bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta)
+                       (bf2_restrict y False ea) ass
+                = val_ifex r ass"
+         "\<And>ass. ass y \<Longrightarrow> bf_ite ia ta ea ass =
+                           bf_ite (bf2_restrict y True ia) (bf2_restrict y True ta)
+                                  (bf2_restrict y True ea) ass"
+         "\<And>ass. \<not> ass y \<Longrightarrow> bf_ite ia ta ea ass =
+                             bf_ite (bf2_restrict y False ia) (bf2_restrict y False ta) 
+                                    (bf2_restrict y False ea) ass"
+       by fastforce+
+  thus ?case by simp
 qed (auto simp add: bf_ite_def)
 
 lemma "ind_ite b ib tb eb \<Longrightarrow>
