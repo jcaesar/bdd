@@ -1,6 +1,6 @@
 theory BDT
 imports Boolean_Expression_Checkers
-        "../thy/BoolFunc"
+        BoolFunc
 begin
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
