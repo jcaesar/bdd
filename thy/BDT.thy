@@ -1,6 +1,5 @@
 theory BDT
-imports Boolean_Expression_Checkers
-        BoolFunc
+imports Boolean_Expression_Checkers BoolFunc Min2
 begin
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
@@ -21,54 +20,10 @@ fun ifex_ordered :: "('a::linorder) ifex \<Rightarrow> bool" where
 definition ifex_bf2_rel where
   "ifex_bf2_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ifex_ordered b}"
 
-(* had we done ifex_variable_list instead of _set, we would have gotten out way easier\<dots> *)
-definition "is_lowest_element e S = (e \<in> S \<and> (\<forall>oe \<in> S. e \<le> oe))"
-definition select_lowest :: "'a set \<Rightarrow> 'a :: linorder" where "select_lowest a = the_elem {m. m \<in> a \<and> (\<forall>om \<in> a. m \<le> om)}"
-lemma select_hlp_ex: "finite (S :: ('a :: linorder) set)  \<Longrightarrow> S \<noteq> {} \<Longrightarrow> \<exists>k. k \<in> {m. m \<in> S \<and> (\<forall>om \<in> S. m \<le> om)}"
-using Min.coboundedI Min_in mem_Collect_eq by blast
-lemma card2_ordered_pair: "2 \<le> card (S :: ('a :: linorder) set) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> a < b"
-proof -
-	assume "2 \<le> card S"
-	then obtain k where a: "card S = Suc (Suc k)" using Nat.le_iff_add by auto
-	from card_eq_SucD[OF this]    obtain a B  where aB: "S = insert a B"  "a \<notin> B"  "card B = Suc k" by blast
-	from card_eq_SucD[OF this(3)] obtain b B' where bB: "B = insert b B'" "b \<notin> B'" "card B' = k"    by blast
-	have "a \<noteq> b" using aB(2) bB(1) by simp
-	moreover have "a \<in> S" "b \<in> S" using aB(1) bB(1) by simp_all
-	ultimately show ?thesis using aB(1) bB(1) by(meson neq_iff)
-qed
-lemma select_set_ov: "finite a \<Longrightarrow> (a :: ('a :: linorder) set) \<noteq> {} \<Longrightarrow> card {m. m \<in> a \<and> (\<forall>om \<in> a. m \<le> om)} = 1"
-proof(rule ccontr)
-	let ?m = "{m \<in> a. \<forall>om\<in>a. m \<le> om}"
-	case goal1
-	then obtain ae where ae: "ae \<in> a" by blast
-	note select_hlp_ex[OF goal1(1)  goal1(2)] then guess k ..
-	then have cns: "card ?m \<noteq> 0" using goal1(1) by auto
-	moreover have "card ?m < 2"
-	proof(rule ccontr)
-		case goal1
-		obtain a b where ab: "a \<in> ?m" "b \<in> ?m" "a < b" 
-		using card2_ordered_pair[OF leI[OF goal1]] by blast
-		thus False by fastforce
-	qed
-	ultimately show False using goal1(3) by linarith
-qed
-lemma select_is_lowest: "finite S \<Longrightarrow> S \<noteq> {} \<Longrightarrow> is_lowest_element (select_lowest S) S"
-unfolding is_lowest_element_def
-proof -
-	case goal1
-	note select_set_ov[OF goal1(1) goal1(2)]
-	then obtain l where l: "{m \<in> S. \<forall>om\<in>S. m \<le> om} = {l}" by (metis (no_types, lifting) One_nat_def card_eq_SucD)
-	thus ?case unfolding select_lowest_def by auto 
-qed
-(* Yes, this is the same as Min, but it works without 'a sort *)
-lemma "finite S \<Longrightarrow> S \<noteq> {} \<Longrightarrow> Min S = select_lowest S"
-	by (meson Min_eqI is_lowest_element_def select_is_lowest)
-
 lemma finite_ifex_var_set: "finite (ifex_var_set k)" by(induction k) simp_all
 lemma nonempty_if_var_set: "ifex_var_set (IF v t e) \<noteq> {}" by simp
 lemma ifex_ite_select_helper: "i = (IF iv it ie) \<Longrightarrow> k = (\<Union>(ifex_var_set ` {i,t,e})) \<Longrightarrow> finite k \<and> k \<noteq> {}"
 	using finite_ifex_var_set nonempty_if_var_set by auto
-
 
 fun restrict where
   "restrict (IF v t e) var val = (let rt = restrict t var val; re = restrict e var val in
