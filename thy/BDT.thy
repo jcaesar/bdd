@@ -395,4 +395,45 @@ lemma "ind_ite b ib tb eb \<Longrightarrow>
        (bf_ite ia ta ea, b) \<in> ifex_bf2_rel"
   unfolding ifex_bf2_rel_def by (simp add: ind_ite_ifex_ordered ind_ite_val_invar)
 
+fun ifex_minimal :: "'a ifex \<Rightarrow> bool" where
+  "ifex_minimal (IF v t e) = ((t \<noteq> e) & ifex_minimal t & ifex_minimal e)" |
+  "ifex_minimal Trueif = True" |
+  "ifex_minimal Falseif = True"
+
+lemma ifex_ordered_restrict_branches:
+  "ifex_ordered (IF x l r) \<Longrightarrow> restrict (IF x l r) x val = (if val then l else r)"
+  using restrict_untouched_id by fastforce
+
+lemma ifex_minimal_restrict_invar:
+       "ifex_ordered i \<Longrightarrow> ifex_minimal i \<Longrightarrow> \<forall>v \<in> ifex_var_set i. var \<le> v \<Longrightarrow>
+       ifex_minimal (restrict i var val)"
+proof(induction i)
+case (IF x i1 i2) show ?case
+proof(cases "var \<in> ifex_var_set (IF x i1 i2)")
+  case False 
+    with restrict_untouched_id have "(restrict (IF x i1 i2) var val) = (IF x i1 i2)" by fast
+    with IF(4) show ?thesis by simp
+  next
+  case True
+    with IF(3,5) have "var = x" apply(auto) using not_less by auto
+    with IF(3,4) show ?thesis using ifex_ordered_restrict_branches by fastforce
+  qed
+qed (auto)
+
+
+lemma "ind_ite b ib tb eb \<Longrightarrow> ifex_ordered ib \<Longrightarrow> ifex_ordered tb \<Longrightarrow> ifex_ordered eb \<Longrightarrow>
+       ifex_minimal ib \<Longrightarrow> ifex_minimal tb \<Longrightarrow> ifex_minimal eb \<Longrightarrow>
+       ifex_minimal b"
+proof(induction rule: ind_ite.induct)
+  case(ind_ite_if x i t e iv tifex eifex l r) 
+    then have lr_minimal: "ifex_minimal l" "ifex_minimal r"
+      using restrict_ifex_ordered_invar ifex_minimal_restrict_invar by(blast)+
+    show ?case
+    proof(cases "l = r")
+      case False with lr_minimal show ?thesis by auto
+    next
+      case True with ind_ite_if show ?thesis
+oops
+
+
 end
