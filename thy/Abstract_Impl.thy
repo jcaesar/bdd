@@ -60,9 +60,37 @@ apply(induction n arbitrary: ni s)
 apply(simp) apply(subst restrict_impl_opt.simps) apply(frule DESTRimpl_rule1) apply(simp)
 apply(simp) apply(subst restrict_impl_opt.simps) apply(frule DESTRimpl_rule2) apply(simp)
 apply(simp split del: split_if) apply(subst restrict_impl_opt.simps) apply(frule DESTRimpl_rule3) 
- apply(clarsimp split del: split_if)
-oops
-
+apply(clarsimp split del: split_if)
+proof -
+	case goal1
+	note goal1(1)[OF goal1(5)]
+	then obtain rnit s' where rnits: "restrict_impl_opt ni1 var val s = Some (rnit, s')" "(rnit, restrict n1 var val) \<in> R s'" "les s s'" by blast
+	from this(3) goal1(6) have "(ni2, n2) \<in> R s'" unfolding les_def by simp
+	note goal1(2)[OF this]
+	then obtain rnie s'' where rnies: "restrict_impl_opt ni2 var val s' = Some (rnie, s'')" "(rnie, restrict n2 var val) \<in> R s''"  "les s' s''" by blast
+	from this(3) rnits(2) have 1: "(rnit, restrict n1 var val) \<in> R s''" unfolding les_def by simp
+	obtain r s''' where rs: "IFimpl x1 rnit rnie s'' = (r,s''')" by force
+	have les: "les s s'''" using les_trans rnits(3) rnies(3) IFimpl_mono[OF 1 rnies(2) rs] by blast
+	show ?case
+		unfolding rnits(1)
+		unfolding bind_lunit
+		apply(split prod.splits, clarify)
+	unfolding rnies(1)
+	unfolding bind_lunit
+	apply(split prod.splits, clarify)
+	apply(cases  "x1 = var")
+	apply(simp only: refl if_True)
+	using les_def rnies rnits apply auto[1]
+	apply(simp only: refl if_False)
+	apply simp
+	apply rule
+	apply rule
+	apply(rule)
+	apply(simp add: rs)
+	using les IFimpl_rule[OF 1 rnies(2) rs]
+	apply simp
+	done
+qed
 
 end
 end
