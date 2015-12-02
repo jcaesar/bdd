@@ -264,10 +264,13 @@ lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<L
 	apply(subst ifex_ordered.simps)
 	apply(rule Let2assm)+
 	apply rule
-	 apply(b last intro: hlp1[OF finite_three] dest: subsetD[OF ifex_vars_ifex_ite_ss])
-	apply(meson restrict_ifex_ordered_invar)
+	 apply(unfold ball_Un Ball_def, clarify)
+	 apply(subgoal_tac "lowest_tops iv t e = Min (\<Union>(ifex_vars ` {IF iv it ie, t, e}))") 
+	  apply(simp only:)
+	  apply(blast intro: hlp1[OF finite_three] dest: subsetD[OF ifex_vars_ifex_ite_ss])
+	 apply(rule lowest_tops_eq[symmetric]) 
+	   apply(meson restrict_ifex_ordered_invar)+
 done
-sorry
 
 theorem "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
@@ -275,14 +278,17 @@ theorem "
 	(ea, eb) \<in> ifex_bf2_rel \<Longrightarrow>
 	(bf_ite ia ta ea, ifex_ite ib tb eb) \<in> ifex_bf2_rel"
 proof(induction ib tb eb arbitrary: ia ta ea rule: ifex_ite.induct)
-	case goal3 note goal1 = goal3
-	let ?strtr = "Min (\<Union>(ifex_vars ` {IF iv it ie, t, e}))"
+	case goal3
+	note laorder = ifex_ordered_implied[OF goal3(3)] ifex_ordered_implied[OF goal3(4)] ifex_ordered_implied[OF goal3(5)]
+	note goal1 = goal3
+	let ?strtr = "lowest_tops iv t e"
+	note ltb = lowest_tops_eq[symmetric, OF laorder]
 	have mrdr: "ifex_ordered (IF ?strtr (ifex_ite (restrict (IF iv it ie) ?strtr True) (restrict t ?strtr True) (restrict e ?strtr True))
                                   (ifex_ite (restrict (IF iv it ie) ?strtr False) (restrict t ?strtr False) (restrict e ?strtr False)))"
 		unfolding ifex_ordered.simps
 		by(rule conjI, rule, unfold Un_iff, erule disjE)
-		    (((drule subsetD[OF ifex_vars_ifex_ite_ss], 
-			unfold img_three, blast intro: hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three])+),
+			(((drule subsetD[OF ifex_vars_ifex_ite_ss] | 
+			(unfold ltb img_three, blast intro: hlp1[where k = "{IF iv it ie, t, e}", OF finite_three, unfolded img_three]))+),
 			metis restrict_ifex_ordered_invar order_ifex_ite_invar ifex_ordered_implied goal1(3,4,5))
     have kll: "(\<lambda>as. if as ?strtr then bf_ite (bf2_restrict ?strtr True ia) (bf2_restrict ?strtr True ta) (bf2_restrict ?strtr True ea) as
                                    else bf_ite (bf2_restrict ?strtr False ia) (bf2_restrict ?strtr False ta) (bf2_restrict ?strtr False ea) as) 
@@ -335,8 +341,8 @@ proof(induct arbitrary: b rule: ifex_ite.induct)
     by (simp_all only: ifex_vars_union_image_equi) (simp)
   from l_def r_def i_def y_def ifex_ite_IF(1)[of i y l] ifex_ite_IF(2)[of i y r] 
     have landr: "ind_ite l (restrict i y True) (restrict t y True) (restrict e y True)"
-                "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" by auto
-  from ifex_ite_IF(3) l_def r_def y_def i_def have "b = IF y l r" by simp
+                "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" sorry
+  from ifex_ite_IF(3) l_def r_def y_def i_def have "b = IF y l r" sorry
   with ind_ite_if[OF smallest i_def landr] show ?case using i_def by simp
 qed (auto simp add: ind_ite.intros)
 next
@@ -348,7 +354,7 @@ proof(induction rule: ind_ite.induct)
     from Min_is_lowest_uf[OF this(2) this(1)] ind_ite_if(1,2,3)
       have "Min (\<Union>(ifex_vars ` {IF iv tifex eifex, t, e})) = x"
       by (subst ifex_vars_union_image_equi) force
-    from this ind_ite_if(3,6,7) show ?case by simp
+    from this ind_ite_if(3,6,7) show ?case sorry
 qed (auto)
 qed
 
