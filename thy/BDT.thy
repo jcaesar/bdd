@@ -1,12 +1,17 @@
 theory BDT
-imports Boolean_Expression_Checkers BoolFunc Min2
+imports Boolean_Expression_Checkers BoolFunc
 begin
+
+(* just something to simplify reasoning over Min *)
+lemma Min_is_lowest_uf: "finite S \<Longrightarrow> S \<noteq> {} \<Longrightarrow> Min S \<in> S \<and> (\<forall>s \<in> S. Min S \<le> s)" by simp
+definition "is_lowest_element e S = (e \<in> S \<and> (\<forall>oe \<in> S. e \<le> oe))"
+lemma Min_is_lowest: "finite S \<Longrightarrow> S \<noteq> {} \<Longrightarrow> is_lowest_element (Min S) S" by(simp add: is_lowest_element_def)
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
 (* type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool" *)
 
 
-fun ifex_vars :: "'a ifex \<Rightarrow> 'a set" where
+fun ifex_vars :: "('a :: linorder) ifex \<Rightarrow> 'a set" where
   "ifex_vars (IF v t e) = {v} \<union> ifex_vars t \<union> ifex_vars e" |
   "ifex_vars Trueif = {}" |
   "ifex_vars Falseif = {}"
@@ -22,6 +27,7 @@ definition ifex_bf2_rel where
 
 lemma finite_ifex_vars: "finite (ifex_vars k)" by(induction k) simp_all
 lemma nonempty_if_var_set: "ifex_vars (IF v t e) \<noteq> {}" by simp
+lemma empty_if_var_setFE: "ifex_vars t \<noteq> {} \<Longrightarrow> t = Trueif \<Longrightarrow> False" "ifex_vars t \<noteq> {} \<Longrightarrow> t = Falseif \<Longrightarrow> False" by simp_all
 lemma ifex_ite_select_helper: "i = (IF iv it ie) \<Longrightarrow> k = (\<Union>(ifex_vars ` {i,t,e})) \<Longrightarrow> finite k \<and> k \<noteq> {}"
 	using finite_ifex_vars nonempty_if_var_set by auto
 
@@ -73,10 +79,44 @@ fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> bool \<Rightarrow> 'a i
 lemma "ifex_ordered (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) val"
 	using restrict_untouched_id by fastforce (* fastforce ftw *)
 
+lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
+lemma Un_three: "\<Union>{a, b, c} = a \<union> b \<union> c" by auto
+lemma finite_three: "finite {a, b, c}" by simp
+
+
+lemmas Min_helpers =
+	Min.union[OF finite_ifex_vars _ finite_ifex_vars] 
+	Min_insert[OF iffD2[OF finite_Un, OF conjI[OF finite_ifex_vars finite_ifex_vars]], unfolded Un_empty de_Morgan_conj, OF disjI1]
+	Min_insert[OF finite_ifex_vars]
+	Min.union[OF iffD2[OF finite_Un, OF conjI[OF finite_ifex_vars finite_ifex_vars]], unfolded Un_empty de_Morgan_conj, OF disjI1, OF _ finite_ifex_vars]
+	(* mighty construction *)
+
+lemma hlp2: "k \<le> iv \<Longrightarrow> 
+	if ifex_vars it \<noteq> {} then k < Min (ifex_vars it) else True \<Longrightarrow> if ifex_vars ie \<noteq> {} then k < Min (ifex_vars ie) else True \<Longrightarrow>
+	k \<le> Min (insert iv (ifex_vars it \<union> ifex_vars ie))"
+by(cases "ifex_vars it = {}", case_tac[!] "ifex_vars ie = {}") (auto simp add:  Min_helpers)
+
+lemma finite_singleton: "finite {x}" by simp
+lemma min_vars_top: "ifex_ordered (IF v t e) \<Longrightarrow> Min (ifex_vars (IF v t e)) = v"
+	by(cases "ifex_vars t = {}", case_tac[!] "ifex_vars e = {}", simp_all add: Min_helpers) (rule min_absorb1, simp add: finite_ifex_vars less_imp_le)+
+
+definition "lowest_tops (iv :: ('a :: linorder)) t e \<equiv> (let m1 = (case t of (IF tv _ _) \<Rightarrow> min iv tv | _ \<Rightarrow> iv) in (case e of (IF ev _ _) \<Rightarrow> min m1 ev | _ \<Rightarrow> m1))"
+lemma lowest_tops_eq: "ifex_ordered (IF iv it ie) \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> Min (\<Union>(ifex_vars ` {(IF iv it ie),t,e})) = lowest_tops iv t e"
+unfolding lowest_tops_def
+	apply(cases t, case_tac[!] e)
+	        apply(auto simp add: min_vars_top Min_helpers simp del: ifex_ordered.simps(1) ifex_vars.simps(1))
+	    apply((rule HOL.trans[OF Min_helpers(1)] | rule HOL.trans[OF Min_helpers(4), unfolded Un_assoc]), simp, simp, 
+		      simp add: min_vars_top Min_helpers(1)[OF nonempty_if_var_set nonempty_if_var_set] del: ifex_ordered.simps(1) ifex_vars.simps(1))+ 
+done
+
+lemma lowest_tops_in: "lowest_tops iv t e \<in> \<Union>(ifex_vars ` {(IF iv it ie),t,e})"
+unfolding img_three Un_three Un_iff
+	by(cases t, case_tac[!] e) (simp_all add: min_def lowest_tops_def)
+
 function ifex_ite :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
   "ifex_ite Trueif t e = t" |
   "ifex_ite Falseif t e = e" |
-  "ifex_ite (IF iv it ie) t e = (let i = (IF iv it ie); x = select_lowest (\<Union>(ifex_vars ` {i,t,e})) in 
+  "ifex_ite (IF iv it ie) t e = (let i = (IF iv it ie); x = lowest_tops iv t e in 
                          (IF x (ifex_ite (restrict i x True) (restrict t x True) (restrict e x True))
                                (ifex_ite (restrict i x False) (restrict t x False) (restrict e x False))))"
 by pat_completeness auto
@@ -111,7 +151,7 @@ qed simp_all
 lemma restrict_size_eqE: "size k = size (restrict k x val) \<Longrightarrow> x \<notin> ifex_vars k"
 	using less_not_refl restrict_size_less by metis
 
-lemma termlemma2: "xa = select_lowest (\<Union>(ifex_vars ` {(IF iv it ie), t, e})) \<Longrightarrow>
+lemma termlemma2: "xa = lowest_tops iv t e \<Longrightarrow>
        (size (restrict (IF iv it ie) xa val) + size (restrict t xa val) + size (restrict e xa val)) < (size (IF iv it ie) + size t + size e)"
 proof(rule ccontr, unfold not_less)
 	case goal1 thus ?case
@@ -122,13 +162,12 @@ proof(rule ccontr, unfold not_less)
 		have 2: "size t = size (restrict t xa val)" using restrict_size_le * by (metis False add.commute add_less_le_mono order.not_eq_order_implies_strict)
 		have 3: "size e = size (restrict e xa val)" using * 1 2 by linarith
 		note restrict_size_eqE[OF 1] restrict_size_eqE[OF 2] restrict_size_eqE[OF 3]
-		then show False unfolding goal1 using ifex_ite_select_helper[OF refl refl] 
-			conjunct1[OF select_is_lowest[unfolded is_lowest_element_def], of "(\<Union>(ifex_vars ` {(IF iv it ie), t, e}))"] by auto 
+		then show False unfolding goal1 using lowest_tops_in by blast
 	next
 		case True thus False using restrict_size_le by (metis add_mono_thms_linordered_semiring(1) leD)
 	qed
 qed
-lemma termlemma: "xa = select_lowest (\<Union>(ifex_vars ` {(IF iv it ie), t, e})) \<Longrightarrow>
+lemma termlemma: "xa = lowest_tops iv t e \<Longrightarrow>
        (case (restrict (IF iv it ie) xa val, restrict t xa val, restrict e xa val) of (i, t, e) \<Rightarrow> size i + size t + size e) < (case (IF iv it ie, t, e) of (i, t, e) \<Rightarrow> size i + size t + size e)"
 using termlemma2 by fast
 termination ifex_ite by(relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) (simp_all only: termlemma)+
@@ -157,10 +196,6 @@ lemma ifex_bf2_construct: "(ta, tb) \<in> ifex_bf2_rel \<Longrightarrow> (ea, eb
 	
 lemma ifex_ordered_implied: "(a, b) \<in> ifex_bf2_rel \<Longrightarrow> ifex_ordered b" unfolding ifex_bf2_rel_def by simp
 
-lemma img_three: "foo ` {a, b, c} = {foo a, foo b, foo c}" by simp
-lemma Un_three: "\<Union>{a, b, c} = a \<union> b \<union> c" by auto
-lemma finite_three: "finite {a, b, c}" by simp
-
 lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 	unfolding single_valued_def
 	unfolding ifex_bf2_rel_def
@@ -178,19 +213,20 @@ lemma ifex_vars_ifex_ite_ss: "ifex_vars (ifex_ite i t e) \<subseteq> \<Union>(if
 	 apply(rule le_supI)
 	  apply rule
 	  apply(unfold singleton_iff)
-	  apply(meson ifex_ite_select_helper is_lowest_element_def select_is_lowest)
 proof -
-	case goal1
+	case goal2
 	show ?case
-		apply(rule subset_trans[OF goal1(1)[OF refl refl]])
+		apply(rule subset_trans[OF goal2(1)[OF refl refl]])
 		apply(unfold img_three)
 		using restrict_variables_subset by fastforce
 next
-	case goal2
+	case goal3
 	show ?case
-		apply(rule subset_trans[OF goal2(2)[OF refl refl]])
+		apply(rule subset_trans[OF goal3(2)[OF refl refl]])
 		apply(unfold img_three)
 		using restrict_variables_subset by fastforce
+next
+	case goal1 show ?case using goal1(3) by (meson lowest_tops_in)
 qed
 
 lemma Let_keeper: "f (let x = a in b x) = (let x = a in f (b x))" by simp
@@ -200,8 +236,8 @@ lemma Let2assm: "(\<And>x. x = foo \<Longrightarrow> f x) \<Longrightarrow> let 
 lemma hlp1: 
 	assumes fin: "finite k"
 	assumes el: "(IF v t e) \<in> k"
-	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_vars (restrict vr (select_lowest (\<Union>(ifex_vars ` k))) vl)) ` k)" (is "x \<in> ?a1s")
-	shows "select_lowest (\<Union>(ifex_vars ` k)) < x"
+	assumes a1: "x \<in> \<Union>((\<lambda>vr. ifex_vars (restrict vr (Min (\<Union>(ifex_vars ` k))) vl)) ` k)" (is "x \<in> ?a1s")
+	shows "Min (\<Union>(ifex_vars ` k)) < x"
 proof(cases "k = {}")
 	case True
 	have False using a1 unfolding True by simp
@@ -209,18 +245,15 @@ proof(cases "k = {}")
 next
 	case False
 	let ?vs = "\<Union>(ifex_vars ` k)"
-	have "is_lowest_element (select_lowest ?vs) ?vs" 
-		using finite_ifex_vars fin el 
-		by(force intro: select_is_lowest)
-	moreover have ne: "select_lowest ?vs \<notin> ?a1s" using not_element_restrict by fast
-	moreover have "\<Union>((\<lambda>vr. ifex_vars (restrict vr (select_lowest (\<Union>(ifex_vars ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_vars ` k))" 
+	have "is_lowest_element (Min ?vs) ?vs" 
+		using finite_ifex_vars fin el
+		by(force intro: Min_is_lowest)
+	moreover have ne: "Min ?vs \<notin> ?a1s" using not_element_restrict by fast
+	moreover have "\<Union>((\<lambda>vr. ifex_vars (restrict vr (Min (\<Union>(ifex_vars ` k))) vl)) ` k) \<subseteq> (\<Union>(ifex_vars ` k))" 
 		using restrict_variables_subset by fast
-	moreover have "x \<noteq> select_lowest ?vs" using a1 ne by fast
+	moreover have "x \<noteq> Min ?vs" using a1 ne by fast
 	ultimately show ?thesis
-				using a1 
-		unfolding is_lowest_element_def
-		unfolding Ball_def
-		by(auto dest: le_neq_trans)
+		using a1 unfolding is_lowest_element_def Ball_def by(auto dest: le_neq_trans)
 qed
 
 lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered (ifex_ite i t e)"
@@ -231,9 +264,10 @@ lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<L
 	apply(subst ifex_ordered.simps)
 	apply(rule Let2assm)+
 	apply rule
-	 apply(blast intro: hlp1[OF finite_three] dest: subsetD[OF ifex_vars_ifex_ite_ss])
+	 apply(b last intro: hlp1[OF finite_three] dest: subsetD[OF ifex_vars_ifex_ite_ss])
 	apply(meson restrict_ifex_ordered_invar)
 done
+sorry
 
 theorem "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
@@ -242,7 +276,7 @@ theorem "
 	(bf_ite ia ta ea, ifex_ite ib tb eb) \<in> ifex_bf2_rel"
 proof(induction ib tb eb arbitrary: ia ta ea rule: ifex_ite.induct)
 	case goal3 note goal1 = goal3
-	let ?strtr = "select_lowest (\<Union>(ifex_vars ` {IF iv it ie, t, e}))"
+	let ?strtr = "Min (\<Union>(ifex_vars ` {IF iv it ie, t, e}))"
 	have mrdr: "ifex_ordered (IF ?strtr (ifex_ite (restrict (IF iv it ie) ?strtr True) (restrict t ?strtr True) (restrict e ?strtr True))
                                   (ifex_ite (restrict (IF iv it ie) ?strtr False) (restrict t ?strtr False) (restrict e ?strtr False)))"
 		unfolding ifex_ordered.simps
@@ -291,14 +325,14 @@ proof(induct arbitrary: b rule: ifex_ite.induct)
   case("3" iv tifex eifex t e) note ifex_ite_IF = "3"
   obtain i y l r 
     where i_def: "i = IF iv tifex eifex" and
-          y_def: "y = select_lowest (\<Union>(ifex_vars ` {i,t,e}))" and
+          y_def: "y = Min (\<Union>(ifex_vars ` {i,t,e}))" and
           r_def: "r = ifex_ite (restrict i y False) (restrict t y False) (restrict e y False)" and
           l_def: "l = ifex_ite (restrict i y True) (restrict t y True) (restrict e y True)" by simp
   from i_def have "finite (ifex_variables_ite i t e)" "ifex_variables_ite i t e \<noteq> {}"
     by (simp_all add: finite_ifex_vars)
-  from select_is_lowest[OF this(1) this(2)] y_def
+  from Min_is_lowest_uf[OF this(1) this(2)] y_def
     have smallest: "y \<in> ifex_variables_ite i t e" "\<forall>v \<in> ifex_variables_ite i t e. y \<le> v"
-    unfolding is_lowest_element_def by (simp_all only: ifex_vars_union_image_equi) (simp)
+    by (simp_all only: ifex_vars_union_image_equi) (simp)
   from l_def r_def i_def y_def ifex_ite_IF(1)[of i y l] ifex_ite_IF(2)[of i y r] 
     have landr: "ind_ite l (restrict i y True) (restrict t y True) (restrict e y True)"
                 "ind_ite r (restrict i y False) (restrict t y False) (restrict e y False)" by auto
@@ -311,9 +345,9 @@ proof(induction rule: ind_ite.induct)
   case(ind_ite_if x i t e iv tifex eifex l r)
     from this(3) have "ifex_variables_ite i t e \<noteq> {}" "finite (ifex_variables_ite i t e)"
       using finite_ifex_vars by auto
-    from select_is_lowest[OF this(2) this(1)] ind_ite_if(1,2,3)
-      have "select_lowest (\<Union>(ifex_vars ` {IF iv tifex eifex, t, e})) = x"
-      unfolding is_lowest_element_def by (subst ifex_vars_union_image_equi) force
+    from Min_is_lowest_uf[OF this(2) this(1)] ind_ite_if(1,2,3)
+      have "Min (\<Union>(ifex_vars ` {IF iv tifex eifex, t, e})) = x"
+      by (subst ifex_vars_union_image_equi) force
     from this ind_ite_if(3,6,7) show ?case by simp
 qed (auto)
 qed
