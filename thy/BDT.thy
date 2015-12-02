@@ -72,15 +72,20 @@ fun lowest_tops :: "('a :: linorder) ifex list \<Rightarrow> 'a option" where
 "lowest_tops (_#r) = lowest_tops r"
 
 lemma lowest_tops_NoneD: "lowest_tops k = None \<Longrightarrow> (\<not>(\<exists>v t e. ((IF v t e) \<in> set k)))"
-by(induction k rule: lowest_tops.induct) simp_all
+	by(induction k rule: lowest_tops.induct) simp_all
 lemma lowest_tops_in: "lowest_tops k = Some l \<Longrightarrow> l \<in> set (concat (map ifex_vars k))"
-  by(induction k rule: lowest_tops.induct) (simp_all split: option.splits if_splits add: min_def)
+	by(induction k rule: lowest_tops.induct) (simp_all split: option.splits if_splits add: min_def)
+lemma lowest_tops_in2: "i = IF a b c \<Longrightarrow> the (lowest_tops (i#k)) \<in> set (concat (map ifex_vars (i#k)))"
+	by(cases "lowest_tops (i#k)") (fastforce intro: lowest_tops_in)+
+
+
 
 function ifex_ite :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
-  "ifex_ite i t e = (case lowest_tops [i, t, e] of Some x \<Rightarrow> 
+  "ifex_ite Trueif t e = t" |
+  "ifex_ite Falseif t e = e" |
+  "ifex_ite (IF iv it ie) t e = (let i = (IF iv it ie); x = the (lowest_tops [i,t,e]) in 
                          (IF x (ifex_ite (restrict i x True) (restrict t x True) (restrict e x True))
-                               (ifex_ite (restrict i x False) (restrict t x False) (restrict e x False)))
-                     | None \<Rightarrow> (case i of Trueif \<Rightarrow> t | Falseif \<Rightarrow> e))"
+                               (ifex_ite (restrict i x False) (restrict t x False) (restrict e x False))))"
 by pat_completeness auto
 
 lemma restrict_size_le: "size (restrict k x val) \<le> size k"
@@ -113,7 +118,7 @@ qed simp_all
 lemma restrict_size_eqE: "size k = size (restrict k x val) \<Longrightarrow> x \<notin> set (ifex_vars k)"
 	using less_not_refl restrict_size_less by metis
 
-lemma termlemma2: "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
+lemma termlemma2: "the (lowest_tops [i, t, e]) = xa \<Longrightarrow> i = IF iv it ie \<Longrightarrow>
        (size (restrict i xa val) + size (restrict t xa val) + size (restrict e xa val)) < (size i + size t + size e)"
 proof(rule ccontr, unfold not_less)
 	case goal1 thus ?case
@@ -124,15 +129,18 @@ proof(rule ccontr, unfold not_less)
 		have 2: "size t = size (restrict t xa val)" using restrict_size_le * by (metis False add.commute add_less_le_mono order.not_eq_order_implies_strict)
 		have 3: "size e = size (restrict e xa val)" using * 1 2 by linarith
 		note restrict_size_eqE[OF 1] restrict_size_eqE[OF 2] restrict_size_eqE[OF 3]
-		then show False unfolding goal1 using lowest_tops_in[OF goal1(1)] by simp
+		then show False unfolding goal1 using goal1(1) lowest_tops_in2[OF goal1(2)] unfolding goal1(2)[symmetric] by force
 	next
 		case True thus False using restrict_size_le by (metis add_mono_thms_linordered_semiring(1) leD)
 	qed
 qed
-lemma termlemma: "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
+lemma termlemma: "the (lowest_tops [i, t, e]) = xa \<Longrightarrow> i = IF iv it ie \<Longrightarrow>
        (case (restrict i xa val, restrict t xa val, restrict e xa val) of (i, t, e) \<Rightarrow> size i + size t + size e) < (case (i, t, e) of (i, t, e) \<Rightarrow> size i + size t + size e)"
 using termlemma2 by fast
-termination ifex_ite by(relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) (simp_all only: termlemma)
+termination ifex_ite 
+	apply(relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) 
+	 apply(simp_all only: termlemma)
+done
 
 definition "const x _ = x" (* Mehr Haskell wagen *)
 lemma rel_true_false: "(a, Trueif) \<in> ifex_bf2_rel \<Longrightarrow> a = const True" "(a, Falseif) \<in> ifex_bf2_rel \<Longrightarrow> a = const False"
