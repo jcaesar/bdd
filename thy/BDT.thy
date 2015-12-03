@@ -115,4 +115,54 @@ termination ifex_ite
      (simp_all only: termlemma)+
 
 
+(* INDUCTIVE DEFINITION *)
+
+abbreviation ifex_variables_ite where
+  "ifex_variables_ite i t e \<equiv>
+   ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
+
+inductive ind_ite :: "('a::linorder) ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> bool" where
+ind_ite_true:   "ind_ite t Trueif t e" |
+ind_ite_false:  "ind_ite e Falseif t e" |
+ind_ite_if:     "x = Min (\<Union>(ifex_top_var_set ` {i,t,e})) \<Longrightarrow>
+   i = IF iv tifex eifex \<Longrightarrow>
+   ind_ite l (restrict_top i x True) (restrict_top t x True) (restrict_top e x True) \<Longrightarrow>
+   ind_ite r (restrict_top i x False) (restrict_top t x False) (restrict_top e x False) \<Longrightarrow>
+   ind_ite (if l = r then l else IF x l r) i t e"
+
+lemma ifex_var_set_union_image_equi:
+  "\<Union>(ifex_var_set ` {i,t,e}) =
+   ifex_var_set i \<union> ifex_var_set t \<union> ifex_var_set e"
+  by blast
+
+lemma ifex_ite_ind_ite_equi: "ifex_ite i t e = b \<longleftrightarrow> ind_ite b i t e"
+proof(rule iffI)
+assume "ifex_ite i t e = b" thus "ind_ite b i t e"
+proof(induct arbitrary: b rule: ifex_ite.induct)
+  case("3" iv tifex eifex t e) note ifex_ite_IF = "3"
+  obtain i y l r
+    where i_def: "i = IF iv tifex eifex" and
+          y_def: "y = Min (\<Union>(ifex_top_var_set ` {i,t,e}))" and
+          r_def: "r = ifex_ite (restrict_top i y False) (restrict_top t y False)
+                               (restrict_top e y False)" and
+          l_def: "l = ifex_ite (restrict_top i y True) (restrict_top t y True)
+                               (restrict_top e y True)" by simp
+  from this ifex_ite_IF(1)[of i y l]  ifex_ite_IF(2)[of i y l r]
+    have landr: "ind_ite l (restrict_top i y True) (restrict_top t y True)
+                           (restrict_top e y True)"
+                "ind_ite r (restrict_top i y False) (restrict_top t y False)
+                           (restrict_top e y False)" by auto
+  from ifex_ite_IF(3) l_def r_def y_def i_def have "b = (if l = r then l else IF y l r)" by force
+  with ind_ite_if[OF y_def i_def landr] show ?case using i_def by simp
+qed (auto simp add: ind_ite.intros)
+next
+assume "ind_ite b i t e" thus "ifex_ite i t e = b"
+proof(induction rule: ind_ite.induct)
+qed (auto)
+qed
+
+lemma restrict_top_variables_subset: "ifex_var_set (restrict_top k var val) \<subseteq> ifex_var_set k"
+  by (induction k) (auto)
+
+
 end
