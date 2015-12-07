@@ -218,8 +218,6 @@ next
 		using a1 unfolding is_lowest_element_def Ball_def by(auto dest: le_neq_trans)
 qed*)
 
-thm ifex_ite.induct
-
 lemma ifex_ite_induct: "
 			(\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
 			(\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
@@ -227,23 +225,13 @@ lemma ifex_ite_induct: "
 					   sentence (restrict i a True) (restrict t a True) (restrict e a True) \<Longrightarrow>
    lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
 proof(induction i t e rule: ifex_ite.induct)
-	case goal1
-	thus ?case (is ?kees)
+	case goal1 show ?case
 	proof(cases "lowest_tops [i, t, e]")
-		case None thus ?kees 
-		proof(cases i)
-			case (IF iv it ie)
-			have False (* this is why I'm doing my own rule *) using lowest_tops_NoneD[OF None] IF by auto
-			thus ?kees ..
-		next case Trueif  thus ?kees using goal1(3,4)[OF None] by simp
-		next case Falseif thus ?kees using goal1(3,4)[OF None] by simp
-		qed
+		case None thus ?thesis by (cases i) (auto intro: goal1)
 	next
-		case (Some a) thus ?kees by (blast intro: goal1)
+		case (Some a) thus ?thesis by (auto intro: goal1)
   qed
 qed
-
-thm ifex_ite_induct
 
 lemma order_ifex_ite_invar: "prems i t e e \<Longrightarrow> sentence (ifex_ite i t e)"
 apply(induction i t e rule: ifex_ite.induct)
