@@ -239,12 +239,7 @@ proof(induction i t e rule: ifex_ite.induct)
 		next case Falseif thus ?kees using goal1(3,4)[OF None] by simp
 		qed
 	next
-		case (Some a)
-    from goal1(2)[OF Some] Some goal1(5) goal1(3) goal1(4)
-    have 0: "sentence (restrict i a False) (restrict t a False) (restrict e a False)" by blast
-    from goal1(1)[OF Some goal1(3) goal1(4) goal1(5)]
-    have 1: "sentence (restrict i a True) (restrict t a True) (restrict e a True)" by fast
-    from goal1(5)[OF 0 1 Some] show ?kees .
+		case (Some a) thus ?kees by (blast intro: goal1)
   qed
 qed
 
