@@ -218,12 +218,14 @@ next
 		using a1 unfolding is_lowest_element_def Ball_def by(auto dest: le_neq_trans)
 qed*)
 
+thm ifex_ite.induct
+
 lemma ifex_ite_induct: "
-			(\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence (ifex_ite i t e)) \<Longrightarrow>
-			(\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence (ifex_ite i t e)) \<Longrightarrow>
-			(\<And>i t e a. sentence (ifex_ite (restrict i a True) (restrict t a True) (restrict e a True)) \<Longrightarrow>
-					   sentence (ifex_ite (restrict i a False) (restrict t a False) (restrict e a False)) \<Longrightarrow>
-   lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence (ifex_ite i t e)) \<Longrightarrow> sentence (ifex_ite i t e)"
+			(\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
+			(\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
+			(\<And>i t e a. sentence (restrict i a False) (restrict t a False) (restrict e a False) \<Longrightarrow> 
+					   sentence (restrict i a True) (restrict t a True) (restrict e a True) \<Longrightarrow>
+   lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
 proof(induction i t e rule: ifex_ite.induct)
 	case goal1
 	thus ?case (is ?kees)
@@ -238,10 +240,15 @@ proof(induction i t e rule: ifex_ite.induct)
 		qed
 	next
 		case (Some a)
-		note goal1(1,2)[OF Some goal1(3) goal1(4)]
-		show ?kees by(blast intro: goal1(1,2,5) Some dest: goal1(3,4))+
-	qed
+    from goal1(2)[OF Some] Some goal1(5) goal1(3) goal1(4)
+    have 0: "sentence (restrict i a False) (restrict t a False) (restrict e a False)" by blast
+    from goal1(1)[OF Some goal1(3) goal1(4) goal1(5)]
+    have 1: "sentence (restrict i a True) (restrict t a True) (restrict e a True)" by fast
+    from goal1(5)[OF 0 1 Some] show ?kees .
+  qed
 qed
+
+thm ifex_ite_induct
 
 lemma order_ifex_ite_invar: "prems i t e e \<Longrightarrow> sentence (ifex_ite i t e)"
 apply(induction i t e rule: ifex_ite.induct)
@@ -256,8 +263,7 @@ lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<L
 	apply simp
 	 
 	apply(meson restrict_ifex_ordered_invar)
-done
-sorry
+oops
 
 theorem "
 	(ia, ib) \<in> ifex_bf2_rel \<Longrightarrow>
