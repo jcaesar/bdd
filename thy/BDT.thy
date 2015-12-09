@@ -67,8 +67,32 @@ fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> 'a \<Rightarrow> bool \
   "restrict_top (IF v t e) var val = (if v = var then (if val then t else e) else (IF v t e))" |
   "restrict_top i _ _ = i"
 
-lemma "ifex_ordered (IF v t e) \<Longrightarrow> restrict (IF v t e) var val = restrict_top (IF v t e) var val"
-oops
+(* dunno if the following four are useful for something\<dots> *)
+lemma restrict_top_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v \<Longrightarrow> v' < v \<Longrightarrow> restrict_top e v' val = e"
+	by(induction e) auto
+lemma restrict_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v \<Longrightarrow> v' < v \<Longrightarrow> restrict e v' val = e"
+	apply(induction e arbitrary: v)
+	  apply simp_all[2]
+	apply(case_tac e1, case_tac[!] e2)
+	        apply simp_all[2]
+	      apply fastforce
+	     apply simp_all[2]
+	   apply fastforce
+	  apply fastforce
+	 apply fastforce
+	apply force (* meh *)
+done
+lemma restrict_top_IF_id: "ifex_ordered (IF v t e) \<Longrightarrow> v' < v \<Longrightarrow> restrict_top (IF v t e) v' val = (IF v t e)"
+	using restrict_top_id by auto
+lemma restrict_IF_id: assumes o: "ifex_ordered (IF v t e)" assumes le: "v' < v"
+	shows "restrict (IF v t e) v' val = (IF v t e)"
+	using restrict_id[OF o, unfolded ifex_top_var.simps, OF refl le, of val] .
+
+lemma restrict_top_eq: "ifex_ordered (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) v val"
+	using restrict_untouched_id by auto
+
+lemma restrict_top_ifex_ordered_invar: "ifex_ordered b \<Longrightarrow> ifex_ordered (restrict_top b var val)"
+  by (induction b) simp_all
 
 fun lowest_tops :: "('a :: linorder) ifex list \<Rightarrow> 'a option" where
 "lowest_tops [] = None" |
@@ -95,21 +119,11 @@ lemma restrict_size_less: "ifex_top_var k = Some var \<Longrightarrow> size (res
 
 
 (* I'm commander Shepard and this is my favourite proof in this repository *)
+(* Heyy, this is Kelly. I optimized your proof for you. I hope you still like it. *)
 lemma lowest_tops_cases: "lowest_tops [i, t, e] = Some var \<Longrightarrow>
        ifex_top_var i = Some var \<or> ifex_top_var t = Some var \<or> ifex_top_var e = Some var"
-apply(cases i)
-apply(cases t) 
-  apply(cases e) apply(auto simp add: min_def)[3]
-  apply(cases e) apply(auto simp add: min_def)[3]
-  apply(cases e) apply(auto simp add: min_def)[3]
-apply(cases t)
-  apply(cases e) apply(auto simp add: min_def)[3]
-  apply(cases e) apply(auto simp add: min_def)[3]
-  apply(cases e) apply(auto simp add: min_def)[3]
-apply(cases t) 
-  apply(cases e) apply(auto simp add: min_def)[3]
-  apply(cases e) apply(auto simp add: min_def)[3]
-  apply(cases e) apply(auto simp add: min_def)[3]
+apply(cases i, case_tac[!] t, case_tac[!] e)
+apply(auto simp add: min_def)
 done
 
 lemma termlemma2: "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
@@ -164,31 +178,35 @@ lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 lemma ifex_ite_induct: "
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
-  (\<And>i t e a. sentence (restrict_top i a False) (restrict_top t a False) (restrict_top e a False) \<Longrightarrow> 
-					   sentence (restrict_top i a True) (restrict_top t a True) (restrict_top e a True) \<Longrightarrow>
+  (\<And>i t e a. (\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val)) \<Longrightarrow> 
    lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
 proof(induction i t e rule: ifex_ite.induct)
 	case goal1 show ?case
 	proof(cases "lowest_tops [i, t, e]")
 		case None thus ?thesis by (cases i) (auto intro: goal1)
 	next
-		case (Some a) thus ?thesis by (auto intro: goal1)
+		case (Some a) show ?thesis
+			apply(rule goal1(5)[OF _ Some]) 
+			apply(case_tac val) 
+			 apply(simp_all) 
+			 apply(rule goal1(1)[OF Some]) 
+			   apply(blast intro: goal1(5) dest: goal1(3,4))+
+			apply(rule goal1(2)[OF Some]) 
+			   apply(blast intro: goal1(5) dest: goal1(3,4))+
+		    done
   qed
 qed
-
-lemma order_ifex_ite_invar: "prems i t e e \<Longrightarrow> sentence (ifex_ite i t e)"
-apply(induction i t e rule: ifex_ite.induct)
-apply(case_tac "lowest_tops [i, t, e]")
-apply(case_tac i)
-oops
-
 
 lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered (ifex_ite i t e)"
 	apply(induction i t e rule: ifex_ite_induct)
 	apply simp
-	 
-	apply(meson restrict_ifex_ordered_invar)
+	apply simp
+	proof -
+		case goal1
+		note l = restrict_top_ifex_ordered_invar
+		note l[OF goal1(3)] l[OF goal1(4)] l[OF goal1(5)]
+		note goal1(1)[OF this]
+		thus ?case apply(subst ifex_ite.simps) unfolding goal1(2) apply(simp del: ifex_ite.simps) apply rule
 oops
-
 
 end
