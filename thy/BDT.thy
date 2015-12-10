@@ -126,6 +126,13 @@ apply(cases i, case_tac[!] t, case_tac[!] e)
 apply(auto simp add: min_def)
 done
 
+lemma lowest_tops_lowest: "lowest_tops es = Some a \<Longrightarrow> e \<in> set es \<Longrightarrow> ifex_ordered e \<Longrightarrow> v \<in> set (ifex_vars e) \<Longrightarrow> a \<le> v"
+apply((induction arbitrary: a rule: lowest_tops.induct))
+apply(case_tac[!] e, simp_all add: min_def Ball_def less_imp_le split: if_splits option.splits)
+apply (meson less_imp_le lowest_tops_NoneD order_refl)
+apply fastforce+
+done
+
 lemma termlemma2: "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
   (size (restrict_top i xa val) + size (restrict_top t xa val) + size (restrict_top e xa val)) <
   (size i + size t + size e)"
@@ -175,38 +182,97 @@ lemma single_valued_rel: "single_valued (ifex_bf2_rel\<inverse>)"
 	by blast
 
 
-lemma ifex_ite_induct: "
+lemma ifex_ite_induct2: "
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
-  (\<And>i t e a. (\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val)) \<Longrightarrow> 
+  (\<And>i t e a. sentence (restrict_top i a True) (restrict_top t a True) (restrict_top e a True) \<Longrightarrow>
+             sentence (restrict_top i a False) (restrict_top t a False) (restrict_top e a False) \<Longrightarrow>
    lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
 proof(induction i t e rule: ifex_ite.induct)
 	case goal1 show ?case
 	proof(cases "lowest_tops [i, t, e]")
 		case None thus ?thesis by (cases i) (auto intro: goal1)
 	next
-		case (Some a) show ?thesis
-			apply(rule goal1(5)[OF _ Some]) 
-			apply(case_tac val) 
-			 apply(simp_all) 
-			 apply(rule goal1(1)[OF Some]) 
-			   apply(blast intro: goal1(5) dest: goal1(3,4))+
-			apply(rule goal1(2)[OF Some]) 
-			   apply(blast intro: goal1(5) dest: goal1(3,4))+
-		    done
+		case (Some a) thus ?thesis by(auto intro: goal1)
   qed
+qed
+lemma ifex_ite_induct: "
+  (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
+  (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
+  (\<And>i t e a. (\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val)) \<Longrightarrow> 
+   lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
+proof(induction i t e rule: ifex_ite_induct2)
+	case goal3
+	have "(\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val))"
+		apply(case_tac val) apply(auto) using goal3(1,2,6) apply(blast intro: goal3(4,5))+ done
+	note goal3(6)[OF this goal3(3)] thus ?case .
+qed blast+
+
+lemma lowest_restrictor: "lowest_tops e = Some a \<Longrightarrow> (\<And>i. i \<in> set e \<Longrightarrow> ifex_ordered i) \<Longrightarrow> x \<in> \<Union>(set (map (set \<circ> ifex_vars \<circ> (\<lambda>i. restrict_top i a vl)) e)) \<Longrightarrow> a < x"
+proof(simp, rule ccontr)
+	case goal1
+	from goal1(3) obtain xa where xa1: "xa\<in>set e" "x \<in> set (ifex_vars (restrict_top xa a vl))" by blast
+	obtain v vt ve where xa: "xa = IF v vt ve" apply(cases xa) using xa1 by auto
+	have o: "ifex_ordered (IF v vt ve)" using goal1(2) xa1(1) unfolding xa .
+	have "x < a" using goal1(4) apply(subgoal_tac "x \<noteq> a", simp) using goal1(3)
+	using not_element_restrict[of v "IF v vt ve"] unfolding restrict_top_eq[OF o] 
+oops (* forget it *)
+
+lemma restrict_top_subset: "x \<in> set (ifex_vars (restrict_top i vr vl)) \<Longrightarrow> x \<in> set (ifex_vars i)"
+	by(induction i) (simp_all split: if_splits)
+
+lemma ifex_vars_subset: "x \<in> set (ifex_vars (ifex_ite i t e)) \<Longrightarrow> (x \<in> set (ifex_vars i)) \<or> (x \<in> set (ifex_vars t)) \<or> (x \<in> set (ifex_vars e))"
+proof(induction rule: ifex_ite_induct2)
+	case goal3
+	have "x \<in> {x. x = a} \<or> x \<in> set (ifex_vars (ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True))) \<or> x \<in> set (ifex_vars (ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)))"
+		(*apply(subst ifex_ite.simps) apply(simp only: goal3(2) option.simps ifex_vars.simps set_simps set_append insert_def Un_iff split: option.split) *)
+		using goal3 by simp
+	hence "x = a \<or>
+		x \<in> set (ifex_vars (restrict_top i a True )) \<or> x \<in> set (ifex_vars (restrict_top t a True )) \<or> x \<in> set (ifex_vars (restrict_top e a True )) \<or>
+		x \<in> set (ifex_vars (restrict_top i a False)) \<or> x \<in> set (ifex_vars (restrict_top t a False)) \<or> x \<in> set (ifex_vars (restrict_top e a False))"
+	using goal3(1-2) by blast
+	thus ?case using restrict_top_subset apply - apply(erule disjE) defer apply blast using  lowest_tops_in[OF goal3(3)] apply(simp only: set_concat set_map set_simps) by blast
+qed simp_all
+
+lemma three_ins: "i \<in> set [i, t, e]" "t \<in> set [i, t, e]" "e \<in> set [i, t, e]" by simp_all
+
+lemma hlp3: "lowest_tops (IF v uu uv # r) \<noteq> lowest_tops r \<Longrightarrow> lowest_tops (IF v uu uv # r) = Some v"
+	by(simp add: min_def split: option.splits if_splits)
+lemma hlp2: "IF vi vt ve \<in> set is
+\<Longrightarrow> lowest_tops is = Some a
+\<Longrightarrow> a \<le> vi" 
+apply(induction "is" arbitrary: vt ve a rule: lowest_tops.induct)
+apply(auto simp add: min_def split: if_splits option.splits dest: lowest_tops_NoneD) (* solves all but some of second case *)
+apply(meson le_cases order_trans) (* I stared at this for quite a few minutes\<dots> how the\<dots>? *)
+done
+
+lemma hlp1: "i \<in> set is \<Longrightarrow> lowest_tops is = Some a \<Longrightarrow> ifex_ordered i \<Longrightarrow> a \<notin> set (ifex_vars (restrict_top i a val))"
+proof(rule ccontr, unfold not_not)
+	case goal1
+	from goal1(4) obtain vi vt ve where vi: "i = IF vi vt ve" by(cases i) simp_all
+	with goal1(4) goal1(3) have ne: "vi \<noteq> a" by(simp split: if_splits) blast+
+	moreover have "vi \<le> a" using goal1(3,4) proof -
+		case goal1
+		hence "a \<in> set (ifex_vars vt) \<or> a \<in> set (ifex_vars ve)" using ne by(simp add: vi)
+		thus ?case using goal1(1)[unfolded vi ifex_ordered.simps] using less_imp_le by auto
+	qed
+	moreover have "a \<le> vi" using goal1(1) unfolding vi using goal1(2) hlp2 by metis
+	ultimately show False by simp
 qed
 
 lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered (ifex_ite i t e)"
-	apply(induction i t e rule: ifex_ite_induct)
-	apply simp
-	apply simp
-	proof -
-		case goal1
+	proof(induction i t e rule: ifex_ite_induct)
+		case goal3 note goal1 = goal3
 		note l = restrict_top_ifex_ordered_invar
 		note l[OF goal1(3)] l[OF goal1(4)] l[OF goal1(5)]
-		note goal1(1)[OF this]
-		thus ?case apply(subst ifex_ite.simps) unfolding goal1(2) apply(simp del: ifex_ite.simps) apply rule
-oops
+		note mIH = goal1(1)[OF this]
+		note blubb = lowest_tops_lowest[OF goal1(2) _ _ restrict_top_subset]
+		show ?case using mIH 
+		by( subst ifex_ite.simps,
+			auto simp del: ifex_ite.simps
+				simp add: goal1(2) hlp1[OF three_ins(1) goal1(2) goal1(3)] hlp1[OF three_ins(2) goal1(2) goal1(4)] hlp1[OF three_ins(3) goal1(2) goal1(5)] 
+				dest: ifex_vars_subset blubb[OF three_ins(1) goal1(3)] blubb[OF three_ins(2) goal1(4)] blubb[OF three_ins(3) goal1(5)] 
+				intro!: le_neq_trans) (* lol *)
+qed simp_all
 
 end
