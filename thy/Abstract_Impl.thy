@@ -89,29 +89,63 @@ apply(induction rule: lowest_tops.induct)
 apply(simp split: list.splits)
 defer
 apply(simp split: list.splits)
-oops (* todo *)
+oops (* todo (probably) *)
+
+lemma destr_reconstruct: "DESTRimpl ni s = IFD v ni1 ni2 \<Longrightarrow> 
+	IFimpl v ni1 ni2 s = (ni, s)"
+	(* I'm not sure we can prove this *)
+	(* our assumptions may be insufficient *)
+	(* try re-adding (ni1, t) \<in> R s \<Longrightarrow> (ni2, e) \<in> R s, but I don't think that will help. *)
+	(* this lemma makes me think that we wrote down our assumptions in a strange way *)
+	sorry
+
+fun restrict_top_impl where
+"restrict_top_impl e vr vl s = (case DESTRimpl e s of
+	IFD v te ee \<Rightarrow> (if v = vr then (if vl then te else ee) else e) |
+	_ \<Rightarrow> e)"
+lemma restrict_top_R[intro]: "(ni,i) \<in> R s \<Longrightarrow> (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
+apply(induction i vr vl rule: restrict_top.induct) defer
+apply(simp_all add: DESTRimpl_rule1 DESTRimpl_rule2)[2]
+apply(drule DESTRimpl_rule3)
+apply clarify
+apply(simp only: restrict_top.simps restrict_top_impl.simps IFEXD.simps split: IFEXD.splits)
+apply(case_tac "v = var", case_tac[!] val)
+apply simp
+apply simp
+apply(simp_all only: if_False)
+apply(rule IFimpl_rule)
+apply simp
+apply simp
+defer
+apply(rule IFimpl_rule)
+apply simp
+apply simp
+apply(auto elim: destr_reconstruct)
+done
 
 (* todo: write restrict_top and use it! (also, that doesn't return state) *)
 partial_function(option) ite_impl where
 "ite_impl i t e s = 
 	(case lowest_tops_impl [i, t, e] s of
-		Some a \<Rightarrow> (do {
-			(ti,s) \<leftarrow> restrict_impl_opt i a True s;
-			(tt,s) \<leftarrow> restrict_impl_opt t a True s;
-			(te,s) \<leftarrow> restrict_impl_opt e a True s;
+		Some a \<Rightarrow> (let
+			ti = restrict_top_impl i a True s;
+			tt = restrict_top_impl t a True s;
+			te = restrict_top_impl e a True s;
+			fi = restrict_top_impl i a False s;
+			ft = restrict_top_impl t a False s;
+			fe = restrict_top_impl e a False s
+			in do {
 			(tb,s) \<leftarrow> ite_impl ti tt te s;
-			(fi,s) \<leftarrow> restrict_impl_opt i a False s;
-			(ft,s) \<leftarrow> restrict_impl_opt t a False s;
-			(fe,s) \<leftarrow> restrict_impl_opt e a False s;
 			(fb,s) \<leftarrow> ite_impl fi ft fe s;
             Some (IFimpl a tb fb s)}) |
-        None \<Rightarrow> Some undefined)"
+        None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s)))"
 lemma "
 	(ii, i) \<in> R s \<Longrightarrow>
 	(ti, t) \<in> R s \<Longrightarrow>
 	(ei, e) \<in> R s \<Longrightarrow>
 	ite_impl ii ti ei s = Some (r, s') \<Longrightarrow>
 	(r, ifex_ite i t e) \<in> R s'"
+apply(induction i t e rule: ifex_ite_induct)
 oops (* we have work to do *)
 
 end
