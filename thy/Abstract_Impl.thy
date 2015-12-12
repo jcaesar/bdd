@@ -81,17 +81,17 @@ fun lowest_tops_impl where
 			None \<Rightarrow> Some v) |
 		_           \<Rightarrow> lowest_tops_impl es s)"
 fun in_R_list where
-"in_R_list nis [] _ = (case nis of (_#_) \<Rightarrow> False | _ \<Rightarrow> True)" |
-"in_R_list nis (n#ns) s = (case nis of (ni#nis) \<Rightarrow> ((ni, n) \<in> R s) \<and> in_R_list nis ns s | _ \<Rightarrow> False)"
+"in_R_list (ni#nis) (n#ns) s = (((ni, n) \<in> R s) \<and> in_R_list nis ns s)" |
+"in_R_list [] [] _ = True" |
+"in_R_list _ _ _ = False"
 lemma in_R_list_split: "in_R_list (ni#nis) (n#ns) s \<Longrightarrow> ((ni, n) \<in> R s \<and> in_R_list nis ns s)"
 by simp
 
 lemma in_R_list_lt: "in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
-apply(induction rule: lowest_tops.induct)
-apply(simp split: list.splits)
-defer
-apply(simp split: list.splits)
-sorry (* todo (probably) *)
+apply(induction rule: in_R_list.induct)
+apply(case_tac n)
+apply(auto dest: in_R_list_split DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 split: option.splits)
+done
 
 lemma DESTR_vareq: "(ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
 	by(drule DESTRimpl_rule3, simp)
@@ -157,6 +157,7 @@ apply(drule in_R_list_split, clarify)+
 apply(drule restrict_top_R[of ii])
 apply(drule restrict_top_R[of ti])
 apply(drule restrict_top_R[of ei])
+using Option.bind_eq_Some_conv les_trans
 find_theorems "(_ \<guillemotright>= _) = Some _"
 oops (* we have work to do *)
 
