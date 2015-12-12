@@ -91,13 +91,8 @@ defer
 apply(simp split: list.splits)
 oops (* todo (probably) *)
 
-lemma destr_reconstruct: "DESTRimpl ni s = IFD v ni1 ni2 \<Longrightarrow> 
-	IFimpl v ni1 ni2 s = (ni, s)"
-	(* I'm not sure we can prove this *)
-	(* our assumptions may be insufficient *)
-	(* try re-adding (ni1, t) \<in> R s \<Longrightarrow> (ni2, e) \<in> R s, but I don't think that will help. *)
-	(* this lemma makes me think that we wrote down our assumptions in a strange way *)
-	sorry
+lemma DESTR_vareq: "(ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
+	by(drule DESTRimpl_rule3, simp)
 
 fun restrict_top_impl where
 "restrict_top_impl e vr vl s = (case DESTRimpl e s of
@@ -106,21 +101,14 @@ fun restrict_top_impl where
 lemma restrict_top_R[intro]: "(ni,i) \<in> R s \<Longrightarrow> (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
 apply(induction i vr vl rule: restrict_top.induct) defer
 apply(simp_all add: DESTRimpl_rule1 DESTRimpl_rule2)[2]
+apply(simp only: restrict_top.simps restrict_top_impl.simps)
+apply(case_tac "v = var")
+apply(simp only: refl if_True)
 apply(drule DESTRimpl_rule3)
-apply clarify
-apply(simp only: restrict_top.simps restrict_top_impl.simps IFEXD.simps split: IFEXD.splits)
-apply(case_tac "v = var", case_tac[!] val)
-apply simp
-apply simp
-apply(simp_all only: if_False)
-apply(rule IFimpl_rule)
-apply simp
-apply simp
-defer
-apply(rule IFimpl_rule)
-apply simp
-apply simp
-apply(auto elim: destr_reconstruct)
+apply fastforce
+apply(simp only: if_False split: if_splits IFEXD.splits)
+apply(simp)
+apply(blast dest: DESTR_vareq)
 done
 
 (* todo: write restrict_top and use it! (also, that doesn't return state) *)
