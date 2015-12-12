@@ -82,14 +82,16 @@ fun lowest_tops_impl where
 		_           \<Rightarrow> lowest_tops_impl es s)"
 fun in_R_list where
 "in_R_list nis [] _ = (case nis of (_#_) \<Rightarrow> False | _ \<Rightarrow> True)" |
-"in_R_list nis (n#ns) s = (case nis of (ni#nis) \<Rightarrow> ((ni, n) \<in> R s) | _ \<Rightarrow> False)"
+"in_R_list nis (n#ns) s = (case nis of (ni#nis) \<Rightarrow> ((ni, n) \<in> R s) \<and> in_R_list nis ns s | _ \<Rightarrow> False)"
+lemma in_R_list_split: "in_R_list (ni#nis) (n#ns) s \<Longrightarrow> ((ni, n) \<in> R s \<and> in_R_list nis ns s)"
+by simp
 
-lemma "in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
+lemma in_R_list_lt: "in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
 apply(induction rule: lowest_tops.induct)
 apply(simp split: list.splits)
 defer
 apply(simp split: list.splits)
-oops (* todo (probably) *)
+sorry (* todo (probably) *)
 
 lemma DESTR_vareq: "(ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
 	by(drule DESTRimpl_rule3, simp)
@@ -128,12 +130,34 @@ partial_function(option) ite_impl where
             Some (IFimpl a tb fb s)}) |
         None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s)))"
 lemma "
-	(ii, i) \<in> R s \<Longrightarrow>
-	(ti, t) \<in> R s \<Longrightarrow>
-	(ei, e) \<in> R s \<Longrightarrow>
 	ite_impl ii ti ei s = Some (r, s') \<Longrightarrow>
+	in_R_list [ii, ti, ei] [i, t, e] s \<Longrightarrow>
 	(r, ifex_ite i t e) \<in> R s'"
 apply(induction i t e rule: ifex_ite_induct)
+apply(simp del: lowest_tops.simps in_R_list.simps)
+apply(frule in_R_list_lt)
+apply(subst(asm) ite_impl.simps)
+apply(simp only: refl split: option.splits list.splits)
+apply(clarsimp simp del: lowest_tops_impl.simps lowest_tops.simps in_R_list.simps)
+apply(drule in_R_list_split, clarify)+
+apply(drule DESTRimpl_rule1)
+apply(simp_all)[2]
+apply(simp del: lowest_tops.simps in_R_list.simps)
+apply(frule in_R_list_lt)
+apply(subst(asm) ite_impl.simps)
+apply(simp only: refl split: option.splits list.splits)
+apply(clarsimp simp del: lowest_tops_impl.simps lowest_tops.simps in_R_list.simps)
+apply(drule in_R_list_split, clarify)+
+apply(drule DESTRimpl_rule2)
+apply(simp_all)[2]
+apply(subst(asm) ite_impl.simps)
+apply(frule in_R_list_lt)
+apply(simp only: Let_def bind_eq_Some_conv split: option.splits)
+apply(drule in_R_list_split, clarify)+
+apply(drule restrict_top_R[of ii])
+apply(drule restrict_top_R[of ti])
+apply(drule restrict_top_R[of ei])
+find_theorems "(_ \<guillemotright>= _) = Some _"
 oops (* we have work to do *)
 
 end
