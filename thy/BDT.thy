@@ -268,11 +268,66 @@ lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<L
 		note mIH = goal1(1)[OF this]
 		note blubb = lowest_tops_lowest[OF goal1(2) _ _ restrict_top_subset]
 		show ?case using mIH 
-		by( subst ifex_ite.simps,
+		by (subst ifex_ite.simps,
 			auto simp del: ifex_ite.simps
 				simp add: goal1(2) hlp1[OF three_ins(1) goal1(2) goal1(3)] hlp1[OF three_ins(2) goal1(2) goal1(4)] hlp1[OF three_ins(3) goal1(2) goal1(5)] 
 				dest: ifex_vars_subset blubb[OF three_ins(1) goal1(3)] blubb[OF three_ins(2) goal1(4)] blubb[OF three_ins(3) goal1(5)] 
 				intro!: le_neq_trans) (* lol *)
 qed simp_all
+
+lemma restrict_top_bf2: "i \<in> set is \<Longrightarrow> lowest_tops is = Some vr \<Longrightarrow> 
+	ifex_ordered i \<Longrightarrow> (\<And>ass. fi ass = val_ifex i ass) \<Longrightarrow> val_ifex (restrict_top i vr vl) ass = bf2_restrict vr vl fi ass"
+proof(cases i)
+	case goal3
+	have rr: "restrict_top i vr vl = restrict i vr vl" 
+	proof(cases "x31 = vr")
+		case True
+		note uf = restrict_top_eq[OF goal3(3)[unfolded goal3(5)], symmetric, unfolded goal3(5)[symmetric], unfolded True]
+		thus ?thesis .
+	next
+		case False
+		have 1: "restrict_top i vr vl = i" by (simp add: False goal3(5))
+		have "vr < x31" using le_neq_trans[OF hlp2[OF goal3(1)[unfolded goal3(5)] goal3(2)] False[symmetric]] by blast
+		with goal3(3,5) have 2: "restrict i vr vl = i" using restrict_IF_id by blast
+		show ?thesis unfolding 1 2 ..
+	qed
+	show ?case unfolding rr by(simp add: goal3(4) restrict_val_invar[symmetric])
+qed (simp_all add: bf2_restrict_def)
+
+lemma "
+	in_rel ifex_bf2_rel fi i \<Longrightarrow>
+	in_rel ifex_bf2_rel ft t \<Longrightarrow>
+	in_rel ifex_bf2_rel fe e \<Longrightarrow>
+	in_rel ifex_bf2_rel (bf_ite fi ft fe) (ifex_ite i t e)"
+proof -
+	case goal1
+	hence o: "ifex_ordered (ifex_ite i t e)" unfolding in_rel_def using ifex_ordered_implied order_ifex_ite_invar by blast
+	have fas: "\<And>ass. fi ass = val_ifex i ass" "\<And>ass. ft ass = val_ifex t ass"  "\<And>ass. fe ass = val_ifex e ass"
+		using goal1 unfolding ifex_bf2_rel_def by simp_all
+	moreover have "ifex_ordered i" "ifex_ordered t" "ifex_ordered e" using goal1 ifex_ordered_implied by simp_all 
+	ultimately have "\<And>ass. (bf_ite fi ft fe) ass = val_ifex (ifex_ite i t e) ass"
+	proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
+		case goal3
+		note mIH = goal3(1)[OF refl refl refl 
+			restrict_top_ifex_ordered_invar[OF goal3(6)]
+			restrict_top_ifex_ordered_invar[OF goal3(7)]
+			restrict_top_ifex_ordered_invar[OF goal3(8)], symmetric]
+		note uf1 = restrict_top_bf2[OF three_ins(1) goal3(2) goal3(6) goal3(3)]
+		           restrict_top_bf2[OF three_ins(2) goal3(2) goal3(7) goal3(4)]
+		           restrict_top_bf2[OF three_ins(3) goal3(2) goal3(8) goal3(5)]
+		show ?case
+			apply(subst ifex_ite.simps, simp only: goal3(2) option.simps val_ifex.simps mIH uf1 split: option.splits)
+			(* now, it's only on bf2 *)
+			(* someone explain to me why I can't use *) thm brace90shannon2 (* to prove this *)
+			apply(simp only: bf_ite_def bf2_restrict_def split: if_splits)
+			(* now it's only function updates and ifs *)
+			apply(rule, (clarsimp simp add: fun_upd_idem|metis (mono_tags, lifting) fun_upd_idem)+)
+			done
+	qed (subst ifex_ite.simps, clarsimp simp add: bf_ite_def ifex_bf2_rel_def)+
+	(*apply(subst ifex_ite.simps, clarsimp
+				simp only: val_ifex.simps if_True bf_ite_def ifex_bf2_rel_def in_rel_def option.simps ifex.simps 
+				split: option.splits ifex.splits)*)
+	with o show ?case unfolding ifex_bf2_rel_def by simp
+qed
 
 end
