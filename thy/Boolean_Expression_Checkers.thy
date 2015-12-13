@@ -37,6 +37,7 @@ subsection{* Binary Decision Trees *}
 
 datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex"
 
+
 fun val_ifex :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" where
 "val_ifex Trueif s = True" |
 "val_ifex Falseif s = False" |
