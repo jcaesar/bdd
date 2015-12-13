@@ -320,8 +320,8 @@ proof -
 			(* now, it's only on bf2 *)
 			(* someone explain to me why I can't use *) thm brace90shannon2 (* to prove this *)
 			apply(simp only: bf_ite_def bf2_restrict_def split: if_splits)
-			(* now it's only function updates and ifs *)
-			apply(rule, (clarsimp simp add: fun_upd_idem|metis (mono_tags, lifting) fun_upd_idem)+)
+			(* now it's only function updates and logic *)
+			apply(rule|simp add: fun_upd_idem|metis (mono_tags, lifting) fun_upd_idem)+
 			done
 	qed (subst ifex_ite.simps, clarsimp simp add: bf_ite_def ifex_bf2_rel_def)+
 	(*apply(subst ifex_ite.simps, clarsimp

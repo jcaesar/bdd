@@ -67,6 +67,11 @@ lemma brace90shannon:
 	unfolding bf2_decompose_def bf2_restrict_def bf2_ithvar_def
 	unfolding bf_or_def bf_and_def bf_not_def bf_ite_def bf_True_def bf_False_def
 	by(simp_all add: fun_upd_idem)
+
+lemma brace90shannon2: "bf_ite F G H ass = bf_ite (bf2_ithvar i) 
+	                  (bf_ite (bf2_restrict i True F) (bf2_restrict i True G) (bf2_restrict i True H))
+	                  (bf_ite (bf2_restrict i False F) (bf2_restrict i False G) (bf2_restrict i False H)) ass"
+using brace90shannon by metis
 	
 
 end
