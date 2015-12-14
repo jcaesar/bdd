@@ -205,11 +205,11 @@ case("2" i t e) note FalseIFCase = "2"
   from in_R_list_lt[OF this(4)] this(1,2,4) DESTRimpl_rule2
     have 0: "lowest_tops_impl [ii, ti, ei] s = None"
             "DESTRimpl ii s = FD" by simp_all
-  from this(1,2) FalseIFCase(3) have 1: "r = ei" apply(subst (asm) ite_impl.simps) by auto
-  from 0(1,2) FalseIFCase(3) have    2: "s = s'" apply(subst (asm) ite_impl.simps) by auto
+  from this(1,2) FalseIFCase(3) have 1: "r = ei" by(auto simp add: ite_impl.simps)
+  from 0(1,2) FalseIFCase(3) have    2: "s = s'" by(auto simp add: ite_impl.simps)
   from FalseIFCase(1,2) have 3: "ifex_ite i t e = e" by simp
   from FalseIFCase(4) have 4: "(ei,e) \<in> R s" by simp
-  from les_refl 2 1 3 4 show ?case by presburger
+  show ?case unfolding 2[symmetric] 1 3 by(rule, rule les_refl, rule 4)
 qed
 
 end

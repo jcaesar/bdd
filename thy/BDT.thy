@@ -315,18 +315,10 @@ proof -
 		note uf1 = restrict_top_bf2[OF three_ins(1) goal3(2) goal3(6) goal3(3)]
 		           restrict_top_bf2[OF three_ins(2) goal3(2) goal3(7) goal3(4)]
 		           restrict_top_bf2[OF three_ins(3) goal3(2) goal3(8) goal3(5)]
-		show ?case
-			apply(subst ifex_ite.simps, simp only: goal3(2) option.simps val_ifex.simps mIH uf1 split: option.splits)
-			(* now, it's only on bf2 *)
-			(* someone explain to me why I can't use *) thm brace90shannon2 (* to prove this *)
-			apply(simp only: bf_ite_def bf2_restrict_def split: if_splits)
-			(* now it's only function updates and logic *)
-			apply(rule|simp add: fun_upd_idem|metis (mono_tags, lifting) fun_upd_idem)+
-			done
-	qed (subst ifex_ite.simps, clarsimp simp add: bf_ite_def ifex_bf2_rel_def)+
-	(*apply(subst ifex_ite.simps, clarsimp
-				simp only: val_ifex.simps if_True bf_ite_def ifex_bf2_rel_def in_rel_def option.simps ifex.simps 
-				split: option.splits ifex.splits)*)
+		show ?case by
+			(rule trans[OF brace90shannon2[where i=a]], unfold bf_ite_def[of "bf2_ithvar a"])
+			(subst ifex_ite.simps, simp only: goal3(2) mIH uf1 bf2_ithvar_def option.simps val_ifex.simps)
+	qed (subst ifex_ite.simps, simp add: bf_ite_def ifex_bf2_rel_def)+
 	with o show ?case unfolding ifex_bf2_rel_def by simp
 qed
 
