@@ -58,14 +58,13 @@ apply(metis not_less_iff_gr_or_eq rmi_appendD1 rmi_appendD2 select_convs(1,2))
 apply(auto)
 done
 
-interpretation brofix!: bdd_impl "(\<lambda>s. {(a,b). Rmi_g a b s})" tmi fmi ifmi destrmi lesmi
+
+
+interpretation brofix!: bdd_impl "(\<lambda>s. {(a,b). Rmi_g a b s})" tmi fmi ifmi destrmi
 unfolding comp_def const_def
-proof -
-	fix s s'
-	have "lesmi s s' =  (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})"
-	unfolding lesmi_def ..
-	thus "lesmi s s' \<equiv>  (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})" by presburger
-next
+proof  -
+  note bdd_impl_pre.les_def[simp]
+
 	show "bdd_impl (\<lambda>s. {(a, b). Rmi_g a b s}) tmi fmi ifmi destrmi"
 	proof(unfold_locales)
 	     case goal1 thus ?case by(clarsimp, metis (mono_tags, lifting) max_def old.unit.exhaust rmig2 surjective)
