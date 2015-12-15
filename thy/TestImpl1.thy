@@ -25,10 +25,7 @@ fun Rmi_g :: "nat \<Rightarrow> nat ifex \<Rightarrow> bdd \<Rightarrow> bool" w
 "Rmi_g n (IF v t e) bdd = (if 2 \<le> n \<and> n < bmax bdd then (case nodes bdd n of (nv, nt, ne) \<Rightarrow> nv = v \<and> Rmi_g nt t bdd \<and> Rmi_g ne e bdd) else False)" |
 "Rmi_g _ _ _ = False"
 
-definition "lesmi s s' \<equiv> (\<forall>i \<in> {0..<bmax s}. nodes s i = nodes s' i) \<and> bmax s \<le> bmax s'"
-
-lemma Rmi_gI: "lesmi s s' \<Longrightarrow> Rmi_g n bdd s \<Longrightarrow> Rmi_g n bdd s'"
-	by(induction n bdd s' rule: Rmi_g.induct) (auto simp add: lesmi_def split: if_splits)
+definition "lesmi s s' \<equiv> (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})"
 
 lemma prod_split3: "P (case prod of (x, xa, xaa) \<Rightarrow> f x xa xaa) = (\<forall>x1 x2 x3. prod = (x1, x2, x3) \<longrightarrow> P (f x1 x2 x3))"
 by(simp split: prod.splits)
@@ -65,36 +62,19 @@ interpretation brofix!: bdd_impl "(\<lambda>s. {(a,b). Rmi_g a b s})" tmi fmi if
 unfolding comp_def const_def
 proof -
 	fix s s'
-	have "lesmi s s' =  (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})" 
-	proof
-		case goal1
-		{
-			fix n ni
-			from goal1 have "Rmi_g ni n s \<Longrightarrow> Rmi_g ni n s'"
-			by(induction ni n s' arbitrary: s rule: Rmi_g.induct)
-			  (auto simp add: lesmi_def split: prod.splits if_splits)
-		}
-		thus ?case by simp
-	next
-		case goal2
-		{
-			assume "\<not>bmax s \<le> bmax s'"
-			hence "\<not>(\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})"
-			apply - 
-			apply(simp) apply(drule not_leE) using goal2
-			sorry
-		} note cp = this
-		from goal2 show ?case
-		apply(simp only: lesmi_def)
-		apply(rule) defer  using cp apply blast sorry
-	qed
+	have "lesmi s s' =  (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})"
+	unfolding lesmi_def ..
 	thus "lesmi s s' \<equiv>  (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})" by presburger
 next
 	show "bdd_impl (\<lambda>s. {(a, b). Rmi_g a b s}) tmi fmi ifmi destrmi"
 	proof(unfold_locales)
-	     case goal1 thus ?case by(auto intro: Rmi_gI[unfolded lesmi_def])
-	next case goal2 thus ?case by(auto intro: Rmi_gI[unfolded lesmi_def])
-	next case goal3 thus ?case by(auto intro: Rmi_gI[unfolded lesmi_def] split: prod.splits option.splits)
+	     case goal1 thus ?case by(clarsimp, metis (mono_tags, lifting) max_def old.unit.exhaust rmig2 surjective)
+	next case goal2 thus ?case by(clarsimp, metis (mono_tags, lifting) max_def old.unit.exhaust rmig2 surjective)
+	next case goal3 thus ?case
+	apply(case_tac "List.find (\<lambda>(_, y). (v, ni1, ni2) = y) (map (\<lambda>i. (i, nodes s i)) [2..<bmax s])")
+	apply(simp_all split: prod.splits)
+	 apply(clarsimp split: option.split prod.split)
+	 	using rmi_appendD1 rmi_appendD2 by fastforce
 	next case goal4 thus ?case by(auto)
 	next case goal5 thus ?case by(auto)
 	next
