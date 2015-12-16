@@ -212,5 +212,32 @@ case("2" i t e) note FalseIFCase = "2"
   show ?case unfolding 2[symmetric] 1 3 by(rule, rule les_refl, rule 4)
 qed
 
+function eval_impl     :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
+and eval_impl_hlp :: "('a, 'ni) IFEXD \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" 
+where
+"eval_impl e s ass = eval_impl_hlp (DESTRimpl e s) s ass" |
+"eval_impl_hlp (TD) _ _ = True" |
+"eval_impl_hlp (FD) _ _ = False" |
+"eval_impl_hlp (IFD v t e) s ass = eval_impl (if ass v then t else e) s ass" (* sassy *)
+by pat_completeness auto
+
+term "projr \<circ> Inr"
+termination eval_impl
+apply(relation "measure undefined", rule wf_measure, unfold in_measure)
+oops
+
+inductive reachable_impl where
+"(n,p) \<in> R s \<Longrightarrow> reachable_impl n s" |
+"DESTRimpl n s = IFD v t e \<Longrightarrow> (b = t \<or> b = e) \<Longrightarrow> reachable_impl b s"
+
+
+partial_function(option) eval_impl     :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool"
+and eval_impl_hlp :: "('a, 'ni) IFEXD \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" 
+where
+"eval_impl e s ass = eval_impl_hlp (DESTRimpl e s) s ass" 
+(* oops! *)
+
+
+
 end
 end
