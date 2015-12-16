@@ -5,15 +5,19 @@ begin
 
 datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni 
 
-locale bdd_impl = 
+locale bdd_impl_pre =
   fixes R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set"
+begin
+  definition les:: "'s \<Rightarrow> 's \<Rightarrow> bool" where
+  "les s s' == \<forall>ni n. (ni, n) \<in> R s \<longrightarrow> (ni, n) \<in> R s'"
+end
+
+
+locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set" +
   fixes Timpl :: "'s \<Rightarrow> ('ni \<times> 's)"
   fixes Fimpl :: "'s \<Rightarrow> ('ni \<times> 's)"
   fixes IFimpl :: "'a \<Rightarrow> 'ni \<Rightarrow> 'ni \<Rightarrow> 's \<Rightarrow> ('ni \<times> 's)"
   fixes DESTRimpl :: "'ni  \<Rightarrow> 's \<Rightarrow> ('a, 'ni) IFEXD"
-
-  fixes les :: "'s \<Rightarrow> 's \<Rightarrow> bool"
-  defines "les s s' == \<forall>ni n. (ni, n) \<in> R s \<longrightarrow> (ni, n) \<in> R s'"
 
   assumes Timpl_mono: "Timpl s = (ni, s') \<Longrightarrow> les s s'"
   assumes Fimpl_mono: "Fimpl s = (ni, s') \<Longrightarrow> les s s'"

@@ -92,13 +92,12 @@ proof(induction ni1 n1 s arbitrary: n2 ni2 rule: Rmi_g.induct)
 qed (case_tac n2, simp, clarsimp, clarsimp)+
 	
 
-interpretation brofix!: bdd_impl "(\<lambda>s. {(a,b). Rmi_g a b s})" tmi fmi ifmi destrmi lesmi
+
+
+interpretation brofix!: bdd_impl "(\<lambda>s. {(a,b). Rmi_g a b s})" tmi fmi ifmi destrmi
 unfolding comp_def const_def
-proof -
-	fix s s'
-	show "lesmi s s' \<equiv>  (\<forall>ni n. (ni, n) \<in> {(a, b). Rmi_g a b s} \<longrightarrow> (ni, n) \<in> {(a, b). Rmi_g a b s'})" unfolding lesmi_def by presburger
-next
-	note defnodes_def[simp]
+proof  -
+  note bdd_impl_pre.les_def[simp] defnodes_def[simp]
 	show "bdd_impl (\<lambda>s. {(a, b). Rmi_g a b s}) tmi fmi ifmi destrmi"
 	proof(unfold_locales)
 	     case goal1 thus ?case using rmig2 by fastforce
