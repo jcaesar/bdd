@@ -110,10 +110,6 @@ using assms proof(induction b arbitrary: v b1 b2)
     qed
 qed (auto)
 
-lemma ifex_in_var_set_assign: 
-  "ro_ifex b \<Longrightarrow> x \<in> ifex_var_set b \<Longrightarrow> \<exists>ass. val_ifex b ass"
-sorry
-
 lemma ifex_ordered_not_part: "ifex_ordered  b \<Longrightarrow> b = IF v b1 b2 \<Longrightarrow> w < v \<Longrightarrow> w \<notin> ifex_var_set b"
   proof(induction arbitrary: v b1 b2)
     case(IF v' b1' b2') thus ?case 
@@ -206,30 +202,31 @@ oops
 
 lemma bla: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass. val_ifex x ass = val_ifex y ass \<Longrightarrow> x = y"
  proof(induction x arbitrary: y)
-  case (IF xv xb1 xb2) note IFind = IF thus ?case
-    proof(cases y)
+  case (IF xv xb1 xb2) note IFind = IF from this(3,4,5) show ?case
+    proof(induction y)
       case (IF yv yb1 yb2)
   thm IF IFind(3,4,5) IFind(1)[of yb1] IFind(2)[of yb2]
   obtain x where x_def: "x = IF xv xb1 xb2" by simp
-  from this IFind(3,4) IF have 0: "ro_ifex xb1" "ro_ifex xb2" "ro_ifex yb1" "ro_ifex yb2" 
-                                  "ro_ifex x" by auto
-  from IF IFind(5) x_def have 1: "\<forall>ass. val_ifex x ass = val_ifex y ass" by simp
-  show ?thesis proof(cases "xv = yv")
+  obtain y' where y'_def: "y' = IF yv yb1 yb2" by simp
+  from y'_def x_def IFind(3,4) IF have 0: "ro_ifex xb1" "ro_ifex xb2" "ro_ifex yb1" "ro_ifex yb2" 
+                                          "ro_ifex x" "ro_ifex y'" by auto
+  from IF IFind(5) x_def y'_def have 1: "\<forall>ass. val_ifex x ass = val_ifex y' ass" by simp
+  show ?case proof(cases "xv = yv")
     note roifex_set_var_subtree(1)[OF 0(5) x_def, symmetric]
-    case True 
+    case True
       from roifex_set_var_subtree(1)[OF 0(5) x_def]
-           roifex_set_var_subtree(1)[OF IFind(4) IF] 1 True IFind(1)[OF 0(1) 0(3)]
+           roifex_set_var_subtree(1)[OF 0(6) y'_def] 1 True IFind(1)[OF 0(1) 0(3)]
            have 3: "xb1 = yb1" by blast
       from roifex_set_var_subtree(2)[OF 0(5) x_def]
-           roifex_set_var_subtree(2)[OF IFind(4) IF] 1 True IFind(2)[OF 0(2) 0(4)]
+           roifex_set_var_subtree(2)[OF 0(6) y'_def] 1 True IFind(2)[OF 0(2) 0(4)]
            have 4: "xb2 = yb2" by blast
       from True 3 4 IF show ?thesis by simp
     next
     case False note uneq = False show ?thesis
       proof(cases "xv < yv")
         case True
-          from ifex_ordered_not_part[OF _ IF True] ifex_var_noinfluence[of xv y _ "True"]
-               IFind(4) roifex_set_var_subtree(1)[OF 0(5) x_def] 1
+          from ifex_ordered_not_part[OF _ y'_def True] ifex_var_noinfluence[of xv y' _ "True"]
+               0(6) roifex_set_var_subtree(1)[OF 0(5) x_def] 1
              have 5: "\<And>ass. val_ifex xb1 ass = val_ifex x ass" by blast
           from 0(5) ifex_var_noinfluence[of xv xb1 _ "False"] 
                     ifex_var_noinfluence[of xv xb2 _ "False"] 
@@ -242,18 +239,34 @@ lemma bla: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass
           from this show ?thesis ..
       next
         case False
-          from this uneq have "yv < xv" by auto
-          from ifex_ordered_not_part[OF _ x_def this] ifex_var_noinfluence[of yv x _ "True"]
-               0(5) roifex_set_var_subtree(1)[OF IFind(4) IF] 1
-             have 5: "\<And>ass. val_ifex yb1 ass = val_ifex y ass" by blast
-          from IF IFind(4) ifex_var_noinfluence[of yv yb1 _ "False"] 
-               ifex_var_noinfluence[of yv yb2 _ "False"]
-            have "\<And>ass. val_ifex yb1 (ass(yv := False)) = val_ifex yb1 ass"
-                 "\<And>ass. val_ifex yb2 (ass(yv := False)) = val_ifex yb2 ass" by auto
-          from 5 this roifex_set_var_subtree(2)[OF IFind(4) IF]
-            have "\<And>ass. val_ifex yb1 ass = val_ifex yb2 ass" by presburger
-          from IFind(1)[OF 0(1) 0(2)] this IFind(3) have "False" by auto
-          from this show ?thesis ..
-oops
+          from this uneq have 6: "yv < xv" by auto
+          from ifex_ordered_not_part[OF _ x_def this]
+                     ifex_var_noinfluence[of yv x] 0(5)
+             have  "\<And>ass val. val_ifex x (ass(yv := val)) = val_ifex x ass" 
+                   "\<And>ass val. val_ifex x (ass(yv := val)) =  val_ifex x ass" by auto
+          from this roifex_set_var_subtree[OF 0(5) x_def]
+            have "\<And>ass val. val_ifex x (ass(xv := True, yv := val)) = val_ifex xb1 ass"
+                 "\<And>ass val. val_ifex x (ass(xv := False, yv := val)) = val_ifex xb2 ass" by blast+
+          from ifex_ordered_not_part[OF _ x_def 6] 0(5) ifex_var_noinfluence[of yv x] 1
+               roifex_set_var_subtree[OF 0(6) y'_def]
+            have "\<And>ass val. val_ifex x ass = val_ifex yb1 ass"
+                 "\<And>ass val. val_ifex x ass = val_ifex yb2 ass" by blast+
+          from this IF(1,2) x_def 0(5) y'_def 0(6) have "x = yb1" "x = yb2" by fastforce+
+          from this have "yb1 = yb2" by auto
+          from 0(6) y'_def this have "False" by auto
+          thus ?thesis ..
+      qed
+  qed
+next
+case Trueif from this roifex_Trueif_unique show ?case by fastforce
+next
+case Falseif from this roifex_Falseif_unique show ?case by fastforce
+qed
+next
+case Trueif from this roifex_Trueif_unique show ?case by fastforce
+next
+case Falseif from this roifex_Falseif_unique show ?case by fastforce
+qed
+
 
 end
