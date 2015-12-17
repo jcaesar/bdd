@@ -68,18 +68,139 @@ lemma "(f, b) \<in> ifex_bf2_rel \<Longrightarrow>  b = Trueif \<longleftrightar
 lemma "(f, b) \<in> ifex_bf2_rel \<Longrightarrow>  b = Falseif \<longleftrightarrow> f = (\<lambda>_. False)"
   unfolding ifex_bf2_rel_def using roifex_Falseif_unique by auto
 
-lemma "ro_ifex b \<Longrightarrow> x \<in> ifex_var_set b \<Longrightarrow>
-       \<exists>ass. val_ifex b (ass(x:=True)) \<noteq> val_ifex b (ass(x:=False))"
+
+
+lemma ro_ifex_true_assign: assumes "ro_ifex b" "b = IF v b1 b2" shows "\<exists>ass. val_ifex b ass"
+using assms proof(induction b arbitrary: v b1 b2)
+  case(IF v' b1' b2') note IFind = IF show ?case
+    proof(cases b1')
+      case Trueif thus ?thesis by auto
+    next
+      case Falseif with IF(2) IF(3) show ?thesis 
+        proof(cases b2')
+          case (IF v2 b21 b22) 
+            from IFind(2)[OF _ this] IFind(3) obtain a where a_def: "val_ifex b2' a" by auto
+           note this = roifex_set_var_subtree(2)[OF IFind(3), of v' b1' b2' a]
+           from a_def this show ?thesis by blast
+        qed(auto)
+    next
+      case (IF v1 b11 b12) 
+        from IFind(1)[OF _ this] roifex_set_var_subtree(1)[OF IFind(3), of v' b1' b2'] IFind(3)
+          show ?thesis by fastforce
+    qed
+qed (auto)
+
+lemma ro_ifex_false_assign: assumes "ro_ifex b" "b = IF v b1 b2" shows "\<exists>ass. \<not> val_ifex b ass"
+using assms proof(induction b arbitrary: v b1 b2)
+  case(IF v' b1' b2') note IFind = IF show ?case
+    proof(cases b1')
+      case Falseif thus ?thesis by auto
+    next
+      case Trueif with IF(2) IF(3) show ?thesis 
+        proof(cases b2')
+          case (IF v2 b21 b22) 
+            from IFind(2)[OF _ this] IFind(3) obtain a where a_def: "\<not> val_ifex b2' a" by auto
+           note this = roifex_set_var_subtree(2)[OF IFind(3), of v' b1' b2' a]
+           from a_def this show ?thesis by blast
+        qed(auto)
+    next
+      case (IF v1 b11 b12) 
+        from IFind(1)[OF _ this] roifex_set_var_subtree(1)[OF IFind(3), of v' b1' b2'] IFind(3)
+          show ?thesis by fastforce
+    qed
+qed (auto)
+
+lemma ifex_in_var_set_assign: 
+  "ro_ifex b \<Longrightarrow> x \<in> ifex_var_set b \<Longrightarrow> \<exists>ass. val_ifex b ass"
+sorry
+
+lemma "ifex_ordered  b \<Longrightarrow> b = IF v b1 b2 \<Longrightarrow> w < v \<Longrightarrow> w \<notin> ifex_var_set b"
+  proof(induction arbitrary: v b1 b2 w v)
+    case(IF v' b1' b2') thus ?case proof(cases b1')
+      case goal1 from goal1(4,5) have "w < v'" by blast
+        from this goal1(6) show ?thesis apply(cases b2') apply(simp) apply(simp)
+          using goal1(2)[of v' _ _ w]
 oops
 
-lemma "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass. val_ifex x ass = val_ifex y ass \<Longrightarrow> x = y"
+lemma dong: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> x \<noteq> y \<Longrightarrow> \<exists>ass. val_ifex x ass \<noteq> val_ifex y ass"
   proof(induction x arbitrary: y)
-  case (IF xv xb1 xb2) note IFinduction = IF thus ?case
+    case(Trueif) thus ?case 
+      proof(cases y)
+        case Falseif thus ?thesis by simp
+      next
+        case (IF) from ro_ifex_false_assign[OF Trueif(2) this] show ?thesis by simp
+      qed (auto)
+  next
+    case(Falseif) thus ?case 
+      proof(cases y)
+        case Trueif thus ?thesis by simp
+      next
+        case (IF) from ro_ifex_true_assign[OF Falseif(2) this] show ?thesis by simp
+      qed (auto)
+  next
+    case(IF v b1 b2) note IFind = IF thus ?case
+    proof(cases "y")
+      case Trueif from ro_ifex_false_assign[OF IFind(3), of v b1 b2] this show ?thesis by simp
+    next
+      case Falseif from ro_ifex_true_assign[OF IFind(3), of v b1 b2] this show ?thesis by simp
+    next
+      case (IF yv yb1 yb2) show ?thesis
+        proof(cases "yb1 = b1", cases "yb2 = b2")
+          case goal1 from this IF IFind(5) have 0: "v \<noteq> yv" by blast
+            from goal1 IFind(3) have "v \<notin> ifex_var_set yb1 \<and> v \<notin> ifex_var_set yb2" by auto
+            with 0 IF have 2: "v \<notin> ifex_var_set y" by simp
+            obtain x where x_def: "x = (IF v b1 b2)" by simp
+            from goal1 IF IFind(4) have "yv \<notin> ifex_var_set b1 \<and> yv \<notin> ifex_var_set b2" by auto
+            with 0 x_def have 1: "yv \<notin> ifex_var_set x" by simp
+            from goal1 IFind(1)[of yb2] IFind(3) 
+              obtain a where a_def: "val_ifex b1 a \<noteq> val_ifex yb2 a" by auto
+            from roifex_set_var_subtree(1)[OF IFind(3), of v b1 b2] x_def
+              have "val_ifex x (a(v := True)) = val_ifex b1 a" by blast
+            from this ifex_var_noinfluence[OF 1, of "a(v := True)" "False"]
+              have 3: "val_ifex x (a(v := True, yv := False)) = val_ifex b1 a" by fast
+            from roifex_set_var_subtree(2)[OF IFind(4) IF, of a] 
+                 ifex_var_noinfluence[OF 2, of "a(yv := False)" "True"] 
+                 fun_upd_twist[OF 0, of a "True" "False"]
+              have 4: "val_ifex y (a(v := True, yv := False)) = val_ifex yb2 a" by presburger
+            from 3 4 a_def x_def show ?thesis by blast
+        next
+          case goal2
+            from IFind(3,4) IF IFind(2)[OF _ _ this(2)[symmetric]]  
+              obtain a where a_def: "val_ifex b2 a \<noteq> val_ifex yb2 a" by auto
+            from IFind(3,4) goal2(1) IF IFind(1)[of yb2] 
+              obtain b where b_def: "val_ifex b1 b \<noteq> val_ifex yb2 b" by auto
+            from roifex_set_var_subtree(2)[OF IFind(3), of v b1 b2 a]
+                  roifex_set_var_subtree(2)[OF IFind(4) IF, of a] a_def
+              have 0: "val_ifex (IF v b1 b2) (a(v := False)) \<noteq> val_ifex y (a(yv := False))" by simp
+            show ?thesis
+              proof(cases "v < yv")
+                case True with IFind(4) IF have "v \<notin> ifex_var_set y" 
+              next
+                case False with goal2
+oops
+
+lemma bla: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass. val_ifex x ass = val_ifex y ass \<Longrightarrow> x = y"
+ proof(induction x arbitrary: y)
+  case (IF xv xb1 xb2) note IFind = IF thus ?case
     proof(cases y)
-      case (IF yv yb1 yb2) 
-  thm IF IFinduction(3,4,5) IFinduction(1)[of yb1] IFinduction(2)[of yb2]
-  from IF IFinduction(5) have 0: "\<forall>ass. val_ifex (IF xv xb1 xb2) ass = val_ifex (IF yv yb1 yb2) ass"
-   by simp
+      case (IF yv yb1 yb2)
+  thm IF IFind(3,4,5) IFind(1)[of yb1] IFind(2)[of yb2]
+  obtain x where x_def: "x = IF xv xb1 xb2" by simp
+  from this IFind(3,4) IF have 0: "ro_ifex xb1" "ro_ifex xb2" "ro_ifex yb1" "ro_ifex yb2" 
+                                  "ro_ifex x" by auto
+  from IF IFind(5) x_def have 1: "\<forall>ass. val_ifex x ass = val_ifex y ass" by simp
+  show ?thesis proof(cases "xv = yv")
+    note roifex_set_var_subtree(1)[OF 0(5) x_def, symmetric]
+    case True 
+      from roifex_set_var_subtree(1)[OF 0(5) x_def, symmetric]
+           roifex_set_var_subtree(1)[OF IFind(4) IF, symmetric] 1 True IFind(1)[OF 0(1) 0(3)]
+           have 3: "xb1 = yb1" by presburger
+      from roifex_set_var_subtree(2)[OF 0(5) x_def, symmetric]
+           roifex_set_var_subtree(2)[OF IFind(4) IF, symmetric] 1 True IFind(2)[OF 0(2) 0(4)]
+           have 4: "xb2 = yb2" by presburger
+      from True 3 4 IF show ?thesis by simp
+    next
+    case False 
 oops
 
 end
