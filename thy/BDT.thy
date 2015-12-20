@@ -1,5 +1,5 @@
 theory BDT
-imports Boolean_Expression_Checkers BoolFunc Min2
+imports Boolean_Expression_Checkers BoolFunc
 begin
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
@@ -27,8 +27,8 @@ fun ifex_minimal :: "('a::linorder) ifex \<Rightarrow> bool" where
   "ifex_minimal Trueif = True" |
   "ifex_minimal Falseif = True"
 
-definition ifex_bf2_rel where
-  "ifex_bf2_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ifex_ordered b \<and> ifex_minimal b}"
+definition bf_ifex_rel where
+  "bf_ifex_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ifex_ordered b \<and> ifex_minimal b}"
 
 abbreviation ro_ifex where "ro_ifex t \<equiv> ifex_ordered t \<and> ifex_minimal t"
 
@@ -62,13 +62,11 @@ proof(induction b)
   case (IF v b1 b2) with roifex_set_var_subtree[OF IF(3), of v b1 b2] show ?case by fastforce
 qed(auto)
 
-lemma "(f, b) \<in> ifex_bf2_rel \<Longrightarrow>  b = Trueif \<longleftrightarrow> f = (\<lambda>_. True)"
-  unfolding ifex_bf2_rel_def using roifex_Trueif_unique by auto
+lemma "(f, b) \<in> bf_ifex_rel \<Longrightarrow>  b = Trueif \<longleftrightarrow> f = (\<lambda>_. True)"
+  unfolding bf_ifex_rel_def using roifex_Trueif_unique by auto
 
-lemma "(f, b) \<in> ifex_bf2_rel \<Longrightarrow>  b = Falseif \<longleftrightarrow> f = (\<lambda>_. False)"
-  unfolding ifex_bf2_rel_def using roifex_Falseif_unique by auto
-
-
+lemma "(f, b) \<in> bf_ifex_rel \<Longrightarrow>  b = Falseif \<longleftrightarrow> f = (\<lambda>_. False)"
+  unfolding bf_ifex_rel_def using roifex_Falseif_unique by auto
 
 lemma ro_ifex_true_assign: assumes "ro_ifex b" "b = IF v b1 b2" shows "\<exists>ass. val_ifex b ass"
 using assms proof(induction b arbitrary: v b1 b2)
@@ -143,64 +141,7 @@ lemma ifex_ordered_not_part: "ifex_ordered  b \<Longrightarrow> b = IF v b1 b2 \
   qed (auto)
 qed(auto)
 
-lemma dong: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> x \<noteq> y \<Longrightarrow> \<exists>ass1 ass2. val_ifex x ass1 \<noteq> val_ifex y ass2"
-  proof(induction x arbitrary: y)
-    case(Trueif) thus ?case 
-      proof(cases y)
-        case Falseif thus ?thesis by simp
-      next
-        case (IF) from ro_ifex_false_assign[OF Trueif(2) this] show ?thesis by simp
-      qed (auto)
-  next
-    case(Falseif) thus ?case 
-      proof(cases y)
-        case Trueif thus ?thesis by simp
-      next
-        case (IF) from ro_ifex_true_assign[OF Falseif(2) this] show ?thesis by simp
-      qed (auto)
-  next
-    case(IF v b1 b2) note IFind = IF thus ?case
-    proof(cases "y")
-      case Trueif from ro_ifex_false_assign[OF IFind(3), of v b1 b2] this show ?thesis by simp
-    next
-      case Falseif from ro_ifex_true_assign[OF IFind(3), of v b1 b2] this show ?thesis by simp
-    next
-      case (IF yv yb1 yb2) show ?thesis
-        proof(cases "yb1 = b1", cases "yb2 = b2")
-          case goal1 from this IF IFind(5) have 0: "v \<noteq> yv" by blast
-            from goal1 IFind(3) have "v \<notin> ifex_var_set yb1 \<and> v \<notin> ifex_var_set yb2" by auto
-            with 0 IF have 2: "v \<notin> ifex_var_set y" by simp
-            obtain x where x_def: "x = (IF v b1 b2)" by simp
-            from goal1 IF IFind(4) have "yv \<notin> ifex_var_set b1 \<and> yv \<notin> ifex_var_set b2" by auto
-            with 0 x_def have 1: "yv \<notin> ifex_var_set x" by simp
-            from goal1 IFind(1)[of yb2] IFind(3) 
-              obtain a where a_def: "val_ifex b1 a \<noteq> val_ifex yb2 a" by auto
-            from roifex_set_var_subtree(1)[OF IFind(3), of v b1 b2] x_def
-              have "val_ifex x (a(v := True)) = val_ifex b1 a" by blast
-            from this ifex_var_noinfluence[OF 1, of "a(v := True)" "False"]
-              have 3: "val_ifex x (a(v := True, yv := False)) = val_ifex b1 a" by fast
-            from roifex_set_var_subtree(2)[OF IFind(4) IF, of a] 
-                 ifex_var_noinfluence[OF 2, of "a(yv := False)" "True"] 
-                 fun_upd_twist[OF 0, of a "True" "False"]
-              have 4: "val_ifex y (a(v := True, yv := False)) = val_ifex yb2 a" by presburger
-            from 3 4 a_def x_def show ?thesis by blast
-        next
-          case goal2
-            from IFind(3,4) IF IFind(2)[OF _ _ this(2)[symmetric]]  
-              obtain a where a_def: "val_ifex b2 a \<noteq> val_ifex yb2 a" by auto
-            from IFind(3,4) goal2(1) IF IFind(1)[of yb2] 
-              obtain b where b_def: "val_ifex b1 b \<noteq> val_ifex yb2 b" by auto
-            from roifex_set_var_subtree(2)[OF IFind(3), of v b1 b2 a]
-                  roifex_set_var_subtree(2)[OF IFind(4) IF, of a] a_def
-              have 0: "val_ifex (IF v b1 b2) (a(v := False)) \<noteq> val_ifex y (a(yv := False))" by simp
-            show ?thesis
-              proof(cases "v < yv")
-                case True with IFind(4) IF have "v \<notin> ifex_var_set y" 
-              next
-                case False with goal2
-oops
-
-lemma bla: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass. val_ifex x ass = val_ifex y ass \<Longrightarrow> x = y"
+lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass. val_ifex x ass = val_ifex y ass \<Longrightarrow> x = y"
  proof(induction x arbitrary: y)
   case (IF xv xb1 xb2) note IFind = IF from this(3,4,5) show ?case
     proof(induction y)
@@ -268,5 +209,7 @@ next
 case Falseif from this roifex_Falseif_unique show ?case by fastforce
 qed
 
+lemma "single_valued bf_ifex_rel" "single_valued (bf_ifex_rel\<inverse>)"
+  unfolding single_valued_def bf_ifex_rel_def using ro_ifex_unique by auto
 
 end
