@@ -322,4 +322,76 @@ proof -
 	with o show ?case unfolding ifex_bf2_rel_def by simp
 qed
 
+fun ifex_sat where
+"ifex_sat Trueif = Some (const False)" |
+"ifex_sat Falseif = None" |
+"ifex_sat (IF v t e) = 
+	(case ifex_sat e of 
+		Some a \<Rightarrow> Some (a(v:=False)) |
+		None \<Rightarrow> (case ifex_sat t of
+			Some a \<Rightarrow> Some (a(v:=True)) |
+			None \<Rightarrow> None))
+"
+lemma ifex_sat_untouched_False: "v \<notin> set (ifex_vars i) \<Longrightarrow> ifex_sat i = Some a \<Longrightarrow> a v = False"
+proof(induction i arbitrary: a)
+	case (IF v1 t e)
+	have ni: "v \<notin> set (ifex_vars t)" "v \<notin> set (ifex_vars e)" using IF.prems(1) by simp_all
+	have ne: "v1 \<noteq> v" using IF.prems(1) by force
+	show ?case proof(cases "ifex_sat e")
+		case (Some as)
+		with IF.prems(2) have au: "a = as(v1 := False)" by simp
+		moreover from IF.IH(2)[OF ni(2)] have "as v = False" using Some .
+		ultimately show ?thesis using ne by simp
+	next
+		case None
+		obtain as where Some: "ifex_sat t = Some as" using None IF.prems(2) by fastforce
+		with IF.prems(2) None have au: "a = as(v1 := True)" by(simp)
+		moreover from IF.IH(1)[OF ni(1)] have "as v = False" using Some .
+		ultimately show ?thesis using ne by simp
+	qed (* feels like this should be easier *)
+qed(simp_all add: const_def fun_eq_iff)
+
+lemma ifex_upd_other: "v \<notin> set (ifex_vars i) \<Longrightarrow> val_ifex i (a(v:=any)) = val_ifex i a" 
+proof(induction i)
+	case (IF v1 t e)
+	have prems: "v \<notin> set (ifex_vars t) " "v \<notin> set (ifex_vars e)" using IF.prems by simp_all
+	from IF.prems have ne: "v1 \<noteq> v" by clarsimp
+	show ?case by(simp only: val_ifex.simps fun_upd_other[OF ne] ifex_vars.simps IF.IH(1)[OF prems(1)] IF.IH(2)[OF prems(2)] split: if_splits)
+qed simp_all
+
+(* just thinking\<dots> this basically implies that there can be an order, but doesn't require it *)
+fun ifex_no_twice where
+"ifex_no_twice (IF v t e) = (
+	v \<notin> set (ifex_vars t @ ifex_vars e) \<and>
+	ifex_no_twice t \<and> ifex_no_twice e)" |
+"ifex_no_twice _ = True"
+lemma ordered_ifex_no_twiceI: "ifex_ordered i \<Longrightarrow> ifex_no_twice i"
+	by(induction i) (simp_all,blast)
+
+lemma ifex_sat_NoneD: "ifex_sat i = None \<Longrightarrow> val_ifex i ass = False"
+	by(induction i) (simp_all split: option.splits)
+lemma ifex_sat_SomeD: "ifex_no_twice i \<Longrightarrow> ifex_sat i = Some ass \<Longrightarrow> val_ifex i ass = True"
+proof(induction i arbitrary: ass)
+	case (IF v t e) 
+	have ni: "v \<notin> set (ifex_vars t)" "v \<notin> set (ifex_vars e)" using IF.prems(1) by simp_all
+	note IF.prems[unfolded ifex_sat.simps]
+	thus ?case proof(cases "ifex_sat e")
+		case (Some a) thus ?thesis using IF.prems 
+			by(clarsimp simp only: val_ifex.simps ifex_sat.simps option.simps fun_upd_same if_False ifex_upd_other[OF ni(2)]) (rule IF.IH(2), simp_all)
+	next
+		case None
+		obtain a where Some: "ifex_sat t = Some a" using None IF.prems(2) by fastforce
+		thus ?thesis using IF.prems
+			by(clarsimp simp only: val_ifex.simps ifex_sat.simps option.simps fun_upd_same if_True None ifex_upd_other[OF ni(1)])
+			(rule IF.IH(1), simp_all)
+	qed
+qed simp_all
+lemma ifex_sat_NoneI: "ifex_no_twice i \<Longrightarrow> (\<And>ass. val_ifex i ass = False) \<Longrightarrow> ifex_sat i = None" 
+(* using ifex_sat_SomeD by fastforce *)
+proof(rule ccontr)
+	case goal1
+	from goal1(3) obtain as where "ifex_sat i = Some as" by blast
+	from ifex_sat_SomeD[OF goal1(1) this] show False using goal1(2) by simp
+qed
+
 end
