@@ -223,12 +223,33 @@ where
 	FD \<Rightarrow> Some False |
 	(IFD v t e) \<Rightarrow> eval_impl (if ass v then t else e) s ass)"
 
-lemma "(ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n ass) = val_impl ni s ass"
+lemma val_ifex_correct: "(ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n ass) = val_impl ni s ass"
 proof(induction n arbitrary: ni, ((drule DESTRimpl_rule1 | drule DESTRimpl_rule2), simp add: val_impl.simps)+, drule DESTRimpl_rule3, clarify)
 	case goal1
 	note mIH = goal1(1)[OF goal1(4)] goal1(2)[OF goal1(5)]
 	show ?case by(subst val_impl.simps) (simp add: mIH goal1(3))
 qed
+lemma val_ifex_correct2: assumes "(ni,n) \<in> R s" shows "val_ifex n ass = the (val_impl ni s ass)"
+	unfolding val_ifex_correct[OF assms, symmetric] option.sel ..
+
+partial_function(option) sat_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) option option" where
+"sat_impl f s = (case DESTRimpl f s of
+	TD \<Rightarrow> Some (Some (const False)) |
+	FD \<Rightarrow> Some None |
+	(IFD v t e) \<Rightarrow> 
+	(case sat_impl e s of 
+		None \<Rightarrow> None | 
+		Some a' \<Rightarrow> (case a' of 
+			Some a \<Rightarrow> Some (Some (a(v:=False))) |
+			None \<Rightarrow> (case sat_impl t s of
+				None \<Rightarrow> None |
+				Some a' \<Rightarrow> (case a' of
+					Some a \<Rightarrow> Some (Some (a(v:=True))) | 
+					None \<Rightarrow> Some None)))))"
+
+
+find_theorems sat_impl
+
 
 end
 end
