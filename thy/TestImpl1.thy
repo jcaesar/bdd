@@ -113,17 +113,21 @@ proof  -
 		case goal6
 		from goal6(1,2) have s: "Rmi_g ni1 n1 s" "Rmi_g ni2 n2 s" by simp_all
 		from s(1) have g: "2 \<le> length (nodes s)" using rmig2 by simp
-		from s goal6(3) have "Rmi_g ni (IF v n1 n2) s'"
+		from s goal6(3) have "Rmi_g ni (IFC v n1 n2) s'"
 		proof(cases "ni1 \<noteq> ni2", cases "lunode s (v, ni1, ni2)")
 			case None moreover assume "ni1 \<noteq> ni2" ultimately show ?thesis using s goal6(3)
-			by(clarsimp simp add: g rmi_appendD split: prod.splits)
+			apply(clarsimp simp add: g rmi_appendD  split: prod.splits ifc_split)
+			apply(drule rmi_appendD)
+			apply(drule rmi_appendD)
+			using g rmi_appendD
+			sorry
 		next
 			case (Some a) assume nine: "ni1 \<noteq> ni2"
 			have seq: "s' = s" using goal6(3) Some nine by(simp split: prod.splits)
 			(*from Some obtain i tb fb where a: "a = (i, v, tb, fb)" unfolding find_Some_iff by blast
 			from Some[unfolded this] have neq: "nodes s i = (v, tb, fb)" 
 			unfolding find_Some_iff unfolding length_map length_upt 
-			proof(clarify) 
+			proof(clarify)                   
 				case goal1 
 				note nth_map_upt[OF goal1(1)]
 				note goal1(3)[unfolded this]
@@ -156,7 +160,12 @@ proof  -
 			apply(frule rmigif, clarify)
 			apply(simp add: rmigif split: if_splits prod.splits)
 		done
+	next
+		case goal10 thus ?case sorry
 	qed
 qed
+print_theorems
+thm brofix.ite_impl_R
+
 
 end
