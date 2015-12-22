@@ -33,8 +33,6 @@ locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a ::
   assumes DESTRimpl_rule2: "(ni, Falseif) \<in> R s \<Longrightarrow> DESTRimpl ni s = FD"
   assumes DESTRimpl_rule3: "(ni, IF v n1 n2) \<in> R s \<Longrightarrow> \<exists>ni1 ni2. DESTRimpl ni s = IFD v ni1 ni2 
                                                        \<and> (ni1, n1) \<in> R s \<and> (ni2, n2) \<in> R s"
-                                                       
-  assumes rel_minimal: "(ni,n) \<in> R s \<Longrightarrow> ifex_minimal n" 
 
 begin
 
@@ -157,7 +155,7 @@ case ("3" i t e a)
     by simp
   from 5 IFCase(3) have "IFimpl a tb eb se = (r, s')" by force
   from goal11 IFimpl_rule[OF 8 4(1) this] 7 show ?case
-  by(auto split: ifc_split dest: rel_minimal)
+  by(auto split: ifc_split)
 next
 case("1" i t e) note TrueIFCase = "1"
   from in_R_list_lt[OF this(4)] this(1,2,4) DESTRimpl_rule1
