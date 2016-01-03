@@ -206,8 +206,8 @@ lemma restrict_ifex_ordered_invar: "ifex_ordered b \<Longrightarrow> ifex_ordere
   using restrict_variables_subset by (induction b) (fastforce)+
 
 lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow> 
-      (bf2_restrict var val a) ass = val_ifex (restrict b var val) ass"
-  unfolding bf2_restrict_def using restrict_assignment by simp
+      (bf_restrict var val a) ass = val_ifex (restrict b var val) ass"
+  unfolding bf_restrict_def using restrict_assignment by simp
 
 lemma restrict_untouched_id: "x \<notin> set (ifex_vars t) \<Longrightarrow> restrict t x val = t" (* umkehrung gilt auch\<dots> *)
 proof(induction t)
@@ -327,7 +327,7 @@ unfolding bf_ifex_rel_def
 unfolding in_rel_Collect_split_eq
 unfolding val_ifex.simps
 unfolding ifex_ordered.simps
-unfolding bf2_restrict_def
+unfolding bf_restrict_def
 oops
 	
 lemma ifex_ordered_implied: "(a, b) \<in> bf_ifex_rel \<Longrightarrow> ifex_ordered b" unfolding bf_ifex_rel_def by simp
@@ -442,8 +442,8 @@ lemma restrict_top_ifex_minimal_invar: "ifex_minimal i \<Longrightarrow> ifex_mi
 lemma minimal_ifex_ite_invar: "ifex_minimal i \<Longrightarrow> ifex_minimal t \<Longrightarrow> ifex_minimal e \<Longrightarrow> ifex_minimal (ifex_ite i t e)"
 by(induction i t e rule: ifex_ite_induct) (simp_all split: ifc_split option.split add: restrict_top_ifex_minimal_invar)
 
-lemma restrict_top_bf2: "i \<in> set is \<Longrightarrow> lowest_tops is = Some vr \<Longrightarrow> 
-	ifex_ordered i \<Longrightarrow> (\<And>ass. fi ass = val_ifex i ass) \<Longrightarrow> val_ifex (restrict_top i vr vl) ass = bf2_restrict vr vl fi ass"
+lemma restrict_top_bf: "i \<in> set is \<Longrightarrow> lowest_tops is = Some vr \<Longrightarrow> 
+	ifex_ordered i \<Longrightarrow> (\<And>ass. fi ass = val_ifex i ass) \<Longrightarrow> val_ifex (restrict_top i vr vl) ass = bf_restrict vr vl fi ass"
 proof(cases i)
 	case goal3
 	have rr: "restrict_top i vr vl = restrict i vr vl" 
@@ -459,7 +459,7 @@ proof(cases i)
 		show ?thesis unfolding 1 2 ..
 	qed
 	show ?case unfolding rr by(simp add: goal3(4) restrict_val_invar[symmetric])
-qed (simp_all add: bf2_restrict_def)
+qed (simp_all add: bf_restrict_def)
 
 lemma "
 	in_rel bf_ifex_rel fi i \<Longrightarrow>
@@ -480,15 +480,15 @@ proof -
 			restrict_top_ifex_ordered_invar[OF goal3(6)]
 			restrict_top_ifex_ordered_invar[OF goal3(7)]
 			restrict_top_ifex_ordered_invar[OF goal3(8)], symmetric]
-		note uf1 = restrict_top_bf2[OF three_ins(1) goal3(2) goal3(6) goal3(3)]
-		           restrict_top_bf2[OF three_ins(2) goal3(2) goal3(7) goal3(4)]
-		           restrict_top_bf2[OF three_ins(3) goal3(2) goal3(8) goal3(5)]
+		note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) goal3(6) goal3(3)]
+		           restrict_top_bf[OF three_ins(2) goal3(2) goal3(7) goal3(4)]
+		           restrict_top_bf[OF three_ins(3) goal3(2) goal3(8) goal3(5)]
 		show ?case by
-			(rule trans[OF brace90shannon2[where i=a]], unfold bf_ite_def[of "bf2_ithvar a"])
-			(subst ifex_ite.simps, simp only: goal3(1,2,6-8)  mIH uf1 bf2_ithvar_def option.simps val_ifex.simps split: ifc_split, 
+			(rule trans[OF brace90shannon[where i=a]], unfold bf_ite_def[of "\<lambda>l. l a"])
+			(subst ifex_ite.simps, simp only: goal3(1,2,6-8) uf1 mIH  option.simps val_ifex.simps split: ifc_split, 
 				simp add: goal3(1) goal3(6) goal3(7) goal3(8) restrict_top_ifex_ordered_invar uf1) 
 	qed (subst ifex_ite.simps, simp add: bf_ite_def bf_ifex_rel_def)+
-	with o show ?case unfolding bf_ifex_rel_def by simp
+	with o m show ?case unfolding bf_ifex_rel_def by simp
 qed
 
 fun ifex_sat where
