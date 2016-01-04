@@ -6,7 +6,7 @@ record bdd =
 	nodes :: "(nat \<times> nat \<times> nat) list"
 	lunode :: "(nat \<times> nat \<times> nat) \<Rightarrow> nat option"
 
-definition "sane bdd \<equiv> (distinct (nodes bdd) \<and> (\<forall>n \<in> {..<length (nodes bdd)}. lunode bdd (nodes bdd ! n) = Some n))"
+definition "sane bdd \<equiv> (distinct (nodes bdd) \<and> (\<forall>n \<in> {..<length (nodes bdd)}. lunode bdd (nodes bdd ! n) = Some n) \<and> (\<forall>p i. lunode bdd p = Some i \<longrightarrow> nodes bdd ! i = p \<and> i < length (nodes bdd)))"
 
 fun index_of where
 "index_of n [] = None" | "index_of n (a#as) = (if a = n then Some 0 else map_option Suc (index_of n as))"
@@ -19,8 +19,6 @@ proof(induction as arbitrary: n)
 	note mIH = Cons.IH[OF this]
 	thus ?case
 	proof(cases "n = length bs")
-		case True thus ?thesis sorry
-	next
 		case False
 		hence "n < length bs" using Cons.prems(2) by simp
 		note mIH[OF this]
@@ -41,7 +39,7 @@ lemma sane_fixrefs: "distinct (nodes bdd) \<Longrightarrow> sane (fixrefs bdd)"
 apply(simp add: sane_def fixrefs_def)
 oops
 
-definition "defnodes bdd \<equiv> (if sane bdd then bdd else \<lparr>nodes = [], lunode = lunode bdd \<rparr>)"
+definition "defnodes bdd \<equiv> (if sane bdd then bdd else \<lparr>nodes = [], lunode = const None \<rparr>)"
 
 fun destrmi :: "nat \<Rightarrow> bdd \<Rightarrow> (nat, nat) IFEXD" where
 "destrmi 0 bdd = FD" |
@@ -78,16 +76,18 @@ done
 lemma IfI: "(c \<Longrightarrow> P x) \<Longrightarrow> (\<not>c \<Longrightarrow> P y) \<Longrightarrow> P (if c then x else y)" by simp
 lemma fstsndI: "x = (a,b) \<Longrightarrow> fst x = a \<and> snd x = b" by simp
 
+lemma conjI2: "P \<Longrightarrow> Q \<Longrightarrow> Q \<and> P" ..
+
 lemma sane_appendD: "sane s \<Longrightarrow> (v2,t2,e2) \<notin> set (nodes s) \<Longrightarrow> sane \<lparr>nodes = (nodes s)@[(v2,t2,e2)], lunode = (lunode s)((v2,t2,e2) \<mapsto> length (nodes s))\<rparr>"
 unfolding sane_def
-proof
-	case goal1 thus ?case by simp
+proof(rule conjI2, rule conjI2)
+	case goal3 thus ?case by simp
 next
 	case goal2 thus ?case 
 	apply(unfold Ball_def) 
-	apply(rule) 
-	apply(rule) 
-	apply(rename_tac n) 
+	apply(rule)
+	apply(rule)
+	apply(rename_tac n)
 	apply(case_tac "n < length (nodes s)")
 	proof -
 		case goal1 
@@ -101,6 +101,19 @@ next
 		hence sa: "\<And>a. (nodes s @ [a]) ! n = a" by simp
 		from sa ln show ?case by simp
 	qed
+next
+	case goal1 thus ?case
+	apply(unfold Ball_def)
+	apply(rule)
+	apply(rule)
+	apply(rule)
+	apply(simp only: bdd.simps)
+	apply(rename_tac p i)
+	apply(case_tac "i < length (nodes s)")
+	apply(unfold nth_append)
+	apply(simp_all only: if_True if_False) sorry
+	proof -
+		case goal1
 qed
 
 lemma lunodes_noneD: "lunode s (v, ni1, ni2) = None \<Longrightarrow> sane s \<Longrightarrow> (v, ni1, ni2) \<notin> set (nodes s)"
@@ -179,8 +192,9 @@ qed simp_all
 
 lemma oursolversarestupid: "nodes s = [] \<Longrightarrow> \<lparr>nodes = [], lunode = lunode s\<rparr> = s" by simp
 
-lemma "sane s \<Longrightarrow> tmi s = (ni, s') \<Longrightarrow> in_rel (Rmi s') ni Trueif"  
-by(clarsimp simp add: Rmi_def defnodes_def oursolversarestupid split: if_splits) 
+lemma "sane s \<Longrightarrow> tmi s = (ni, s') \<Longrightarrow> in_rel (Rmi s') ni Trueif" by(clarsimp simp add: Rmi_def defnodes_def oursolversarestupid split: if_splits) (* these should fall out of the interpretation, no? *)
+lemma ifmi_saneI: "sane s \<Longrightarrow> ifmi v ni1 ni2 s = (ni, s') \<Longrightarrow> sane s'"
+by(simp split: if_splits option.splits) (blast dest: lunodes_noneD sane_appendD[of s v ni1 ni2])
 
 interpretation brofix!: bdd_impl Rmi tmi fmi ifmi destrmi
 proof  -
@@ -205,8 +219,8 @@ proof  -
 		 apply(simp only:)
 		using rmi_appendD apply fastforce
 	done
-	next case goal4 thus ?case by(clarsimp simp add: sane_def split: if_splits)
-	next case goal5 thus ?case by(clarsimp simp add: sane_def split: if_splits)
+	next case goal4 thus ?case by(clarsimp simp add: sane_def const_def split: if_splits)
+	next case goal5 thus ?case by(clarsimp simp add: sane_def const_def split: if_splits)
 	next
 		case goal6
 		from goal6(1,2) have s: "Rmi_g ni1 n1 s" "Rmi_g ni2 n2 s" by simp_all
@@ -228,22 +242,15 @@ proof  -
 			next
 				case (Some a) assume nine: "ni1 \<noteq> ni2"
 				have foo: "s' = s" "ni = Suc (Suc a)" using goal6(3) Some nine by(simp_all split: prod.splits)
-				have "nodes s ! a = (v, ni1, ni2)" using sn[unfolded sane_def] Some
-				show ?thesis apply(simp add: IFC_def nay foo)
-				apply(rule) defer
-				apply(clarsimp split: prod.splits)
-				apply(rule)
-				defer
-				apply(rule)
-				
-				sorry
+				have sac: "nodes s ! a = (v, ni1, ni2)" "a < length (nodes s)" using sn[unfolded sane_def] Some by simp_all
+				show ?thesis apply(simp add: IFC_def nay foo sac) by(simp only: s simp_thms)
 			qed
 		next
 			case True
 			have b: "n1 = n2" by(rule rmigeq[OF s True]) 
 			from True show ?thesis using s goal6(3) by(clarsimp simp only: ifmi.simps not_not refl if_True prod.simps IFC_def b)
 		qed
-		thus ?case by simp
+		with ifmi_saneI[OF sn goal6(3)] show ?case by simp
 	next
 		case goal7 thus ?case apply(simp) apply(cases ni, simp) apply(case_tac nat, simp) apply simp done
 	next
