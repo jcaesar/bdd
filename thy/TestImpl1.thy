@@ -103,17 +103,10 @@ next
 	qed
 next
 	case goal1 thus ?case
-	apply(unfold Ball_def)
-	apply(rule)
-	apply(rule)
-	apply(rule)
-	apply(simp only: bdd.simps)
-	apply(rename_tac p i)
-	apply(case_tac "i < length (nodes s)")
-	apply(unfold nth_append)
-	apply(simp_all only: if_True if_False) sorry
-	proof -
-		case goal1
+		apply(unfold Ball_def)
+		apply(rule)
+		apply(auto simp add: nth_append fun_upd_same)
+	done
 qed
 
 lemma lunodes_noneD: "lunode s (v, ni1, ni2) = None \<Longrightarrow> sane s \<Longrightarrow> (v, ni1, ni2) \<notin> set (nodes s)"
