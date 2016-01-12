@@ -7,11 +7,11 @@ datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni
 
 locale bdd_impl_pre =
   fixes R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set"
+  fixes I :: "'s \<Rightarrow> bool"
 begin
   definition les:: "'s \<Rightarrow> 's \<Rightarrow> bool" where
   "les s s' == \<forall>ni n. (ni, n) \<in> R s \<longrightarrow> (ni, n) \<in> R s'"
 end
-
 
 locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set" +
   fixes Timpl :: "'s \<Rightarrow> ('ni \<times> 's)"
@@ -19,21 +19,24 @@ locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a ::
   fixes IFimpl :: "'a \<Rightarrow> 'ni \<Rightarrow> 'ni \<Rightarrow> 's \<Rightarrow> ('ni \<times> 's)"
   fixes DESTRimpl :: "'ni  \<Rightarrow> 's \<Rightarrow> ('a, 'ni) IFEXD"
 
-  assumes Timpl_mono: "Timpl s = (ni, s') \<Longrightarrow> les s s'"
-  assumes Fimpl_mono: "Fimpl s = (ni, s') \<Longrightarrow> les s s'"
-  assumes IFimpl_mono: "\<lbrakk>(ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk>
+  assumes Timpl_mono: "I s \<Longrightarrow> Timpl s = (ni, s') \<Longrightarrow> les s s'"
+  assumes Fimpl_mono: "I s \<Longrightarrow> Fimpl s = (ni, s') \<Longrightarrow> les s s'"
+  assumes IFimpl_mono: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk>
                        \<Longrightarrow> les s s'"
 
-  assumes Timpl_rule: "Timpl s = (ni, s') \<Longrightarrow> (ni, Trueif) \<in> R s'"
-  assumes Fimpl_rule: "Fimpl s = (ni, s') \<Longrightarrow> (ni, Falseif) \<in> R s'"
-  assumes IFimpl_rule: "\<lbrakk>(ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk>
+  assumes Timpl_rule: "I s \<Longrightarrow> Timpl s = (ni, s') \<Longrightarrow> (ni, Trueif) \<in> R s'"
+  assumes Fimpl_rule: "I s \<Longrightarrow> Fimpl s = (ni, s') \<Longrightarrow> (ni, Falseif) \<in> R s'"
+  assumes IFimpl_rule: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk>
                        \<Longrightarrow> (ni, IFC v n1 n2) \<in> R s'"
 
-  assumes DESTRimpl_rule1: "(ni, Trueif) \<in> R s \<Longrightarrow> DESTRimpl ni s = TD"
-  assumes DESTRimpl_rule2: "(ni, Falseif) \<in> R s \<Longrightarrow> DESTRimpl ni s = FD"
-  assumes DESTRimpl_rule3: "(ni, IF v n1 n2) \<in> R s \<Longrightarrow> \<exists>ni1 ni2. DESTRimpl ni s = IFD v ni1 ni2 
+  assumes DESTRimpl_rule1: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<Longrightarrow> DESTRimpl ni s = TD"
+  assumes DESTRimpl_rule2: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<Longrightarrow> DESTRimpl ni s = FD"
+  assumes DESTRimpl_rule3: "I s \<Longrightarrow> (ni, IF v n1 n2) \<in> R s \<Longrightarrow> \<exists>ni1 ni2. DESTRimpl ni s = IFD v ni1 ni2 
                                                        \<and> (ni1, n1) \<in> R s \<and> (ni2, n2) \<in> R s"
 
+  assumes Timpl_inv: "I s \<Longrightarrow> Timpl s = (ni, s') \<Longrightarrow> I s'"
+  assumes Fimpl_inv: "I s \<Longrightarrow> Fimpl s = (ni, s') \<Longrightarrow> I s'"
+  assumes IFimpl_inv: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk> \<Longrightarrow> I s'"
 begin
 
 lemma les_refl[simp,intro!]:"les s s" by (auto simp add: les_def)
@@ -47,6 +50,7 @@ fun lowest_tops_impl where
 			Some u \<Rightarrow> Some (min u v) | 
 			None \<Rightarrow> Some v) |
 		_           \<Rightarrow> lowest_tops_impl es s)"
+term list_all2
 fun in_R_list where
 "in_R_list (ni#nis) (n#ns) s = (((ni, n) \<in> R s) \<and> in_R_list nis ns s)" |
 "in_R_list [] [] _ = True" |
@@ -54,7 +58,7 @@ fun in_R_list where
 lemma in_R_list_split: "in_R_list (ni#nis) (n#ns) s \<Longrightarrow> ((ni, n) \<in> R s \<and> in_R_list nis ns s)"
 by simp
 
-lemma in_R_list_lt: "in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
+lemma in_R_list_lt: "I s \<Longrightarrow> in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
 apply(induction rule: in_R_list.induct)
 apply(case_tac n)
 apply(auto dest: in_R_list_split DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 split: option.splits)
@@ -63,20 +67,21 @@ done
 lemma in_R_list_les: "in_R_list nis ns s \<Longrightarrow> les s s' \<Longrightarrow> in_R_list nis ns s'"
   by(induction rule: in_R_list.induct, auto simp add: les_def)
 
-lemma DESTR_vareq: "(ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
-	by(drule DESTRimpl_rule3, simp)
+lemma DESTR_vareq: "I s \<Longrightarrow> (ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
+	by(auto dest: DESTRimpl_rule3)
 
 fun restrict_top_impl where
 "restrict_top_impl e vr vl s = (case DESTRimpl e s of
 	IFD v te ee \<Rightarrow> (if v = vr then (if vl then te else ee) else e) |
 	_ \<Rightarrow> e)"
-lemma restrict_top_R[intro]: "(ni,i) \<in> R s \<Longrightarrow> (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
+lemma restrict_top_R[intro]: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow> (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
 apply(induction i vr vl rule: restrict_top.induct) defer
 apply(simp_all add: DESTRimpl_rule1 DESTRimpl_rule2)[2]
 apply(simp only: restrict_top.simps restrict_top_impl.simps)
 apply(case_tac "v = var")
 apply(simp only: refl if_True)
 apply(drule DESTRimpl_rule3)
+apply fastforce
 apply fastforce
 apply(simp only: if_False split: if_splits IFEXD.splits)
 apply(simp)
@@ -99,26 +104,26 @@ partial_function(option) ite_impl where
             Some (IFimpl a tb fb s)}) |
         None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s)))"
 
-lemma ite_impl_R: "ite_impl ii ti ei s = Some (r, s')
+lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
        \<Longrightarrow> in_R_list [ii, ti, ei] [i, t, e] s
        \<Longrightarrow> les s s' \<and> (r, ifex_ite i t e) \<in> R s'"
 proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
 case ("3" i t e a)
   note IFCase = "3"
-  from in_R_list_lt[OF this(4)] this(2) have 0: "lowest_tops_impl [ii, ti, ei] s = Some a" by simp
-  from IFCase(3) obtain tb st
+  from in_R_list_lt[OF this(3) this(5)] this(2) have 0: "lowest_tops_impl [ii, ti, ei] s = Some a" by simp
+  from IFCase(4) obtain tb st
     where tb_def: "ite_impl (restrict_top_impl ii a True s) (restrict_top_impl ti a True s)
                        (restrict_top_impl ei a True s) s = Some (tb, st)"
-    apply(subst (asm) (2) ite_impl.simps, subst (asm) 0, 
-          simp only: option.case Let_def Option.bind_eq_Some_conv)
+    apply(subst (asm) (2) ite_impl.simps, subst (asm) 0) 
+    apply(simp only: option.case Let_def Option.bind_eq_Some_conv)
     by fast
-  from IFCase(3) obtain eb se
+  from IFCase(4) obtain eb se
     where eb_def: "ite_impl (restrict_top_impl ii a False s) (restrict_top_impl ti a False s)
                        (restrict_top_impl ei a False s) st = Some (eb, se)"
     apply(subst (asm) (2) ite_impl.simps, subst (asm) 0, 
           auto simp del: restrict_top_impl.simps simp add: Option.bind_eq_Some_conv)
     using tb_def by force
-  from IFCase(4) have 2:
+  from IFCase(5) `I s` have 2:
     "in_R_list 
      [restrict_top_impl ii a True s, restrict_top_impl ti a True s, restrict_top_impl ei a True s]
      [restrict_top i a True, restrict_top t a True, restrict_top e a True]
@@ -128,7 +133,7 @@ case ("3" i t e a)
      [restrict_top i a False, restrict_top t a False, restrict_top e a False]
      s"
     by (auto simp del: restrict_top_impl.simps)
-  from IFCase(1)[OF tb_def this(1)] have
+  from IFCase(1)[OF tb_def this(2)] have
     3: "(tb,
          ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R st"
        "les s st" by blast+

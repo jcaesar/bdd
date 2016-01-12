@@ -8,15 +8,14 @@ record bdd =
 
 definition "sane bdd \<equiv> (distinct (nodes bdd) \<and> (\<forall>n \<in> {..<length (nodes bdd)}. lunode bdd (nodes bdd ! n) = Some n) \<and> (\<forall>p i. lunode bdd p = Some i \<longrightarrow> nodes bdd ! i = p \<and> i < length (nodes bdd)))"
 
-definition "defnodes bdd \<equiv> (if sane bdd then bdd else \<lparr>nodes = [], lunode = const None \<rparr>)"
 
 fun destrmi :: "nat \<Rightarrow> bdd \<Rightarrow> (nat, nat) IFEXD" where
 "destrmi 0 bdd = FD" |
 "destrmi (Suc 0) bdd = TD" |
 "destrmi (Suc (Suc n)) bdd = (case nodes bdd ! n of (v, t, e) \<Rightarrow> IFD v t e)"
 
-fun tmi where "tmi bdd = (1, defnodes bdd)"
-fun fmi where "fmi bdd = (0, defnodes bdd)"
+fun tmi where "tmi bdd = (1, bdd)"
+fun fmi where "fmi bdd = (0, bdd)"
 fun ifmi :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bdd \<Rightarrow> (nat \<times> bdd)" where
 "ifmi v t e bdd = (if t = e then (t, bdd) else 
 (case lunode bdd (v, t, e) of
@@ -139,7 +138,7 @@ qed simp_all
 
 lemma oursolversarestupid: "nodes s = [] \<Longrightarrow> \<lparr>nodes = [], lunode = lunode s\<rparr> = s" by simp
 
-lemma "sane s \<Longrightarrow> tmi s = (ni, s') \<Longrightarrow> in_rel (Rmi s') ni Trueif" by(clarsimp simp add: Rmi_def defnodes_def oursolversarestupid split: if_splits) (* these should fall out of the interpretation, no? *)
+lemma "sane s \<Longrightarrow> tmi s = (ni, s') \<Longrightarrow> in_rel (Rmi s') ni Trueif" by(clarsimp simp add: Rmi_def oursolversarestupid split: if_splits) (* these should fall out of the interpretation, no? *)
 lemma ifmi_saneI: "sane s \<Longrightarrow> ifmi v ni1 ni2 s = (ni, s') \<Longrightarrow> sane s'"
 by(simp split: if_splits option.splits) (blast dest: lunodes_noneD sane_appendD[of s v ni1 ni2])
 
@@ -151,10 +150,10 @@ apply(simp split: if_splits prod.splits)
 apply(simp split: if_splits prod.splits)
 done
 
-interpretation brofix!: bdd_impl Rmi tmi fmi ifmi destrmi
+interpretation brofix!: bdd_impl sane Rmi tmi fmi ifmi destrmi
 proof  -
-  note s = bdd_impl_pre.les_def[simp] defnodes_def[simp] Rmi_def[simp] oursolversarestupid[simp]
-	show "bdd_impl Rmi tmi fmi ifmi destrmi"
+  note s = bdd_impl_pre.les_def[simp] Rmi_def[simp] oursolversarestupid[simp]
+	show "bdd_impl sane Rmi tmi fmi ifmi destrmi"
 	proof(unfold_locales)
 	     case goal1 thus ?case by(clarsimp split: if_splits)
 	next case goal2 thus ?case by(clarsimp split: if_splits)
@@ -171,7 +170,7 @@ proof  -
 	next case goal5 thus ?case by(clarsimp simp add: sane_def const_def split: if_splits)
 	next
 		case goal6
-		from goal6(1,2) have s: "Rmi_g ni1 n1 s" "Rmi_g ni2 n2 s" by simp_all
+		from goal6 have s: "Rmi_g ni1 n1 s" "Rmi_g ni2 n2 s" by simp_all
 		have sn: "sane s" using goal6(1) by simp
 		from s goal6(3) have "Rmi_g ni (IFC v n1 n2) s'"
 		proof(cases "ni1 = ni2")
@@ -186,19 +185,19 @@ proof  -
 			proof(cases "lunode s (v, ni1, ni2)")
 				case None
 				have ni: "(v, ni1, ni2) \<notin> set (nodes s)" using sn None by(blast dest: lunodes_noneD)
-				show ?thesis using s goal6(3) by(clarsimp simp add: rmi_appendD[OF _ ni] False None nay split: prod.splits ifc_split)
+				show ?thesis using s goal6(4) by(clarsimp simp add: rmi_appendD[OF _ ni] False None nay split: prod.splits ifc_split)
 			next
 				case (Some a) assume nine: "ni1 \<noteq> ni2"
-				have foo: "s' = s" "ni = Suc (Suc a)" using goal6(3) Some nine by(simp_all split: prod.splits)
+				have foo: "s' = s" "ni = Suc (Suc a)" using goal6(4) Some nine by(simp_all split: prod.splits)
 				have sac: "nodes s ! a = (v, ni1, ni2)" "a < length (nodes s)" using sn[unfolded sane_def] Some by simp_all
 				show ?thesis apply(simp add: IFC_def nay foo sac) by(simp only: s simp_thms)
 			qed
 		next
 			case True
 			have b: "n1 = n2" by(rule rmigeq[OF s True]) 
-			from True show ?thesis using s goal6(3) by(clarsimp simp only: ifmi.simps not_not refl if_True prod.simps IFC_def b)
+			from True show ?thesis using s goal6(4) by(clarsimp simp only: ifmi.simps not_not refl if_True prod.simps IFC_def b)
 		qed
-		with ifmi_saneI[OF sn goal6(3)] show ?case by simp
+		with ifmi_saneI[OF sn goal6(4)] show ?case by simp
 	next
 		case goal7 thus ?case apply(simp) apply(cases ni, simp) apply(case_tac nat, simp) apply simp done
 	next
@@ -210,7 +209,9 @@ proof  -
 			apply(frule rmigif, clarify)
 			apply(clarsimp simp add: rmigif split: if_splits prod.splits)
 		done
-	qed
+	next
+		case goal12 thus ?case using ifmi_saneI by blast
+	qed simp_all
 qed
 
 
