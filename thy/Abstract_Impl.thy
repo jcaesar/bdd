@@ -51,21 +51,33 @@ fun lowest_tops_impl where
 			None \<Rightarrow> Some v) |
 		_           \<Rightarrow> lowest_tops_impl es s)"
 term list_all2
-fun in_R_list where
-"in_R_list (ni#nis) (n#ns) s = (((ni, n) \<in> R s) \<and> in_R_list nis ns s)" |
-"in_R_list [] [] _ = True" |
-"in_R_list _ _ _ = False"
+
+definition "in_R_list nis ns s = list_all2 (\<lambda>ni n. (ni, n) \<in> R s) nis ns"
 lemma in_R_list_split: "in_R_list (ni#nis) (n#ns) s \<Longrightarrow> ((ni, n) \<in> R s \<and> in_R_list nis ns s)"
+unfolding in_R_list_def
 by simp
 
-lemma in_R_list_lt: "I s \<Longrightarrow> in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
-apply(induction rule: in_R_list.induct)
-apply(case_tac n)
-apply(auto dest: in_R_list_split DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 split: option.splits)
+
+lemma in_R_list_lt: assumes "I s" shows "in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
+	apply(unfold in_R_list_def)
+	apply(induction nis arbitrary: ns)
+	apply(simp;fail) 
+	apply(case_tac ns)
+	apply(simp;fail)
+	apply(clarsimp split: option.split)
+	apply(rename_tac ni nis n ns)
+	apply(case_tac n)
+	apply(auto dest:  DESTRimpl_rule1[OF assms] DESTRimpl_rule2[OF assms] DESTRimpl_rule3[OF assms] split: option.splits IFEXD.split)
 done
 
 lemma in_R_list_les: "in_R_list nis ns s \<Longrightarrow> les s s' \<Longrightarrow> in_R_list nis ns s'"
-  by(induction rule: in_R_list.induct, auto simp add: les_def)
+	apply(induction nis arbitrary: ns)
+	apply(auto simp add: les_def in_R_list_def)[1]
+	apply(rename_tac ni nis ns)
+	apply(case_tac ns)
+	apply(simp add: in_R_list_def;fail)
+	apply(auto simp add: les_def in_R_list_def)[1]
+done
 
 lemma DESTR_vareq: "I s \<Longrightarrow> (ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
 	by(auto dest: DESTRimpl_rule3)
