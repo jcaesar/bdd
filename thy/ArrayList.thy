@@ -52,5 +52,11 @@ begin
     apply(rule preciseI)
     apply(simp split: prod.splits) 
   	using preciseD snga_prec by fastforce
+  	
+  lemma is_array_list_lengthIA: "is_array_list l li \<Longrightarrow>\<^sub>A \<up>(snd li = length l) * true"
+  	by(sep_auto simp: is_array_list_def split: prod.splits)
+  	find_consts "assn \<Rightarrow> bool"
+  lemma is_array_list_lengthI: "x \<Turnstile> is_array_list l li \<Longrightarrow> snd li = length l"
+  using is_array_list_lengthIA by (metis (full_types) ent_pure_post_iff star_aci(2))   
 
 end 
