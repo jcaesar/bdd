@@ -46,6 +46,11 @@ begin
     by (sep_auto 
       simp: arl_append_def is_array_list_def take_update_last neq_Nil_conv
       split: prod.splits nat.split)
-
+    
+  lemma is_array_list_prec: "precise is_array_list"
+    unfolding is_array_list_def[abs_def]
+    apply(rule preciseI)
+    apply(simp split: prod.splits) 
+  	using preciseD snga_prec by fastforce
 
 end 
