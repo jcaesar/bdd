@@ -8,20 +8,28 @@ begin
   record 'a pointermap_impl =
     entriesi :: "'a array_list"
     getentryi :: "('a,nat) hashtable"
+  lemma pointermapieq_exhaust: "entries a = entries b \<Longrightarrow> getentry a = getentry b \<Longrightarrow> a = (b :: 'a pointermap)" by simp
 
-  definition is_pointermap_impl where
+  definition is_pointermap_impl :: "('a::{hashable,heap}) pointermap \<Rightarrow> 'a pointermap_impl \<Rightarrow> assn" where
     "is_pointermap_impl b bi \<equiv> 
       is_array_list (entries b) (entriesi bi) 
     * is_hashmap (getentry b) (getentryi bi)"
 
   lemma is_pointermap_impl_prec: "precise is_pointermap_impl"
   	unfolding is_pointermap_impl_def[abs_def]
-  	apply(rule preciseI)
-  	apply(auto)
-  	using preciseD[OF is_array_list_prec] preciseD[OF is_hashmap_prec]
-  	unfolding mod_and_dist 
-  	find_theorems "_ \<Turnstile> _ * _"
-    sorry
+	apply(rule preciseI)
+	apply(auto)
+	apply(rename_tac a a' x y p F F')
+	apply(rule pointermapieq_exhaust)
+	apply(rule_tac p = "entriesi p" and h = "(x,y)" in preciseD[OF is_array_list_prec])
+	apply(unfold star_aci(1))
+	apply blast
+	apply(rule_tac p = "getentryi p" and h = "(x,y)" in preciseD[OF is_hashmap_prec])
+	apply(unfold star_aci(2)[symmetric])
+	apply(unfold star_aci(1)[symmetric]) (* black unfold magic *)
+	apply(unfold star_aci(2)[symmetric])
+	apply blast
+  done
 
   definition pointermap_empty where
     "pointermap_empty \<equiv> do {
@@ -55,14 +63,13 @@ begin
     }"
   
   lemmas pointermap_getmki_defs = pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def
-
   lemma [sep_heap_rules]: "(p,u) = pointermap_getmk a m \<Longrightarrow> < is_pointermap_impl m mi > pointermap_getmki a mi <\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p)>\<^sub>t"
     apply(cases "getentry m a")
     apply(unfold pointermap_getmki_def)
     apply(unfold return_bind)
-    apply(rule_tac R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None) * \<up>((snd (entriesi mi) = p)) * true" in bind_rule)
+    apply(rule_tac R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None \<and> (snd (entriesi mi) = p)) * true" in bind_rule)
     apply(sep_auto simp: pointermap_getmki_defs is_array_list_def pointermap_getmk_def pointermap_insert_def split: prod.splits;fail)
     apply(sep_auto simp: pointermap_getmki_defs)+
   done
-   
+
 end
