@@ -1,5 +1,5 @@
 theory BDT
-imports Boolean_Expression_Checkers BoolFunc "~~/src/HOL/Library/Monad_Syntax"
+imports Boolean_Expression_Checkers BoolFunc
 begin
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
