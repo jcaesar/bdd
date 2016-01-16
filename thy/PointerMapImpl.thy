@@ -14,7 +14,7 @@ begin
       is_array_list (entries b) (entriesi bi) 
     * is_hashmap (getentry b) (getentryi bi)"
 
-  lemma "precise is_pointermap_impl"
+  lemma is_pointermap_impl_prec: "precise is_pointermap_impl"
   	unfolding is_pointermap_impl_def[abs_def]
   	apply(rule preciseI)
   	apply(auto)
@@ -53,16 +53,29 @@ begin
         	}
         )
     }"
+  
+  lemmas pointermap_getmki_defs = pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def
+
   lemma [sep_heap_rules]: "(p,u) = pointermap_getmk a m \<Longrightarrow> < is_pointermap_impl m mi > pointermap_getmki a mi <\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p)>\<^sub>t"
-  unfolding pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def
-  	apply (sep_auto simp: pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def ) 
-  	apply(rename_tac b c d e f) (* no idea what they even are *)
-  	apply(rule_tac x = "(e,f)" in is_array_list_lengthI)
-  	find_theorems "_ \<Turnstile> _ * ?a \<Longrightarrow> _ \<Turnstile> ?a" (* how do I even separate? *)
-    apply (sep_auto simp: pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def is_array_list_def  intro: is_array_list_lengthI split: prod.splits)
-    defer
-    (* I quit for now *)
-    defer
-    oops
+    apply(cases "getentry m a")
+    prefer 2
+    apply(sep_auto simp: pointermap_getmki_defs;fail)[1]
+    apply(unfold pointermap_getmki_def)
+    apply(unfold return_bind)
+    apply(rule_tac R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None) * \<up>((snd (entriesi mi) = p)) * true" in bind_rule)
+    apply(sep_auto simp: is_pointermap_impl_def is_array_list_def pointermap_getmk_def pointermap_insert_def split: prod.splits;fail)[1]
+    apply(clarsimp) (* purify that r = None *)
+    apply(rule_tac R = "\<lambda>r. is_hashmap (getentry m) (getentryi mi) * is_array_list ((entries m)@[a]) r 
+    	                    * \<up>((snd (entriesi mi) = p)) * true" in bind_rule)
+    apply(sep_auto simp: pointermap_getmki_defs;fail)[1]
+    apply(rename_tac uai)
+    (*apply(rule_tac R = "\<lambda>r. is_array_list (entries m @ [a]) uai * 
+    	                    is_hashmap ((getentry m)(a \<mapsto> snd (entriesi mi))) r * true" in bind_rule)
+    apply(sep_auto simp: pointermap_getmk_defs;fail)[1]*)
+    apply(rule bind_rule)
+    prefer 2
+    apply(rule return_wp_rule)
+    apply(sep_auto simp: pointermap_getmki_defs;fail)[1]
+	done
    
 end
