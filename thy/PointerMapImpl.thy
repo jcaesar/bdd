@@ -58,24 +58,11 @@ begin
 
   lemma [sep_heap_rules]: "(p,u) = pointermap_getmk a m \<Longrightarrow> < is_pointermap_impl m mi > pointermap_getmki a mi <\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p)>\<^sub>t"
     apply(cases "getentry m a")
-    prefer 2
-    apply(sep_auto simp: pointermap_getmki_defs;fail)[1]
     apply(unfold pointermap_getmki_def)
     apply(unfold return_bind)
     apply(rule_tac R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None) * \<up>((snd (entriesi mi) = p)) * true" in bind_rule)
-    apply(sep_auto simp: is_pointermap_impl_def is_array_list_def pointermap_getmk_def pointermap_insert_def split: prod.splits;fail)[1]
-    apply(clarsimp) (* purify that r = None *)
-    apply(rule_tac R = "\<lambda>r. is_hashmap (getentry m) (getentryi mi) * is_array_list ((entries m)@[a]) r 
-    	                    * \<up>((snd (entriesi mi) = p)) * true" in bind_rule)
-    apply(sep_auto simp: pointermap_getmki_defs;fail)[1]
-    apply(rename_tac uai)
-    (*apply(rule_tac R = "\<lambda>r. is_array_list (entries m @ [a]) uai * 
-    	                    is_hashmap ((getentry m)(a \<mapsto> snd (entriesi mi))) r * true" in bind_rule)
-    apply(sep_auto simp: pointermap_getmk_defs;fail)[1]*)
-    apply(rule bind_rule)
-    prefer 2
-    apply(rule return_wp_rule)
-    apply(sep_auto simp: pointermap_getmki_defs;fail)[1]
-	done
+    apply(sep_auto simp: pointermap_getmki_defs is_array_list_def pointermap_getmk_def pointermap_insert_def split: prod.splits;fail)
+    apply(sep_auto simp: pointermap_getmki_defs)+
+  done
    
 end
