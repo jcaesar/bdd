@@ -44,7 +44,7 @@ begin
   definition pm_pthi where
     "pm_pthi m p \<equiv> arl_nth (entriesi m) p"
 
-  lemma [sep_heap_rules]: "pointermap_p_valid p m \<Longrightarrow> < is_pointermap_impl m mi > pm_pthi mi p <\<lambda>ai. \<up>(ai = pm_pth m p)>\<^sub>t"
+  lemma [sep_heap_rules]: "pointermap_p_valid p m \<Longrightarrow> < is_pointermap_impl m mi > pm_pthi mi p <\<lambda>ai. is_pointermap_impl m mi * \<up>(ai = pm_pth m p)>"
     by (sep_auto simp: pm_pthi_def pm_pth_def is_pointermap_impl_def pointermap_p_valid_def)
 
   definition pointermap_getmki where
