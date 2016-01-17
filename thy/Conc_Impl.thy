@@ -5,7 +5,7 @@ begin
 instantiation prod :: (default, default) default
 begin
 	definition "default_prod :: ('a \<times> 'b) \<equiv> (default, default)" 
-	instance by(intro_classes)
+	instance ..
 end
 (* can be found in "~~/src/HOL/Proofs/Extraction/Greatest_Common_Divisor" or "~~/src/HOL/Proofs/Lambda/WeakNorm" *)
 instantiation nat :: default
@@ -24,7 +24,7 @@ definition destrci :: "nat \<Rightarrow> (nat \<times> nat \<times> nat) pointer
 "destrci n bdd \<equiv> (case n of
 	0 \<Rightarrow> return FD |
 	Suc 0 \<Rightarrow> return TD |
-	Suc (Suc p) \<Rightarrow> pm_pthi bdd p \<guillemotright>= (\<lambda>lu. case lu of (v,t,e) \<Rightarrow> return (IFD v t e)))"
+	Suc (Suc p) \<Rightarrow> pm_pthi bdd p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
 
 lemma [sep_heap_rules]: "<is_pointermap_impl bdd bddi> tci bddi <\<lambda>r. is_pointermap_impl bdd (snd r) * \<up>(fst r = fst (tmi bdd))>"
 by(sep_auto simp: tci_def)
