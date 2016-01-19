@@ -50,55 +50,16 @@ fun lowest_tops_impl where
 			Some u \<Rightarrow> Some (min u v) | 
 			None \<Rightarrow> Some v) |
 		_           \<Rightarrow> lowest_tops_impl es s)"
-term list_all2
-
-definition "in_R_list nis ns s = list_all2 (\<lambda>ni n. (ni, n) \<in> R s) nis ns"
-lemma in_R_list_split: "in_R_list (ni#nis) (n#ns) s \<Longrightarrow> ((ni, n) \<in> R s \<and> in_R_list nis ns s)"
-unfolding in_R_list_def
-by simp
-
-
-lemma in_R_list_lt: assumes "I s" shows "in_R_list nis ns s \<Longrightarrow> lowest_tops_impl nis s = lowest_tops ns"
-	apply(unfold in_R_list_def)
-	apply(induction nis arbitrary: ns)
-	apply(simp;fail) 
-	apply(case_tac ns)
-	apply(simp;fail)
-	apply(clarsimp split: option.split)
-	apply(rename_tac ni nis n ns)
-	apply(case_tac n)
-	apply(auto dest:  DESTRimpl_rule1[OF assms] DESTRimpl_rule2[OF assms] DESTRimpl_rule3[OF assms] split: option.splits IFEXD.split)
-done
-
-lemma in_R_list_les: "in_R_list nis ns s \<Longrightarrow> les s s' \<Longrightarrow> in_R_list nis ns s'"
-	apply(induction nis arbitrary: ns)
-	apply(auto simp add: les_def in_R_list_def)[1]
-	apply(rename_tac ni nis ns)
-	apply(case_tac ns)
-	apply(simp add: in_R_list_def;fail)
-	apply(auto simp add: les_def in_R_list_def)[1]
-done
-
-lemma DESTR_vareq: "I s \<Longrightarrow> (ni,IF v t e) \<in> R s \<Longrightarrow> DESTRimpl ni s = IFD nv nt ne \<Longrightarrow> nv = v"
-	by(auto dest: DESTRimpl_rule3)
 
 fun restrict_top_impl where
 "restrict_top_impl e vr vl s = (case DESTRimpl e s of
 	IFD v te ee \<Rightarrow> (if v = vr then (if vl then te else ee) else e) |
 	_ \<Rightarrow> e)"
-lemma restrict_top_R[intro]: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow> (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
-apply(induction i vr vl rule: restrict_top.induct) defer
-apply(simp_all add: DESTRimpl_rule1 DESTRimpl_rule2)[2]
-apply(simp only: restrict_top.simps restrict_top_impl.simps)
-apply(case_tac "v = var")
-apply(simp only: refl if_True)
-apply(drule DESTRimpl_rule3)
-apply fastforce
-apply fastforce
-apply(simp only: if_False split: if_splits IFEXD.splits)
-apply(simp)
-apply(blast dest: DESTR_vareq)
-done
+
+lemma restrict_top_R: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow>
+                       (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
+by (induction i vr vl rule: restrict_top.induct,
+    auto dest: DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3)
 
 partial_function(option) ite_impl where
 "ite_impl i t e s = 
@@ -116,98 +77,97 @@ partial_function(option) ite_impl where
             Some (IFimpl a tb fb s)}) |
         None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s)))"
 
+
 lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
-       \<Longrightarrow> in_R_list [ii, ti, ei] [i, t, e] s
-       \<Longrightarrow> les s s' \<and> (r, ifex_ite i t e) \<in> R s'"
+       \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+       \<Longrightarrow> les s s' \<and> (r, ifex_ite i t e) \<in> R s' \<and> I s'"
 proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
-case ("3" i t e a)
-  note IFCase = "3"
-  from in_R_list_lt[OF this(3) this(5)] this(2) have 0: "lowest_tops_impl [ii, ti, ei] s = Some a" by simp
-  from IFCase(4) obtain tb st
+case (goal3 i t e a)
+  print_cases
+  note IFCase = goal3
+  note inR = `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e`
+  from \<open>I s\<close> inR \<open>lowest_tops [i, t, e] = Some a\<close>
+    have 0: "lowest_tops_impl [ii, ti, ei] s = Some a"
+    by(case_tac[!] i, case_tac[!] t, case_tac[!] e,
+       (fastforce dest: DESTRimpl_rule1[OF \<open>I s\<close>] DESTRimpl_rule2[OF \<open>I s\<close>] DESTRimpl_rule3[OF \<open>I s\<close>]
+                  split: IFEXD.split)+) (* takes quite a while *)
+  from IFCase obtain tb st
     where tb_def: "ite_impl (restrict_top_impl ii a True s) (restrict_top_impl ti a True s)
                        (restrict_top_impl ei a True s) s = Some (tb, st)"
-    apply(subst (asm) (2) ite_impl.simps, subst (asm) 0) 
-    apply(simp only: option.case Let_def Option.bind_eq_Some_conv)
-    by fast
-  from IFCase(4) obtain eb se
+    by (auto simp: Option.bind_eq_Some_conv 0 ite_impl.simps
+             simp del: restrict_top_impl.simps lowest_tops_impl.simps)
+  from `ite_impl ii ti ei s = Some (r, s')` obtain eb se
     where eb_def: "ite_impl (restrict_top_impl ii a False s) (restrict_top_impl ti a False s)
                        (restrict_top_impl ei a False s) st = Some (eb, se)"
-    apply(subst (asm) (2) ite_impl.simps, subst (asm) 0, 
-          auto simp del: restrict_top_impl.simps simp add: Option.bind_eq_Some_conv)
-    using tb_def by force
-  from IFCase(5) `I s` have 2:
-    "in_R_list 
-     [restrict_top_impl ii a True s, restrict_top_impl ti a True s, restrict_top_impl ei a True s]
-     [restrict_top i a True, restrict_top t a True, restrict_top e a True]
-     s"
-    "in_R_list 
-     [restrict_top_impl ii a False s, restrict_top_impl ti a False s, restrict_top_impl ei a False s]
-     [restrict_top i a False, restrict_top t a False, restrict_top e a False]
-     s"
-    by (auto simp del: restrict_top_impl.simps)
-  from IFCase(1)[OF tb_def this(2)] have
+    by (subst (asm) (2) ite_impl.simps,
+        auto simp del: lowest_tops_impl.simps restrict_top_impl.simps
+             simp add: Option.bind_eq_Some_conv 0 tb_def)
+  from `I s` inR IFCase(1)[OF \<open>I s\<close> tb_def, of True] have
     3: "(tb,
          ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R st"
-       "les s st" by blast+
-  note 41 =  in_R_list_les[OF 2(2), of st]
-  from IFCase(1)[OF eb_def 41] 3
+       "les s st" "I st" by (auto dest: restrict_top_R simp del: restrict_top_impl.simps)
+  from inR `les s st` IFCase(1)[OF `I st` eb_def, of False]
   have 4: "(eb,
         ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)) \<in> R se"
-       "les st se" by auto
-  from IFCase(3) have 5: "ite_impl ii ti ei s = Some (IFimpl a tb eb se)"
+        "les st se" "I se" unfolding les_def
+  apply(fastforce dest: restrict_top_R[OF `I s`, of ii i] restrict_top_R[OF `I s`, of ti t] restrict_top_R[OF `I s`, of ei e]
+             simp del: restrict_top_impl.simps restrict_top.simps ifex_ite.simps) sorry
+  from IFCase(4) have 5: "ite_impl ii ti ei s = Some (IFimpl a tb eb se)"
     apply(subst (asm) ite_impl.simps, subst (asm) 0,
           auto simp del: restrict_top_impl.simps simp add: Option.bind_eq_Some_conv)
     using tb_def eb_def by auto
-  from 3 4(2) les_def[of st se]
-    have 8: "(tb, 
+  from 3 4 les_def[of st se]
+    have 6: "(tb, 
            ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R se"
     by blast
-  from IFimpl_mono[OF this 4(1), of a r s'] 5 IFCase(3) have "les se s'" by fastforce
-  from this 3 4(2) les_trans have goal11: "les s s'" by blast
+  from IFimpl_mono[OF `I se` this, of _ _ a r s'] 4 5 IFCase have "les se s'" by force
+  from IFimpl_inv[OF `I se` 6 4(1), of a r s'] 5 IFCase have "I s'" by auto
+  from `les se s'` 3 4 les_trans have goal11: "les s s'" by blast
   from IFCase(2)
     have 7:
     "ifex_ite i t e =
      IFC a (ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True))
       (ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False))"
     by simp
-  from 5 IFCase(3) have "IFimpl a tb eb se = (r, s')" by force
-  from goal11 IFimpl_rule[OF 8 4(1) this] 7 show ?case
+  from 5 IFCase(4) have "IFimpl a tb eb se = (r, s')" by force
+  from goal11 IFimpl_rule[OF `I se` 6 4(1) this] `I s'` 7 show ?case
   by(auto split: ifc_split)
 next
 case("1" i t e) note TrueIFCase = "1"
-  from in_R_list_lt[OF this(4)] this(1,2,4) DESTRimpl_rule1
+  from this
     have 0: "lowest_tops_impl [ii, ti, ei] s = None"
-            "DESTRimpl ii s = TD" by simp_all
-  from this(1,2) TrueIFCase(3) have 1: "r = ti" apply(subst (asm) ite_impl.simps) by auto
-  from 0(1,2) TrueIFCase(3) have    2: "s = s'" apply(subst (asm) ite_impl.simps) by auto
-  from TrueIFCase(1,2) have 3: "ifex_ite i t e = t" by simp
-  from TrueIFCase(4) have 4: "(ti,t) \<in> R s" by simp
-  from les_refl 2 1 3 4 show ?case by presburger
+            "DESTRimpl ii s = TD"  
+      by (case_tac[!] i, case_tac[!] t, case_tac[!] e,
+         (fastforce dest: DESTRimpl_rule1[OF \<open>I s\<close>] DESTRimpl_rule2[OF \<open>I s\<close>] DESTRimpl_rule3[OF \<open>I s\<close>]
+                    split: IFEXD.split)+)
+  from this TrueIFCase have 1: "r = ti" by(auto simp add: ite_impl.simps)
+  from 0 TrueIFCase have    2: "s = s'" by(auto simp add: ite_impl.simps)
+  from TrueIFCase have 3: "ifex_ite i t e = t" by simp
+  from les_refl 1 2 3 TrueIFCase show ?case by auto
 next
 case("2" i t e) note FalseIFCase = "2"
-  from in_R_list_lt[OF this(4)] this(1,2,4) DESTRimpl_rule2
+    from this
     have 0: "lowest_tops_impl [ii, ti, ei] s = None"
-            "DESTRimpl ii s = FD" by simp_all
-  from this(1,2) FalseIFCase(3) have 1: "r = ei" by(auto simp add: ite_impl.simps)
-  from 0(1,2) FalseIFCase(3) have    2: "s = s'" by(auto simp add: ite_impl.simps)
-  from FalseIFCase(1,2) have 3: "ifex_ite i t e = e" by simp
-  from FalseIFCase(4) have 4: "(ei,e) \<in> R s" by simp
-  show ?case unfolding 2[symmetric] 1 3 by(rule, rule les_refl, rule 4)
+            "DESTRimpl ii s = FD"  
+      by (case_tac[!] i, case_tac[!] t, case_tac[!] e,
+         (fastforce dest: DESTRimpl_rule1[OF \<open>I s\<close>] DESTRimpl_rule2[OF \<open>I s\<close>] DESTRimpl_rule3[OF \<open>I s\<close>]
+                    split: IFEXD.split)+)
+  from this FalseIFCase have 1: "r = ei" by(auto simp add: ite_impl.simps)
+  from 0 FalseIFCase have    2: "s = s'" by(auto simp add: ite_impl.simps)
+  from FalseIFCase have 3: "ifex_ite i t e = e" by simp
+  from 1 2 3 FalseIFCase show ?case by auto
 qed
 
-partial_function(option) val_impl     :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option" 
+partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option" 
 where
-"eval_impl e s ass = (case (DESTRimpl e s) of
+"val_impl e s ass = (case (DESTRimpl e s) of
 	TD \<Rightarrow> Some True |
 	FD \<Rightarrow> Some False |
-	(IFD v t e) \<Rightarrow> eval_impl (if ass v then t else e) s ass)"
+	(IFD v t e) \<Rightarrow> val_impl (if ass v then t else e) s ass)"
 
-lemma "(ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n ass) = val_impl ni s ass"
-proof(induction n arbitrary: ni, ((drule DESTRimpl_rule1 | drule DESTRimpl_rule2), simp add: val_impl.simps)+, drule DESTRimpl_rule3, clarify)
-	case goal1
-	note mIH = goal1(1)[OF goal1(4)] goal1(2)[OF goal1(5)]
-	show ?case by(subst val_impl.simps) (simp add: mIH goal1(3))
-qed
+lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n ass) = val_impl ni s ass"
+by (induction n arbitrary: ni, 
+    auto dest: DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 simp add: val_impl.simps)
 
 end
 end
