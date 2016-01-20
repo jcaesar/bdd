@@ -37,12 +37,6 @@ lemma roifex_var_not_in_subtree:
   shows "v \<notin> ifex_var_set t" and "v \<notin> ifex_var_set e"
 using assms by (induction, auto)
 
-lemma roifex_var_no_influence_subtree: 
-  assumes "ro_ifex b" and "b = IF v t e"
-  shows "val_ifex t (ass(v:=val)) = val_ifex t ass" 
-        "val_ifex e (ass(v:=val)) = val_ifex e ass"
-  using assms by (auto intro!: ifex_var_noinfluence dest: roifex_var_not_in_subtree)
-
 lemma roifex_set_var_subtree: 
   assumes "ro_ifex b" and "b = IF v t e"
   shows "val_ifex b (ass(v:=True)) = val_ifex t ass" 
@@ -51,12 +45,13 @@ lemma roifex_set_var_subtree:
 
 lemma roifex_Trueif_unique: "ro_ifex b \<Longrightarrow> \<forall>ass. val_ifex b ass \<Longrightarrow> b = Trueif"
 proof(induction b)
-  case (IF v b1 b2) with roifex_set_var_subtree[OF IF(3), of v b1 b2] show ?case by simp
+  case (IF v b1 b2) with roifex_set_var_subtree[OF `ro_ifex (IF v b1 b2)`] show ?case by force
 qed(auto)
 
 lemma roifex_Falseif_unique: "ro_ifex b \<Longrightarrow> \<forall>ass. \<not> val_ifex b ass \<Longrightarrow> b = Falseif"
 proof(induction b)
-  case (IF v b1 b2) with roifex_set_var_subtree[OF IF(3), of v b1 b2] show ?case by fastforce
+  case (IF v b1 b2) with roifex_set_var_subtree[OF `ro_ifex (IF v b1 b2)`, of v b1 b2] show ?case
+    by fastforce
 qed(auto)
 
 lemma "(f, b) \<in> bf_ifex_rel \<Longrightarrow>  b = Trueif \<longleftrightarrow> f = (\<lambda>_. True)"
@@ -65,70 +60,31 @@ lemma "(f, b) \<in> bf_ifex_rel \<Longrightarrow>  b = Trueif \<longleftrightarr
 lemma "(f, b) \<in> bf_ifex_rel \<Longrightarrow>  b = Falseif \<longleftrightarrow> f = (\<lambda>_. False)"
   unfolding bf_ifex_rel_def using roifex_Falseif_unique by auto
 
-lemma ro_ifex_true_assign: assumes "ro_ifex b" "b = IF v b1 b2" shows "\<exists>ass. val_ifex b ass"
-using assms proof(induction b arbitrary: v b1 b2)
-  case(IF v' b1' b2') note IFind = IF show ?case
-    proof(cases b1')
-      case Trueif thus ?thesis by auto
-    next
-      case Falseif with IF(2) IF(3) show ?thesis 
-        proof(cases b2')
-          case (IF v2 b21 b22) 
-            from IFind(2)[OF _ this] IFind(3) obtain a where a_def: "val_ifex b2' a" by auto
-           note this = roifex_set_var_subtree(2)[OF IFind(3), of v' b1' b2' a]
-           from a_def this show ?thesis by blast
-        qed(auto)
-    next
-      case (IF v1 b11 b12) 
-        from IFind(1)[OF _ this] roifex_set_var_subtree(1)[OF IFind(3), of v' b1' b2'] IFind(3)
-          show ?thesis by fastforce
-    qed
-qed (auto)
-
-lemma ro_ifex_false_assign: assumes "ro_ifex b" "b = IF v b1 b2" shows "\<exists>ass. \<not> val_ifex b ass"
-using assms proof(induction b arbitrary: v b1 b2)
-  case(IF v' b1' b2') note IFind = IF show ?case
-    proof(cases b1')
-      case Falseif thus ?thesis by auto
-    next
-      case Trueif with IF(2) IF(3) show ?thesis 
-        proof(cases b2')
-          case (IF v2 b21 b22) 
-            from IFind(2)[OF _ this] IFind(3) obtain a where a_def: "\<not> val_ifex b2' a" by auto
-           note this = roifex_set_var_subtree(2)[OF IFind(3), of v' b1' b2' a]
-           from a_def this show ?thesis by blast
-        qed(auto)
-    next
-      case (IF v1 b11 b12) 
-        from IFind(1)[OF _ this] roifex_set_var_subtree(1)[OF IFind(3), of v' b1' b2'] IFind(3)
-          show ?thesis by fastforce
-    qed
-qed (auto)
-
 lemma ifex_ordered_not_part: "ifex_ordered  b \<Longrightarrow> b = IF v b1 b2 \<Longrightarrow> w < v \<Longrightarrow> w \<notin> ifex_var_set b"
 	using less_asym by fastforce
 
-lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \<forall>ass. val_ifex x ass = val_ifex y ass \<Longrightarrow> x = y"
+lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> (\<And>ass. val_ifex x ass = val_ifex y ass) \<Longrightarrow> x = y"
  proof(induction x arbitrary: y)
-  case (IF xv xb1 xb2) note IFind = IF from this(3,4,5) show ?case
-    proof(induction y)
-      case (IF yv yb1 yb2)
-  thm IF IFind(3,4,5) IFind(1)[of yb1] IFind(2)[of yb2]
-  obtain x where x_def: "x = IF xv xb1 xb2" by simp
-  obtain y' where y'_def: "y' = IF yv yb1 yb2" by simp
-  from y'_def x_def IFind(3,4) IF have 0: "ro_ifex xb1" "ro_ifex xb2" "ro_ifex yb1" "ro_ifex yb2" 
-                                          "ro_ifex x" "ro_ifex y'" by auto
-  from IF IFind(5) x_def y'_def have 1: "\<forall>ass. val_ifex x ass = val_ifex y' ass" by simp
-  show ?case proof(cases "xv = yv")
-    note roifex_set_var_subtree(1)[OF 0(5) x_def, symmetric]
-    case True
-      from roifex_set_var_subtree(1)[OF 0(5) x_def]
-           roifex_set_var_subtree(1)[OF 0(6) y'_def] 1 True IFind(1)[OF 0(1) 0(3)]
-           have 3: "xb1 = yb1" by blast
-      from roifex_set_var_subtree(2)[OF 0(5) x_def]
-           roifex_set_var_subtree(2)[OF 0(6) y'_def] 1 True IFind(2)[OF 0(2) 0(4)]
-           have 4: "xb2 = yb2" by blast
-      from True 3 4 IF show ?thesis by simp
+  case (IF xv xb1 xb2) note IFind = IF 
+    from `ro_ifex (IF xv xb1 xb2)`  `ro_ifex y` `\<And>ass. val_ifex (IF xv xb1 xb2) ass = val_ifex y ass`
+      show ?case
+        proof(induction y)
+          case (IF yv yb1 yb2)
+            obtain x where x_def: "x = IF xv xb1 xb2" by simp
+            obtain y' where y'_def: "y' = IF yv yb1 yb2" by simp
+            from y'_def x_def IFind IF have 0: "ro_ifex xb1" "ro_ifex xb2" "ro_ifex yb1" 
+                                               "ro_ifex yb2" "ro_ifex x" "ro_ifex y'" by auto
+            from IF IFind x_def y'_def have 1: "\<And>ass. val_ifex x ass = val_ifex y' ass" by simp
+            show ?case
+              proof(cases "xv = yv")
+                case True
+      have "xb1 = yb1"
+        by (auto intro: IFind simp add: 0 1 True roifex_set_var_subtree[OF _ y'_def]
+                                        roifex_set_var_subtree[OF _ x_def, symmetric])
+      moreover have "xb2 = yb2"
+        by (auto intro: IFind simp add: 0 1 True roifex_set_var_subtree[OF _ y'_def]
+                                        roifex_set_var_subtree[OF _ x_def, symmetric])
+      ultimately show ?thesis using True by simp
     next
     case False note uneq = False show ?thesis
       proof(cases "xv < yv")
@@ -168,7 +124,7 @@ lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> \
 qed (fastforce intro: roifex_Falseif_unique roifex_Trueif_unique)+
 qed (fastforce intro: roifex_Falseif_unique[symmetric] roifex_Trueif_unique[symmetric])+
 
-lemma "single_valued bf_ifex_rel" "single_valued (bf_ifex_rel\<inverse>)"
+theorem "single_valued bf_ifex_rel" "single_valued (bf_ifex_rel\<inverse>)"
   unfolding single_valued_def bf_ifex_rel_def using ro_ifex_unique by auto
 
 lemma nonempty_if_var_set: "ifex_vars (IF v t e) \<noteq> []" by auto
@@ -216,20 +172,15 @@ fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> 'a \<Rightarrow> bool \
 (* dunno if the following four are useful for something\<dots> *)
 lemma restrict_top_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v \<Longrightarrow> v' < v \<Longrightarrow> restrict_top e v' val = e"
 	by(induction e) auto
+
 lemma restrict_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v \<Longrightarrow> v' < v \<Longrightarrow> restrict e v' val = e"
-	apply(induction e arbitrary: v)
-	  apply simp_all[2]
-	apply(case_tac e1, case_tac[!] e2)
-	        apply simp_all[2]
-	      apply fastforce
-	     apply simp_all[2]
-	   apply fastforce
-	  apply fastforce
-	 apply fastforce
-	apply force (* meh *)
-done
+	proof(induction e arbitrary: v)
+	  case (IF w e1 e2) thus ?case by (case_tac[!] e1, case_tac[!] e2, force+)
+  qed(auto)
+
 lemma restrict_top_IF_id: "ifex_ordered (IF v t e) \<Longrightarrow> v' < v \<Longrightarrow> restrict_top (IF v t e) v' val = (IF v t e)"
 	using restrict_top_id by auto
+
 lemma restrict_IF_id: assumes o: "ifex_ordered (IF v t e)" assumes le: "v' < v"
 	shows "restrict (IF v t e) v' val = (IF v t e)"
 	using restrict_id[OF o, unfolded ifex_top_var.simps, OF refl le, of val] .
@@ -246,7 +197,8 @@ fun lowest_tops :: "('a :: linorder) ifex list \<Rightarrow> 'a option" where
 "lowest_tops (_#r) = lowest_tops r"
 
 lemma lowest_tops_NoneD: "lowest_tops k = None \<Longrightarrow> (\<not>(\<exists>v t e. ((IF v t e) \<in> set k)))"
-by(induction k rule: lowest_tops.induct) simp_all
+by (induction k rule: lowest_tops.induct) simp_all
+
 lemma lowest_tops_in: "lowest_tops k = Some l \<Longrightarrow> l \<in> set (concat (map ifex_vars k))"
   by(induction k rule: lowest_tops.induct) (simp_all split: option.splits if_splits add: min_def)
 
@@ -266,14 +218,9 @@ lemma restrict_size_le: "size (restrict_top k var val) \<le> size k"
 lemma restrict_size_less: "ifex_top_var k = Some var \<Longrightarrow> size (restrict_top k var val) < size k"
  by (induction k, auto)
 
-
-(* I'm commander Shepard and this is my favourite proof in this repository *)
-(* Heyy, this is Kelly. I optimized your proof for you. I hope you still like it. *)
 lemma lowest_tops_cases: "lowest_tops [i, t, e] = Some var \<Longrightarrow>
        ifex_top_var i = Some var \<or> ifex_top_var t = Some var \<or> ifex_top_var e = Some var"
-apply(cases i, case_tac[!] t, case_tac[!] e)
-apply(auto simp add: min_def)
-done
+by (cases i, case_tac[!] t, case_tac[!] e, auto simp add: min_def)
 
 lemma lowest_tops_lowest: "lowest_tops es = Some a \<Longrightarrow> e \<in> set es \<Longrightarrow> ifex_ordered e \<Longrightarrow> v \<in> ifex_var_set e \<Longrightarrow> a \<le> v"
 apply((induction arbitrary: a rule: lowest_tops.induct))
@@ -328,7 +275,7 @@ lemma single_valued_rel: "single_valued (bf_ifex_rel\<inverse>)"
 	by blast
 
 
-lemma ifex_ite_induct2: "
+lemma ifex_ite_induct2[case_names Trueif Falseif IF]: "
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
   (\<And>i t e a. sentence (restrict_top i a True) (restrict_top t a True) (restrict_top e a True) \<Longrightarrow>
@@ -342,7 +289,8 @@ proof(induction i t e rule: ifex_ite.induct)
 		case (Some a) thus ?thesis by(auto intro: goal1)
   qed
 qed
-lemma ifex_ite_induct: "
+
+lemma ifex_ite_induct[case_names Trueif Falseif IF]: "
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Trueif \<Longrightarrow> sentence i t e) \<Longrightarrow>
   (\<And>i t e. lowest_tops [i, t, e] = None \<Longrightarrow> i = Falseif \<Longrightarrow> sentence i t e) \<Longrightarrow>
   (\<And>i t e a. (\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val)) \<Longrightarrow> 
@@ -448,35 +396,36 @@ proof(cases i)
 	show ?case unfolding rr by(simp add: goal3(4) restrict_val_invar[symmetric])
 qed (simp_all add: bf_restrict_def)
 
-lemma "
+
+lemma val_ifex_ite: "
+  (\<And>ass. fi ass = val_ifex i ass) \<Longrightarrow>
+  (\<And>ass. ft ass = val_ifex t ass) \<Longrightarrow>
+  (\<And>ass. fe ass = val_ifex e ass) \<Longrightarrow>
+  ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow>
+  (bf_ite fi ft fe) ass = val_ifex (ifex_ite i t e) ass"
+proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
+  case goal3
+  thm goal3(1)
+  note mIH = goal3(1)[OF refl refl refl 
+    restrict_top_ifex_ordered_invar[OF goal3(6)]
+    restrict_top_ifex_ordered_invar[OF goal3(7)]
+    restrict_top_ifex_ordered_invar[OF goal3(8)], symmetric]
+  note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) `ifex_ordered i`  goal3(3)]
+             restrict_top_bf[OF three_ins(2) goal3(2) `ifex_ordered t`  goal3(4)]
+             restrict_top_bf[OF three_ins(3) goal3(2) `ifex_ordered e`  goal3(5)]
+  show ?case apply(rule trans[OF brace90shannon[where i=a]])
+    by (auto simp: restrict_top_ifex_ordered_invar goal3(1,2,6-8) uf1 mIH bf_ite_def[of "\<lambda>l. l a"]
+             split: ifc_split)
+qed (simp add: bf_ite_def bf_ifex_rel_def)+
+
+theorem "
 	in_rel bf_ifex_rel fi i \<Longrightarrow>
 	in_rel bf_ifex_rel ft t \<Longrightarrow>
 	in_rel bf_ifex_rel fe e \<Longrightarrow>
 	in_rel bf_ifex_rel (bf_ite fi ft fe) (ifex_ite i t e)"
-proof -
-	case goal1
-	from goal1 have o: "ifex_ordered (ifex_ite i t e)" unfolding in_rel_def using ifex_ordered_implied order_ifex_ite_invar by blast
-	from goal1 have m: "ifex_minimal (ifex_ite i t e)" unfolding in_rel_def using ifex_minimal_implied minimal_ifex_ite_invar by blast
-	have fas: "\<And>ass. fi ass = val_ifex i ass" "\<And>ass. ft ass = val_ifex t ass"  "\<And>ass. fe ass = val_ifex e ass"
-		using goal1 unfolding bf_ifex_rel_def by simp_all
-	moreover have "ifex_ordered i" "ifex_ordered t" "ifex_ordered e" using goal1 ifex_ordered_implied by simp_all 
-	ultimately have "\<And>ass. (bf_ite fi ft fe) ass = val_ifex (ifex_ite i t e) ass"
-	proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
-		case goal3
-		note mIH = goal3(1)[OF refl refl refl 
-			restrict_top_ifex_ordered_invar[OF goal3(6)]
-			restrict_top_ifex_ordered_invar[OF goal3(7)]
-			restrict_top_ifex_ordered_invar[OF goal3(8)], symmetric]
-		note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) goal3(6) goal3(3)]
-		           restrict_top_bf[OF three_ins(2) goal3(2) goal3(7) goal3(4)]
-		           restrict_top_bf[OF three_ins(3) goal3(2) goal3(8) goal3(5)]
-		show ?case by
-			(rule trans[OF brace90shannon[where i=a]], unfold bf_ite_def[of "\<lambda>l. l a"])
-			(subst ifex_ite.simps, simp only: goal3(1,2,6-8) uf1 mIH  option.simps val_ifex.simps split: ifc_split, 
-				simp add: goal3(1) goal3(6) goal3(7) goal3(8) restrict_top_ifex_ordered_invar uf1) 
-	qed (subst ifex_ite.simps, simp add: bf_ite_def bf_ifex_rel_def)+
-	with o m show ?case unfolding bf_ifex_rel_def by simp
-qed
+by (auto simp add:  bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar val_ifex_ite
+         simp del: ifex_ite.simps)
+
 
 fun ifex_sat where
 "ifex_sat Trueif = Some (const False)" |
