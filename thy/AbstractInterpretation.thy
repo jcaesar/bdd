@@ -1,4 +1,4 @@
-theory TestImpl1
+theory AbstractInterpretation
 imports Abstract_Impl PointerMap
 begin
 

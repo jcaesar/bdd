@@ -1,5 +1,5 @@
 theory Conc_Impl
-imports PointerMapImpl TestImpl1
+imports PointerMapImpl AbstractInterpretation
 begin
 
 instantiation prod :: (default, default) default
@@ -37,7 +37,7 @@ by(sep_auto simp: ifci_def apfst_def map_prod_def split: prod.splits if_splits)
 lemma [sep_heap_rules]: "
 	n < 2 \<or> pointermap_p_valid (n - 2) bdd \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> destrci n bddi
-	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = destrmi n bdd)>\<^sub>t"
+	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = destrmi n bdd)>"
 by(cases "(n, bdd)" rule: destrmi.cases) (sep_auto simp: destrci_def)+
 
 
