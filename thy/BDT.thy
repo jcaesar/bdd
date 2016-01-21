@@ -426,6 +426,120 @@ theorem "
 by (auto simp add:  bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar val_ifex_ite
          simp del: ifex_ite.simps)
 
+function ifex_ite_opt :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
+  "ifex_ite_opt i t e = (case i of Trueif \<Rightarrow> t | Falseif \<Rightarrow> e |
+                        i \<Rightarrow>
+                        (if t = Trueif \<and> e = Falseif then i else
+                        (if t = e then t else
+                        (case lowest_tops [i, t, e] of Some x \<Rightarrow> 
+                         (IFC x (ifex_ite_opt (restrict_top i x True) (restrict_top t x True)
+                                              (restrict_top e x True))
+                                (ifex_ite_opt (restrict_top i x False) (restrict_top t x False)
+                                              (restrict_top e x False)))
+                     | None \<Rightarrow> (case i of Trueif \<Rightarrow> t | Falseif \<Rightarrow> e)))))"
+by pat_completeness auto
+
+termination ifex_ite_opt
+  by (relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) 
+     (simp_all only: termlemma)
+
+
+lemma ifex_ite_cases:
+      assumes "in_rel bf_ifex_rel fi i" "in_rel bf_ifex_rel ft t" "in_rel bf_ifex_rel fe e"
+      shows "ifex_ite Trueif t e = t" "ifex_ite Falseif t e = e"  "ifex_ite i t t = t"
+            "ifex_ite i Trueif Falseif = i"
+proof -
+  show "ifex_ite Trueif t e = t"
+    proof(rule ro_ifex_unique)
+    have 0: "\<And>ass. val_ifex (ifex_ite Trueif t e) ass = (bf_ite (\<lambda>_. True) ft fe) ass"
+      apply(rule val_ifex_ite[of "(%_. True)" Trueif ft t fe e, symmetric])
+      using assms by (auto simp add: bf_ifex_rel_def)
+    show "\<And>ass. val_ifex (ifex_ite Trueif t e) ass = val_ifex t ass" apply(subst 0)
+      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
+  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
+                     simp del: ifex_ite.simps)
+next
+  show "ifex_ite Falseif t e = e"
+    proof(rule ro_ifex_unique)
+    have 0: "\<And>ass. val_ifex (ifex_ite Falseif t e) ass = (bf_ite (\<lambda>_. False) ft fe) ass"
+      apply(rule val_ifex_ite[of "(%_. False)" Falseif ft t fe e, symmetric])
+      using assms by (auto simp add: bf_ifex_rel_def)
+    show "\<And>ass. val_ifex (ifex_ite Falseif t e) ass = val_ifex e ass" apply(subst 0)
+      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
+  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
+                     simp del: ifex_ite.simps)
+next
+  show "ifex_ite i t t = t"
+    proof(rule ro_ifex_unique)
+    have 0: "\<And>ass. val_ifex (ifex_ite i t t) ass = (bf_ite fi ft ft) ass"
+      apply(rule val_ifex_ite[of fi i ft t ft t, symmetric])
+      using assms by (auto simp add: bf_ifex_rel_def)
+    show "\<And>ass. val_ifex (ifex_ite i t t) ass = val_ifex t ass" apply(subst 0)
+      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
+  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
+                     simp del: ifex_ite.simps)
+next
+  show "ifex_ite i Trueif Falseif = i"
+    proof(rule ro_ifex_unique)
+    have 0: "\<And>ass. val_ifex (ifex_ite i Trueif Falseif) ass = (bf_ite fi (\<lambda>_. True) (\<lambda>_. False)) ass"
+      apply(rule val_ifex_ite[symmetric])
+      using assms by (auto simp add: bf_ifex_rel_def)
+    show "\<And>ass. val_ifex (ifex_ite i Trueif Falseif) ass = val_ifex i ass" apply(subst 0)
+      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
+  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
+                     simp del: ifex_ite.simps)
+qed
+
+thm ifex_ite_opt.induct
+
+lemma "
+ 	in_rel bf_ifex_rel fi i \<Longrightarrow>
+	in_rel bf_ifex_rel ft t \<Longrightarrow>
+	in_rel bf_ifex_rel fe e \<Longrightarrow> ifex_ite_opt i t e = ifex_ite i t e"
+  apply(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct2)
+    apply(auto)[2]
+    apply(subst ifex_ite_opt.simps)
+    apply(auto split: ifex.split 
+          simp del: in_rel_def ifex_ite.simps ifex_ite_opt.simps lowest_tops.simps restrict_top.simps)
+    using ifex_ite_cases(1) apply(metis)
+    using ifex_ite_cases(2) apply(metis)
+    using ifex_ite_cases(3) apply(metis)
+    using ifex_ite_cases(4) apply(metis)
+    proof -
+      case goal1
+  have 0: "ifex_ite_opt (restrict_top (IF x31 x32 x33) a True) (restrict_top t a True) (restrict_top e a True) =
+    ifex_ite (restrict_top (IF x31 x32 x33) a True) (restrict_top t a True) (restrict_top e a True)"
+  apply(rule goal1(1))
+  using goal1(4,5,6)
+  by(auto elim!: restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar simp add: bf_ifex_rel_def simp del: restrict_top.simps
+       ifex_minimal.simps ifex_ordered.simps)
+  have 1: "ifex_ite_opt (restrict_top (IF x31 x32 x33) a False) (restrict_top t a False) (restrict_top e a False) =
+    ifex_ite (restrict_top (IF x31 x32 x33) a False) (restrict_top t a False) (restrict_top e a False)"
+  apply(rule goal1(2))
+  using goal1(4,5,6)
+  by(auto elim!: restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar simp add: bf_ifex_rel_def simp del: restrict_top.simps
+       ifex_minimal.simps ifex_ordered.simps)
+ show ?case apply(subst ifex_ite.simps) using goal1(3)
+        using goal1 restrict_top_eq 0 1
+   by (simp del: ifex_ite.simps ifex_ite_opt.simps lowest_tops.simps restrict_top.simps)
+  next 
+  case goal2
+  have 0: "ifex_ite_opt (restrict_top (IF x31 x32 x33) a True) (restrict_top t a True) (restrict_top e a True) =
+    ifex_ite (restrict_top (IF x31 x32 x33) a True) (restrict_top t a True) (restrict_top e a True)"
+  apply(rule goal2(1))
+  using goal2(4,5,6)
+  by(auto elim!: restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar simp add: bf_ifex_rel_def simp del: restrict_top.simps
+       ifex_minimal.simps ifex_ordered.simps)
+  have 1: "ifex_ite_opt (restrict_top (IF x31 x32 x33) a False) (restrict_top t a False) (restrict_top e a False) =
+    ifex_ite (restrict_top (IF x31 x32 x33) a False) (restrict_top t a False) (restrict_top e a False)"
+  apply(rule goal2(2))
+  using goal2(4,5,6)
+  by(auto elim!: restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar simp add: bf_ifex_rel_def simp del: restrict_top.simps
+       ifex_minimal.simps ifex_ordered.simps)
+ show ?case apply(subst ifex_ite.simps) using goal2(3)
+        using goal2 restrict_top_eq 0 1
+   by (simp del: ifex_ite.simps ifex_ite_opt.simps lowest_tops.simps restrict_top.simps)
+qed
 
 fun ifex_sat where
 "ifex_sat Trueif = Some (const False)" |
