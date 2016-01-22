@@ -152,7 +152,6 @@ qed
 
 
 partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option"
-  assume ifex_eq:
 where
 "val_impl e s ass = (case (DESTRimpl e s) of
 	TD \<Rightarrow> Some True |
@@ -162,22 +161,6 @@ where
 lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n ass) = val_impl ni s ass"
 by (induction n arbitrary: ni, 
     auto dest: DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 simp add: val_impl.simps)
-
-lemma "I s \<Longrightarrow> a = b \<Longrightarrow> (ai, a) \<in> R s \<Longrightarrow> (bi, b) \<in> R s \<Longrightarrow> 
-       DESTRimpl ai s = DESTRimpl bi s \<and> (ai = bi)"
-  apply(induction a arbitrary: ai bi)
-    apply(cases b) using DESTRimpl_rules 
-oops
-    apply(cases b) using DESTRimpl_rules apply(fastforce, fastforce, fastforce)
-    apply(cases b) using DESTRimpl_rules  apply(fastforce, fastforce)
-  proof - case goal1
-    obtain bile biri where 0: "DESTRimpl bi s = IFD x31 bile biri \<and> (bile, x32) \<in> R s \<and> (biri, x33) \<in> R s" 
-      using DESTRimpl_rule3[OF `I s`] goal1 by metis
-    obtain aile airi where 1: "DESTRimpl ai s = IFD x31 aile airi \<and> (aile, x32) \<in> R s \<and> (airi, x33) \<in> R s" 
-      using DESTRimpl_rule3[OF `I s`] goal1 by metis
-    have "bile = aile" 
-    from this 0 1 show ?case by simp
-oops
 
 
 end
@@ -258,7 +241,7 @@ case (IF i t e a)
                    `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e` Deq by (auto)
            moreover from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'" 
              apply(subst (asm) ite_impl_opt.simps)
-             using `i =  IF iv ile iri` DESTRimpl_rule3[OF `I s`, of ii iv ile iri]
+             using `i =  IF iv ile iri` DESTRimpl_rule3[OF `I s`, of ii iv ile iri ]
                  DESTRimpl_rule1[OF `I s`, of ti] DESTRimpl_rule2[OF `I s`, of ei]
                  `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e` Deq by (auto)
            ultimately show ?case using `I s` by blast
@@ -273,10 +256,11 @@ case (IF i t e a)
                from IF(4)
                  have "s = s'" apply(subst (asm) ite_impl_opt.simps) using iiDESTR
                                apply(auto) using ti_te_DESTR apply(auto) using `ti = ei` by auto
-                 moreover from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'"
-                   apply(subst (asm) ite_impl_opt.simps) using iiDESTR apply(auto)
-                   using ti_te_DESTR apply(auto) using `ti = ei` apply(auto)
-                   using `i =  IF iv ile iri` DESTRimpl_rule3[OF `I s`, of ii iv ile iri]                   
+                 moreover from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'" 
+                   apply(subst (asm) ite_impl_opt.simps)
+         next
+           assume "t \<noteq> e" 
+           then have DESTR_neq: "DESTRimpl ti s \<noteq> DESTRimpl ei s" using DESTRimpl_rules
 oops
 
 end
