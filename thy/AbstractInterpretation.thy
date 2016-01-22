@@ -128,10 +128,10 @@ lemma in_lesI:
     shows "(ni1, n1) \<in> Rmi s'" "(ni2, n2) \<in> Rmi s'"
 by (meson assms bdd_impl_pre.les_def)+
 
-interpretation brofix!: bdd_impl pointermap_sane Rmi tmi fmi ifmi destrmi
+interpretation brofix!: bdd_impl_eq pointermap_sane Rmi tmi fmi ifmi destrmi
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def[simp]
-	show "bdd_impl pointermap_sane Rmi tmi fmi ifmi destrmi"
+	show "bdd_impl_eq pointermap_sane Rmi tmi fmi ifmi destrmi"
 	proof(unfold_locales)
 	     case goal1 thus ?case by(clarsimp split: if_splits)
 	next case goal2 thus ?case by(clarsimp split: if_splits)
@@ -176,6 +176,10 @@ proof  -
 		done
 	next
 		case goal12 thus ?case using ifmi_saneI by blast
+	next
+		case goal13 thus ?case using rmigneq by fastforce
+	next
+		case goal14 thus ?case by (simp add: rmigeq)
 	qed(simp_all)
 qed
 
