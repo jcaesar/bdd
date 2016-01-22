@@ -1,6 +1,13 @@
+section{*Binary Decision Trees*}
 theory BDT
 imports Boolean_Expression_Checkers BoolFunc
 begin
+
+text{*
+	We first define all operations and properties on binary decision trees.
+	This has the advantage that we can use a simple, structurally defined type
+	and the disadvantage that we cannot represent sharing.
+*}
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
 (* type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool" *)
@@ -30,7 +37,7 @@ definition bf_ifex_rel where
   "bf_ifex_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ro_ifex b}"
 
 lemma ifex_var_noinfluence: "x \<notin> ifex_var_set b \<Longrightarrow> val_ifex b (ass(x:=val)) = val_ifex b ass"
-  by (induction b, auto)  
+  by (induction b, auto)
 
 lemma roifex_var_not_in_subtree:
   assumes "ro_ifex b" and "b = IF v t e" 

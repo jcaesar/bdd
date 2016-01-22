@@ -1,6 +1,15 @@
+section{*Pointermap*}
 theory PointerMap
 imports Main
 begin
+
+text{*
+	We need a datastructure that supports the following two operations:
+	\begin{itemize}
+		\item Given an element, it can construct a pointer (i.e., a small representation) of that element. It will always construct the same pointer for equal elements.
+		\item Given a pointer, we can retrieve the element
+	\end{itemize}
+*}
 
 record 'a pointermap = 
 	entries :: "'a list"

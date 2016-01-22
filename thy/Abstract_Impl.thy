@@ -1,3 +1,4 @@
+section{*Abstract ITE Implementation*}
 theory Abstract_Impl
 imports BDT
         "~~/src/HOL/Library/Monad_Syntax"
@@ -264,5 +265,4 @@ case (IF i t e a)
 oops
 
 end
-
 end

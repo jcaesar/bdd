@@ -1,3 +1,4 @@
+section{*Functional interpretation for the abstract implementation*}
 theory AbstractInterpretation
 imports Abstract_Impl PointerMap
 begin

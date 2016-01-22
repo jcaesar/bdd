@@ -1,6 +1,7 @@
 session "BDDs" = Datastructs +
 	options [document = pdf, document_output = "output"]
 	theories
+		BoolFunc
 		BDT
 		Abstract_Impl
 		AbstractInterpretation

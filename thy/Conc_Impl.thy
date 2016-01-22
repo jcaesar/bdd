@@ -1,3 +1,4 @@
+section{*Imparative implementation*}
 theory Conc_Impl
 imports PointerMapImpl AbstractInterpretation
 begin

@@ -1,3 +1,4 @@
+section{* Boolean functions *}
 theory BoolFunc
 imports Main
 begin
