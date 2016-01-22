@@ -35,6 +35,18 @@ abbreviation ro_ifex where "ro_ifex t \<equiv> ifex_ordered t \<and> ifex_minima
 
 definition bf_ifex_rel where
   "bf_ifex_rel = {(a,b). (\<forall>ass. a ass \<longleftrightarrow> val_ifex b ass) \<and> ro_ifex b}"
+  
+lemma "finite (bf_vars b) \<Longrightarrow> \<exists>i. in_rel bf_ifex_rel b i"
+proof(induction "card (bf_vars b)" arbitrary: b)
+	case 0
+oops
+
+lemma "in_rel bf_ifex_rel b i \<Longrightarrow> bf_vars b = ifex_var_set i"
+apply(induction i arbitrary: b)
+apply(simp_all add: bf_ifex_rel_def bf_vars_def bf_restrict_def)[2]
+proof -
+	case (IF v t e)
+oops
 
 lemma ifex_var_noinfluence: "x \<notin> ifex_var_set b \<Longrightarrow> val_ifex b (ass(x:=val)) = val_ifex b ass"
   by (induction b, auto)

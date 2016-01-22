@@ -42,5 +42,23 @@ lemma brace90shannon: "bf_ite F G H ass =
 	       (bf_ite (bf_restrict i False F) (bf_restrict i False G) (bf_restrict i False H)) ass"
 unfolding bf_ite_def bf_restrict_def by (auto simp add: fun_upd_idem)
 
+text{*
+	Misc.
+*}
+lemma "bf_vars bf_False = {}" "bf_vars bf_True = {}"
+unfolding bf_vars_def bf_False_def bf_True_def bf_restrict_def by simp_all
+lemma bf_no_vars_const: "(bf_vars (f :: 'a boolfunc)) = {} \<Longrightarrow> f = bf_True \<or> f = bf_False"
+(*unfolding bf_vars_def bf_True_def bf_False_def bf_restrict_def fun_eq_iff*)
+(*apply(rule ccontr)
+apply(unfold de_Morgan_disj)
+apply(erule conjE)*)
+apply(unfold bf_True_def bf_False_def fun_eq_iff)
+apply(unfold bf_vars_def)
+apply(unfold Collect_empty_eq)
+apply(unfold not_ex not_not)
+apply(unfold bf_restrict_def)
+apply(simp)
+apply(clarify)
+oops
 
 end
