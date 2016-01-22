@@ -1,0 +1,15 @@
+session "BDDs" = (*Datastructs +*) HOL +
+	options [document = pdf, document_output = "output"]
+	theories
+		BDT
+		Abstract_Impl
+		(*AbstractInterpretation
+		(*Conc_Impl*)*)
+	document_files
+		"root.tex"
+
+session "Datastructs" = HOL +
+	theories
+		ArrayList
+		PointerMap
+		PointerMapImpl
