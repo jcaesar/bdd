@@ -149,7 +149,10 @@ case(Falseif i t e)
   with Falseif show ?case by(auto simp add: ite_impl.simps)
 qed
 
-partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option" 
+
+
+partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option"
+  assume ifex_eq:
 where
 "val_impl e s ass = (case (DESTRimpl e s) of
 	TD \<Rightarrow> Some True |
@@ -160,5 +163,122 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n
 by (induction n arbitrary: ni, 
     auto dest: DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 simp add: val_impl.simps)
 
+lemma "I s \<Longrightarrow> a = b \<Longrightarrow> (ai, a) \<in> R s \<Longrightarrow> (bi, b) \<in> R s \<Longrightarrow> 
+       DESTRimpl ai s = DESTRimpl bi s \<and> (ai = bi)"
+  apply(induction a arbitrary: ai bi)
+    apply(cases b) using DESTRimpl_rules 
+oops
+    apply(cases b) using DESTRimpl_rules apply(fastforce, fastforce, fastforce)
+    apply(cases b) using DESTRimpl_rules  apply(fastforce, fastforce)
+  proof - case goal1
+    obtain bile biri where 0: "DESTRimpl bi s = IFD x31 bile biri \<and> (bile, x32) \<in> R s \<and> (biri, x33) \<in> R s" 
+      using DESTRimpl_rule3[OF `I s`] goal1 by metis
+    obtain aile airi where 1: "DESTRimpl ai s = IFD x31 aile airi \<and> (aile, x32) \<in> R s \<and> (airi, x33) \<in> R s" 
+      using DESTRimpl_rule3[OF `I s`] goal1 by metis
+    have "bile = aile" 
+    from this 0 1 show ?case by simp
+oops
+
+
 end
+
+
+locale bdd_impl_eq = bdd_impl +
+  assumes ifex_eq: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> ni = ni'"
+  assumes ifexd_eq: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni, i') \<in> R s \<Longrightarrow> i = i'"
+begin
+
+
+
+partial_function(option) ite_impl_opt where
+"ite_impl_opt i t e s =
+  (case DESTRimpl i s of TD \<Rightarrow> Some (t,s) | FD \<Rightarrow> Some (e,s) | _ \<Rightarrow>
+  (if DESTRimpl t s = TD \<and> DESTRimpl e s = FD then Some (i,s) else
+  (if e = t then Some (t,s) else
+	(case lowest_tops_impl [i, t, e] s of
+		Some a \<Rightarrow> (let
+			ti = restrict_top_impl i a True s;
+			tt = restrict_top_impl t a True s;
+			te = restrict_top_impl e a True s;
+			fi = restrict_top_impl i a False s;
+			ft = restrict_top_impl t a False s;
+			fe = restrict_top_impl e a False s
+			in do {
+			(tb,s) \<leftarrow> ite_impl_opt ti tt te s;
+			(fb,s) \<leftarrow> ite_impl_opt fi ft fe s;
+            Some (IFimpl a tb fb s)}) |
+        None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s))))))"
+
+lemma ite_impl_opt_R: "I s \<Longrightarrow> ite_impl_opt ii ti ei s = Some (r, s')
+       \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+       \<Longrightarrow> les s s' \<and> (r, ifex_ite_opt i t e) \<in> R s' \<and> I s'"
+proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
+case(Trueif i t e)
+  then have "lowest_tops_impl [ii, ti, ei] s = None" and "DESTRimpl ii s = TD"  
+      by (case_tac[!] i, case_tac[!] t, case_tac[!] e,
+         (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+)
+  with Trueif show ?case  by(auto simp add: ite_impl_opt.simps)
+next
+case(Falseif i t e)
+  then have "lowest_tops_impl [ii, ti, ei] s = None" and "DESTRimpl ii s = FD"  
+    by (case_tac[!] i, case_tac[!] t, case_tac[!] e,
+       (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+)
+  with Falseif show ?case by(auto simp add: ite_impl_opt.simps)
+next
+case (IF i t e a)
+  show ?case
+    proof(cases i)
+      assume "i = Trueif"
+      from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'" apply(subst (asm) ite_impl_opt.simps)
+           using `i = Trueif` DESTRimpl_rule1[OF `I s`] `in_rel (R s) ii i` `in_rel (R s) ti t` 
+           by (simp)
+      moreover from IF(4) have "s = s'" apply(subst (asm) ite_impl_opt.simps)
+           using `i = Trueif` DESTRimpl_rule1[OF `I s`] `in_rel (R s) ii i` `in_rel (R s) ti t` 
+           by (simp)
+      ultimately show ?case using `I s` by blast
+    next
+      assume "i = Falseif"
+      from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'" apply(subst (asm) ite_impl_opt.simps)
+           using `i = Falseif` DESTRimpl_rules[OF `I s`] `in_rel (R s) ii i` `in_rel (R s) ei e` 
+           by (simp)
+      moreover from IF(4) have "s = s'" apply(subst (asm) ite_impl_opt.simps)
+           using `i = Falseif` DESTRimpl_rules[OF `I s`] `in_rel (R s) ii i` 
+           by (simp)
+      ultimately show ?case using `I s` by blast
+    next
+      fix iv ile iri assume "i = IF iv ile iri" 
+      with `I s` `in_rel (R s) ii i` have iiDESTR: "\<exists>ni1 ni2. DESTRimpl ii s = IFD iv ni1 ni2"
+        using DESTRimpl_rule3 by fastforce
+      show ?case
+        proof(cases "t = Trueif \<and> e = Falseif")
+          assume Deq: "t = Trueif \<and> e = Falseif"
+          from IF(4) have "s = s'" apply(subst (asm) ite_impl_opt.simps)
+             using `i =  IF iv ile iri` DESTRimpl_rule3[OF `I s`, of ii iv ile iri ]
+                   DESTRimpl_rule1[OF `I s`, of ti] DESTRimpl_rule2[OF `I s`, of ei]
+                   `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e` Deq by (auto)
+           moreover from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'" 
+             apply(subst (asm) ite_impl_opt.simps)
+             using `i =  IF iv ile iri` DESTRimpl_rule3[OF `I s`, of ii iv ile iri]
+                 DESTRimpl_rule1[OF `I s`, of ti] DESTRimpl_rule2[OF `I s`, of ei]
+                 `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e` Deq by (auto)
+           ultimately show ?case using `I s` by blast
+         next
+           assume Dneq: "\<not> (t = Trueif \<and> e = Falseif)"
+               from this have ti_te_DESTR: "\<not> (DESTRimpl ti s = TD \<and> DESTRimpl ei s = FD)"
+                 using DESTRimpl_rules[OF `I s`] `in_rel (R s) ti t` `in_rel (R s) ei e`
+                 apply(case_tac t, case_tac[!] e) by (fastforce)+
+                show ?case
+             proof(cases "ti = ei")
+               assume "ti = ei"
+               from IF(4)
+                 have "s = s'" apply(subst (asm) ite_impl_opt.simps) using iiDESTR
+                               apply(auto) using ti_te_DESTR apply(auto) using `ti = ei` by auto
+                 moreover from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'"
+                   apply(subst (asm) ite_impl_opt.simps) using iiDESTR apply(auto)
+                   using ti_te_DESTR apply(auto) using `ti = ei` apply(auto)
+                   using `i =  IF iv ile iri` DESTRimpl_rule3[OF `I s`, of ii iv ile iri]                   
+oops
+
+end
+
 end
