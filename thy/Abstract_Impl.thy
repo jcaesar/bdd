@@ -254,15 +254,82 @@ case (IF i t e a)
                 show ?case
              proof(cases "ti = ei")
                assume "ti = ei"
-               from IF(4)
-                 have "s = s'" apply(subst (asm) ite_impl_opt.simps) using iiDESTR
+                 then have "t = e" using ifexd_eq[OF `I s`] `in_rel (R s) ti t` `in_rel (R s) ei e`
+                   by auto
+                 from IF(4) have "s = s'" apply(subst (asm) ite_impl_opt.simps) using iiDESTR
                                apply(auto) using ti_te_DESTR apply(auto) using `ti = ei` by auto
                  moreover from IF(4) have "(r, ifex_ite_opt i t e) \<in> R s'" 
-                   apply(subst (asm) ite_impl_opt.simps)
+                   apply(subst (asm) ite_impl_opt.simps) using iiDESTR
+                   apply(auto)
+                   using ti_te_DESTR apply(auto) using `ti = ei` apply(auto)
+                   using `i =  IF iv ile iri` Dneq `t = e` `in_rel (R s) ei e`
+                     by(auto simp del: ifex_ite_opt.simps restrict_top.simps lowest_tops.simps)
+                  ultimately show ?case using `I s` by simp
          next
-           assume "t \<noteq> e" 
-           then have DESTR_neq: "DESTRimpl ti s \<noteq> DESTRimpl ei s" using DESTRimpl_rules
-oops
+           assume "ti \<noteq> ei"
+           then have "t \<noteq> e" using ifex_eq[OF `I s`]  `in_rel (R s) ti t` `in_rel (R s) ei e`
+             by force
+           have 0: "ite_impl_opt ii ti ei s = (case lowest_tops_impl [ii, ti, ei] s of None \<Rightarrow> Some (case DESTRimpl ii s of TD \<Rightarrow> (ti, s) | FD \<Rightarrow> (ei, s))
+                     | Some a \<Rightarrow> let ti' = restrict_top_impl ii a True s; tt = restrict_top_impl ti a True s; te = restrict_top_impl ei a True s; fi = restrict_top_impl ii a False s;
+                                     ft = restrict_top_impl ti a False s; fe = restrict_top_impl ei a False s
+                                 in ite_impl_opt ti' tt te s \<guillemotright>= (\<lambda>(tb, s). ite_impl_opt fi ft fe s \<guillemotright>= (\<lambda>(fb, s). Some (IFimpl a tb fb s))))"
+             apply(subst ite_impl_opt.simps) using iiDESTR `ti \<noteq> ei` ti_te_DESTR 
+             by (auto simp del: lowest_tops_impl.simps)
+           note inR = `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e`
+           from \<open>I s\<close> inR \<open>lowest_tops [i, t, e] = Some a\<close>
+           have 1: "lowest_tops_impl [ii, ti, ei] s = Some a"
+           by(case_tac[!] i, case_tac[!] t, case_tac[!] e,
+             (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+)
+           from IF obtain tb st
+            where tb_def: "ite_impl_opt (restrict_top_impl ii a True s) (restrict_top_impl ti a True s)
+                       (restrict_top_impl ei a True s) s = Some (tb, st)"
+            by (auto simp: Option.bind_eq_Some_conv 1 0
+                     simp del: restrict_top_impl.simps lowest_tops_impl.simps)
+            from `ite_impl_opt ii ti ei s = Some (r, s')` obtain eb se
+              where eb_def: "ite_impl_opt (restrict_top_impl ii a False s) (restrict_top_impl ti a False s)
+                                 (restrict_top_impl ei a False s) st = Some (eb, se)"
+              apply (subst (asm) 0)
+              by(auto simp del: lowest_tops_impl.simps restrict_top_impl.simps
+                      simp add: Option.bind_eq_Some_conv 1 tb_def)
+            from `I s` inR IF(1)[OF \<open>I s\<close> tb_def, of True] have
+              3: "(tb,
+                   ifex_ite_opt (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R st"
+                 "les s st" "I st" by (auto dest: restrict_top_R simp del: restrict_top_impl.simps)
+            from inR `les s st` IF(1)[OF `I st` eb_def, of False]
+            have "(eb,
+                  ifex_ite_opt (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)) \<in> R se
+                  \<and> les st se \<and> I se" unfolding les_def
+            by(fastforce dest: restrict_top_R[OF `I s`, of ii i] restrict_top_R[OF `I s`, of ti t] restrict_top_R[OF `I s`, of ei e]
+                       simp del: restrict_top_impl.simps restrict_top.simps ifex_ite.simps)
+            then have 4:
+              "(eb, ifex_ite_opt (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)) \<in> R se"
+              "les st se"
+              "I se" by auto
+            from IF(4) have 5: "ite_impl_opt ii ti ei s = Some (IFimpl a tb eb se)"
+              apply(subst (asm) 0, subst (asm) 1,
+                    auto simp del: restrict_top_impl.simps simp add: Option.bind_eq_Some_conv)
+              using tb_def eb_def by auto
+            from 3 4 les_def[of st se]
+              have 6: "(tb, 
+                     ifex_ite_opt (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R se"
+              by blast
+            from IFimpl_mono[OF `I se` this, of _ _ a r s'] 4 5 IF have "les se s'" by force
+            from IFimpl_inv[OF `I se` 6 4(1), of a r s'] 5 IF have "I s'" by auto
+            from `les se s'` 3 4 les_trans have goal11: "les s s'" by blast
+            from IF(2) `i = IF iv ile iri` `t \<noteq> e` Dneq
+              have 7:
+              "ifex_ite_opt i t e =
+               IFC a (ifex_ite_opt (restrict_top i a True) (restrict_top t a True) (restrict_top e a True))
+                (ifex_ite_opt (restrict_top i a False) (restrict_top t a False) (restrict_top e a False))"
+              by (auto)
+            from 5 IF(4) have "IFimpl a tb eb se = (r, s')" by force
+            from goal11 IFimpl_rule[OF `I se` 6 4(1) this] `I s'` 7 show ?case
+            by(auto split: ifc_split)
+qed
+qed
+qed
+qed
+
 
 end
 end
