@@ -15,6 +15,8 @@ begin
 	instance ..
 end
 
+definition "bdd_node_valid bdd n \<equiv> n < 2 \<or> pointermap_p_valid (n - 2) bdd"
+
 definition "tci bdd \<equiv> return (1,bdd)"
 definition "fci bdd \<equiv> return (0,bdd)"
 definition "ifci v t e bdd \<equiv> (if t = e then return (t, bdd) else do {
@@ -36,38 +38,38 @@ lemma [sep_heap_rules]: "(p, u) = ifmi v t e bdd \<Longrightarrow>
 	<\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p)>\<^sub>t"
 by(sep_auto simp: ifci_def apfst_def map_prod_def split: prod.splits if_splits)
 lemma [sep_heap_rules]: "
-	n < 2 \<or> pointermap_p_valid (n - 2) bdd \<Longrightarrow>
+	bdd_node_valid bdd n \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> destrci n bddi
 	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = destrmi n bdd)>"
-by(cases "(n, bdd)" rule: destrmi.cases) (sep_auto simp: destrci_def)+
+by(cases "(n, bdd)" rule: destrmi.cases) (sep_auto simp: destrci_def bdd_node_valid_def)+
 
 definition "restrict_topci p var val bdd = do {
 	d \<leftarrow> destrci p bdd;
 	return (case d of IFD v t e \<Rightarrow> (if v = var then (if val then t else e) else p) | _ \<Rightarrow> p)
 }"
 lemma [sep_heap_rules]: "
-	p < 2 \<or> pointermap_p_valid (p - 2) bdd \<Longrightarrow>
+	bdd_node_valid bdd p \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> restrict_topci p var val bddi
 	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = brofix.restrict_top_impl p var val bdd)>"
 by(sep_auto simp: restrict_topci_def)
 
 fun lowest_topsci where
 "lowest_topsci [] s = return None" |
-"lowest_topsci (e#es) s = 
-	(if e < 2 then lowest_topsci es s else do {
-		(c,_,_) \<leftarrow> pm_pthi s e;
+"lowest_topsci (e#es) s = do {
+		des \<leftarrow> destrci e s;
 		rec \<leftarrow> lowest_topsci es s;
-		return (case rec of Some d \<Rightarrow> Some (min c d) | None \<Rightarrow> Some c)
-	})"
-term "(list_all (pointermap_p_valid\<inverse>\<inverse> bdd), bdd)" 
+		return (case des of
+			(IFD v t e) \<Rightarrow> (case rec of 
+				Some u \<Rightarrow> Some (min u v) | 
+				None \<Rightarrow> Some v) |
+			_ \<Rightarrow> rec)
+	}"
+
 lemma [sep_heap_rules]: "
-	list_all (\<lambda>e. e < 2 \<or> pointermap_p_valid (e - 2) bdd) es \<Longrightarrow>
+	list_all (bdd_node_valid bdd) es \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> lowest_topsci es bddi
 	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = brofix.lowest_tops_impl es bdd)>"
-apply(induction es)
-apply(sep_auto simp:)
-apply(sep_auto simp: split: IFEXD.splits) 
-oops (* I doubt that sep_auto does induction. I'll check later, more pressing matters to attend. *)
+by(induction es) (sep_auto simp:)+
 
 (* partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s =
