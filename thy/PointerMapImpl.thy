@@ -14,7 +14,8 @@ begin
   definition is_pointermap_impl :: "('a::{hashable,heap}) pointermap \<Rightarrow> 'a pointermap_impl \<Rightarrow> assn" where
     "is_pointermap_impl b bi \<equiv> 
       is_array_list (entries b) (entriesi bi) 
-    * is_hashmap (getentry b) (getentryi bi)"
+    * is_hashmap (getentry b) (getentryi bi)
+    * \<up>(pointermap_sane b)"
 
   lemma is_pointermap_impl_prec: "precise is_pointermap_impl"
   	unfolding is_pointermap_impl_def[abs_def]
@@ -32,6 +33,9 @@ begin
 	apply blast
   done
 
+  lemma is_pi_sane_subst: "is_pointermap_impl b bi = \<up>(pointermap_sane b) * is_pointermap_impl b bi"
+    by (sep_auto simp: is_pointermap_impl_def)
+
   definition pointermap_empty where
     "pointermap_empty \<equiv> do {
       hm \<leftarrow> hm_new;
@@ -40,7 +44,8 @@ begin
     }"
 
   lemma [sep_heap_rules]: "< emp > pointermap_empty <is_pointermap_impl empty_pointermap>\<^sub>t"
-    by (sep_auto simp: pointermap_empty_def empty_pointermap_def is_pointermap_impl_def)
+    unfolding is_pointermap_impl_def apply simp
+    by (sep_auto simp: pointermap_empty_def empty_pointermap_def)
 
   definition pm_pthi where
     "pm_pthi m p \<equiv> arl_nth (entriesi m) p"
@@ -64,7 +69,10 @@ begin
     }"
   
   lemmas pointermap_getmki_defs = pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def
-  lemma [sep_heap_rules]: "(p,u) = pointermap_getmk a m \<Longrightarrow> < is_pointermap_impl m mi > pointermap_getmki a mi <\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p)>\<^sub>t"
+  lemma [sep_heap_rules]: "pointermap_getmk a m = (p,u) \<Longrightarrow> 
+    < is_pointermap_impl m mi > pointermap_getmki a mi <\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p \<and> pointermap_p_valid p u)>\<^sub>t"
+    apply (subst is_pi_sane_subst; clarsimp)
+    apply (frule (1) pointermap_sane_getmkD)
     apply(cases "getentry m a")
     apply(unfold pointermap_getmki_def)
     apply(unfold return_bind)

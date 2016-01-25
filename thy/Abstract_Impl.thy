@@ -4,6 +4,16 @@ imports BDT
         "~~/src/HOL/Library/Monad_Syntax"
 begin
 
+primrec oassert :: "bool \<Rightarrow> unit option" where
+  "oassert True = Some ()" | "oassert False = None"
+
+lemma oassert_iff[simp]: 
+  "oassert \<Phi> = Some x \<longleftrightarrow> \<Phi>" 
+  "oassert \<Phi> = None \<longleftrightarrow> \<not>\<Phi>"  
+  by (cases \<Phi>) auto
+
+
+
 datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni 
 
 locale bdd_impl_pre =
@@ -77,7 +87,9 @@ partial_function(option) ite_impl where
 			(tb,s) \<leftarrow> ite_impl ti tt te s;
 			(fb,s) \<leftarrow> ite_impl fi ft fe s;
             Some (IFimpl a tb fb s)}) |
-        None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s)))"
+    None \<Rightarrow> do {
+      (case DESTRimpl i s of TD \<Rightarrow> Some (t, s) | FD \<Rightarrow> Some (e, s) | _ \<Rightarrow> None)
+      })"
 
 
 lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
