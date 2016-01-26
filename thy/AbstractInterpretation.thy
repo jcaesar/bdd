@@ -205,14 +205,13 @@ proof -
 			proof(cases "n = ni")
 				case True
 					show "ifexd_valid s' (destrmi n s')" unfolding True
+					unfolding dme
 					using ifm
-					apply(clarsimp simp: False apfst_def map_prod_def split: prod.splits)
-					apply(clarsimp simp: ifexd_valid_def)
+					apply(clarsimp simp: False apfst_def map_prod_def ifexd_valid_def split: prod.splits)
 					apply(frule pointermap_update_pthI[OF pms])
-					apply(rename_tac a b)
 					apply(rule)
-					using valid(1) apply(case_tac "a < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv; fail)
-					using valid(2) apply(case_tac "b < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv)
+					using valid(1) apply(case_tac "ni1 < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv;fail)
+					using valid(2) apply(case_tac "ni2 < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv)
 				done
 			next
 				case False
