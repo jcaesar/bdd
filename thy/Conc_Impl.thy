@@ -16,8 +16,6 @@ begin
 	instance ..
 end
 
-definition "bdd_node_valid bdd n \<equiv> n < 2 \<or> pointermap_p_valid (n - 2) bdd"
-
 definition "tci bdd \<equiv> return (1,bdd)"
 definition "fci bdd \<equiv> return (0,bdd)"
 definition "ifci v t e bdd \<equiv> (if t = e then return (t, bdd) else do {
@@ -55,20 +53,21 @@ by(sep_auto
 
 lemma [sep_heap_rules]: "
 	bdd_node_valid bdd n \<Longrightarrow>
+	bdd_sane bdd \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> destrci n bddi
-	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = destrmi n bdd)>"
-by(cases "(n, bdd)" rule: destrmi.cases) (sep_auto simp: destrci_def bdd_node_valid_def)+
-
-lemma [simp]: 
-  "bdd_node_valid bdd 0"
-  "bdd_node_valid bdd (Suc 0)"
-  by (auto simp: bdd_node_valid_def)
-
-lemma bdd_node_valid_RmiI: "(ni,n)\<in>Rmi bdd \<Longrightarrow> bdd_node_valid bdd ni"
-  apply (auto simp: Rmi_def)
-  apply (cases "(ni,n,bdd)" rule: Rmi_g.cases; simp)
-  apply (auto simp: bdd_node_valid_def)
-  done
+	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = destrmi n bdd \<and> ifexd_valid bdd r)>"
+	apply (subst is_pi_sane_subst; clarsimp)
+	apply(cases "(n, bdd)" rule: destrmi.cases) 
+	apply(sep_auto simp: destrci_def bdd_node_valid_def ifexd_valid_def)
+	apply(sep_auto simp: destrci_def bdd_node_valid_def ifexd_valid_def)
+	apply(clarify)
+	apply(subst (asm) bdd_sane_def[of bdd])
+	apply(clarify)
+	apply(sep_auto simp: destrci_def)
+	apply(sep_auto simp: destrci_def bdd_node_valid_def)
+	apply(clarsimp split: prod.splits)
+	apply(sep_auto)
+done
 
 definition "restrict_topci p var val bdd = do {
 	d \<leftarrow> destrci p bdd;
@@ -78,12 +77,12 @@ definition "restrict_topci p var val bdd = do {
 thm brofix.restrict_top_R[THEN bdd_node_valid_RmiI]
 
 lemma [sep_heap_rules]: "
+	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd p \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> restrict_topci p var val bddi
 	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>((r, brofix.restrict_top_impl p var val bdd) \<in> node_rel bdd)>"
 	unfolding node_rel_def apply (simp del: brofix.restrict_top_impl.simps)
-
-  by(sep_auto simp: restrict_topci_def)
+  by(sep_auto simp: restrict_topci_def ifexd_valid_def split split: IFEXD.splits)
 
 fun lowest_topsci where
 "lowest_topsci [] s = return None" |
@@ -98,11 +97,11 @@ fun lowest_topsci where
 	}"
 
 lemma [sep_heap_rules]: "
+	bdd_sane bdd \<Longrightarrow>
 	list_all (bdd_node_valid bdd) es \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> lowest_topsci es bddi
 	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = brofix.lowest_tops_impl es bdd)>"
 by(induction es) (sep_auto simp:)+
-
 
 partial_function(heap) iteci where
 "iteci i t e s = do {
@@ -127,7 +126,9 @@ partial_function(heap) iteci where
    }
   }"
 
-lemma "(brofix.ite_impl i t e bdd = Some (p,bdd') 
+lemma "
+  ( bdd_sane bdd
+  \<and> brofix.ite_impl i t e bdd = Some (p,bdd') 
   \<and> bdd_node_valid bdd i
   \<and> bdd_node_valid bdd t
   \<and> bdd_node_valid bdd e
@@ -139,6 +140,7 @@ proof -
   note [simp del] = destrmi.simps lowest_topsci.simps
     brofix.lowest_tops_impl.simps
     brofix.restrict_top_impl.simps
+    ifmi.simps
   show ?thesis
     apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
     defer
@@ -154,7 +156,11 @@ proof -
     apply (simp only: atomize_imp[symmetric] conj_imp_eq_imp_imp)
     apply rprems
     apply assumption
-    apply simp
+    apply(simp add: node_rel_def)
+    apply(simp add: node_rel_def)
+    apply(simp add: node_rel_def)
+    apply(simp add: node_rel_def)
+    apply sep_auto
 
 
 qed
@@ -165,6 +171,10 @@ context bdd_impl begin
 thm iteci_def
 thm ite_impl.fixp_induct
 
+(*
+	Just noticed that in the current state, the destr-operator has to be called multiple times for each object.
+	Let's not go all premature optimization on this though.
+*)
 
 (* partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s =

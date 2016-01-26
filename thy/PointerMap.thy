@@ -132,4 +132,22 @@ lemma pointermap_p_pth_inv:
 using pm_pth_append[OF pv] u
 by(clarsimp simp: pointermap_getmk_def Let_def split: option.splits)
 
+lemma pointermap_backward_valid:
+	assumes puv: "pointermap_p_valid p u"
+	assumes u: "pointermap_getmk a m = (x,u)"
+	assumes ne: "x \<noteq> p"
+	shows "pointermap_p_valid p m"
+(*using u
+unfolding pointermap_getmk_def
+apply(simp add: Let_def split: option.splits)
+prefer 2 using puv apply(simp)
+apply(clarify)
+apply(simp add: pointermap_insert_def)
+using puv apply(clarify)
+apply(simp add: pointermap_p_valid_def)
+using ne by linarith
+*)
+using assms
+by(auto simp: Let_def pointermap_getmk_def pointermap_p_valid_def pointermap_insert_def split: option.splits)
+
 end
