@@ -153,33 +153,6 @@ lemma in_lesI:
     shows "(ni1, n1) \<in> Rmi s'" "(ni2, n2) \<in> Rmi s'"
 by (meson assms bdd_impl_pre.les_def)+
 
-(*lemma nat_minus2ne_hlp: "\<lbrakk>2 \<le> n; n \<noteq> ni\<rbrakk> \<Longrightarrow> ni - 2 \<noteq> (n :: nat) - 2" 
-proof(cases "2 \<le> ni")
-	case True
-	then obtain ni' where[simp]: "ni = Suc (Suc ni')" using add_2_eq_Suc le_Suc_ex by blast
-	assume "2 \<le> n"
-	then obtain n' where[simp]: "n = Suc (Suc n')" using add_2_eq_Suc le_Suc_ex by blast
-	assume "n \<noteq> ni"
-	thus ?thesis by simp
-next
-	assume "2 \<le> n"
-	moreover case False
-	ultimately show ?thesis nitpick 
-qed simp
-sorry*)
-
-(*lemma le2ne_hlp: " \<lbrakk>\<not> n < 2; Suc (Suc n) \<noteq> Suc (Suc ni)\<rbrakk> \<Longrightarrow> ni - 2 \<noteq> n - 2" nitpick oops
-lemma le2ne_hlp: 
-	fixes ni x :: nat
-	assumes ne: "ni \<noteq> n" 
-	assumes gni: "2 \<le> ni" and gn: " 2 \<le> n"
-	shows "ni - 2 \<noteq> n - 2" using assms by simp
-proof -
-	from gni obtain ni' where[simp]: "ni = Suc (Suc ni')" using add_2_eq_Suc le_Suc_ex by blast
-	from gn obtain n' where[simp]: "n = Suc (Suc n')" using add_2_eq_Suc le_Suc_ex by blast
-	show ?thesis using ne by simp
-qed*)
-
 lemma ifmi_valid_set_modification:
 	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
 	assumes ne: "ni1 \<noteq> ni2"
@@ -203,10 +176,6 @@ proof
 		qed
 	qed
 qed
-(*next
-	case goal2 show ?case proof
-		case goal1 thus ?case proof(cases "x = ni")
-			case True thus ?thesis using ifm ne apply(clarsimp simp add: apfst_def map_prod_def bdd_node_valid_def split: prod.splits) apply(rule pointermap_sane_getmkD)*)
 
 lemma ifmi_saneI2:
 	assumes sane: "bdd_sane s"
@@ -216,92 +185,6 @@ lemma ifmi_saneI2:
 proof -
 	have pms: "pointermap_sane s" using sane[unfolded bdd_sane_def] by simp
 	hence pms': "pointermap_sane s'" using ifm ifmi_saneI by blast
-	moreover { 
-		fix n 
-		assume sv: "bdd_node_valid s' n"
-		have "ifexd_valid s' (destrmi n s') \<Longrightarrow> True" 
-		(*proof(cases "n < 2")
-			case True thus ?thesis by(simp add: ifexd_valid_def)
-		proof(cases "n = ni ")
-			case True
-			thus ?thesis using ifm unfolding True
-				apply(simp split: if_splits) 
-				apply(rule ifexd_validI)
-				using sane apply(simp;fail)
-				using sv apply(simp;fail)
-				apply(simp add: comp_def apfst_def map_prod_def  split: prod.splits)
-				apply(cases "(ni, s')" rule: destrmi.cases)
-				apply(simp_all)
-				apply(frule pointermap_update_pthI[OF pms])
-				apply(simp add: ifexd_valid_def)
-				apply(simp add: bdd_node_valid_def)
-				apply(rule)
-				using valid(1) apply(cases "ni1 < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv; fail)
-				using valid(2) apply(cases "ni2 < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv; fail)
-			done
-		next
-			case False
-			thus ?thesis proof(cases "(n, s')" rule: destrmi.cases)
-				case (3 nx bdd) 
-				note s' = 3[unfolded prod.simps]
-				note s = conjunct1[OF s'] conjunct2[OF s']
-				have "bdd_node_valid s n" 
-					apply(cases "ni1 = ni2")
-					 using ifm sv apply(simp)
-					using sv unfolding bdd_node_valid_def apply(cases "n < 2") apply(simp_all) 
-					apply(rule pointermap_backward_valid[of _ _ _ _ "ni - 2"])
-					  apply(assumption) 
-					 using ifm apply(auto simp: apfst_def map_prod_def comp_def split: prod.splits)[1]
-					using False apply - apply(rule ccontr, unfold not_not)
-				done
-				thus ?thesis 
-				
-				sorry
-			qed (simp_all add: ifexd_valid_def)
-				(* 
-				note ifm[unfolded ifmi.simps apfst_def map_prod_def comp_def]
-				hence "ni1 \<noteq> ni2 \<Longrightarrow> pointermap_getmk (v, ni1, ni2) s = (ni - 2, s')"
-			apply(simp split: prod.splits) sorry
-			have "bdd_node_valid s n" 
-				apply(cases "ni1 = ni2")
-				 using ifm sv apply(simp)
-				using sv unfolding bdd_node_valid_def apply(cases "n < 2") apply(simp_all) 
-				apply(rule pointermap_backward_valid[of _ _ _ _ "ni - 2"])
-				  apply(assumption) 
-				 using ifm apply(auto simp: apfst_def map_prod_def comp_def split: prod.splits)[1]
-			done
-			note mp[OF spec[OF conjunct2[OF sane[unfolded bdd_sane_def]]], OF this]*)
-				using ifm
-				apply(cases "(n, s')" rule: destrmi.cases)
-				apply(simp add: ifexd_valid_def;fail)+
-				apply(simp del: ifmi.simps split: prod.splits)
-				using pointermap_p_pth_inv[OF pv]
-				apply -
-				apply(simp split: if_splits) 
-				apply(rule ifexd_validI)
-				using sane apply(simp;fail)
-				using sv apply(simp;fail)
-				apply(cases "(n, s')" rule: destrmi.cases)
-				apply(simp add: ifexd_valid_def;fail)+
-				apply(simp add: comp_def apfst_def map_prod_def split: prod.splits)
-				using sv
-				apply(clarsimp)
-				apply(frule pointermap_backward_valid[OF pv])
-				apply force
-				apply(clarsimp)
-				apply(frule (1) pointermap_p_pth_inv[of _ s])
-				apply(simp)
-				using mp[OF spec[OF conjunct2[OF sane[unfolded bdd_sane_def]]]]
-				apply(rule)
-				find_theorems "pointermap_getmk"
-				apply(rule)
-				apply(simp add: pms')
-				apply(simp add: comp_def apfst_def map_prod_def  split: prod.splits)
-				
-				
-			sorry
-		qed*) sorry
-	}
 	have vp: "\<forall>n. bdd_node_valid s n \<longrightarrow> ifexd_valid s (destrmi n s)" using sane unfolding bdd_sane_def by simp
 	have "(\<forall>n. bdd_node_valid s' n \<longrightarrow> ifexd_valid s' (destrmi n s'))"
 	proof(cases "ni1 = ni2")
