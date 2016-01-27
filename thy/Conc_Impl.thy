@@ -52,10 +52,14 @@ lemma [sep_heap_rules]: "\<lbrakk>bdd_sane bdd; ifmi v t e bdd = (p, bdd'); ti =
 done
 
 lemma [sep_heap_rules]: "
+	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd n \<Longrightarrow>
 	<is_bdd_impl bdd bddi> destrci n bddi
-	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = destrmi n bdd \<and> ifexd_valid bdd (destrmi n bdd))>"
-	using ifexd_validI[of bdd n] by(cases "(n, bdd)" rule: destrmi.cases) (sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def)+
+	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = destrmi n bdd)>"
+	using ifexd_validI[of bdd n] 
+	apply(cases "(n, bdd)" rule: destrmi.cases)
+	apply(sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def bdd_sane_def)+
+done
 
 definition "restrict_topci p var val bdd = do {
 	d \<leftarrow> destrci p bdd;
@@ -65,10 +69,12 @@ definition "restrict_topci p var val bdd = do {
 thm brofix.restrict_top_R[THEN bdd_node_valid_RmiI]
 
 lemma [sep_heap_rules]: "
+	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd p \<Longrightarrow>
+	brofix.restrict_top_impl p var val bdd = Some r \<Longrightarrow>
 	<is_bdd_impl bdd bddi> restrict_topci p var val bddi
-	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = brofix.restrict_top_impl p var val bdd \<and> bdd_node_valid bdd (brofix.restrict_top_impl p var val bdd))>"
-  by(sep_auto simp: restrict_topci_def ifexd_valid_def split split: IFEXD.splits)
+	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
+  by(sep_auto simp: restrict_topci_def ifexd_valid_def split split: IFEXD.splits Option.bind_splits)
 
 fun lowest_topsci where
 "lowest_topsci [] s = return None" |
@@ -83,11 +89,25 @@ fun lowest_topsci where
 	}"
 
 lemma [sep_heap_rules]: "
-	bdd_sane bdd \<Longrightarrow>
-	list_all (bdd_node_valid bdd) es \<Longrightarrow>
+	brofix.lowest_tops_impl es bdd = Some r \<Longrightarrow>
 	<is_bdd_impl bdd bddi> lowest_topsci es bddi
-	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = brofix.lowest_tops_impl es bdd)>"
-by(induction es) (sep_auto simp:)+
+	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
+proof(induction es arbitrary: r)
+	case Nil thus ?case by sep_auto
+next
+	case (Cons e es)
+	thus ?case
+	proof(cases "brofix.lowest_tops_impl es bdd")
+		case None
+		thus ?thesis using Cons.prems by(sep_auto)
+	next
+		case (Some rec)
+		note [sep_heap_rules] = Cons.IH[OF Some]
+		show ?thesis using Cons.prems Some 
+			by(sep_auto split: Option.bind_splits dest: bdd_node_valid_RmiI)
+	qed
+qed
+
 
 partial_function(heap) iteci where
 "iteci i t e s = do {
@@ -126,7 +146,7 @@ lemma "
   ) \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci i t e bddi 
-  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p \<and> bdd_sane bdd' \<and> bdd_node_valid bdd p \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> bdd_node_valid bdd' n))>\<^sub>t"
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p)>\<^sub>t"
 proof (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
 	case 2 thus ?case by simp
 next
@@ -138,45 +158,11 @@ next
 	note [sep_heap_rules] = 3[THEN mp, OF conjI, OF _ conjI, OF _ _ conjI, OF _ _ _ conjI]
   show ?case
     apply (subst iteci.simps)
-    apply (sep_auto)
-    apply (split IFEXD.split option.splits; intro impI conjI; clarsimp) []
-    apply sep_auto
-    apply sep_auto
-
-    apply (clarsimp split: Option.bind_splits)
-    apply sep_auto
-    apply(drule_tac (1) ifmi_saneI2_reordered)
-    
-    prefer 4
-    apply(sep_auto)
-    prefer 3
-    apply(sep_auto)
-    apply(auto)
-    apply(drule_tac s=ba in ifmi_saneI2)
-    
-    thm brofix.restrict_top_R
-    (*apply((subst(asm) bdd_node_valid_def)+, clarify, rule bdd_node_valid_RmiI, rule brofix.restrict_top_R; simp add: bdd_sane_def)+
-    apply(sep_auto)
-    apply((subst(asm) bdd_node_valid_def)+)
-    apply(clarify)
-    apply(rule bdd_node_valid_RmiI)
-    apply(drule (1) brofix.restrict_top_R[of _ i])
-    apply(simp add: bdd_sane_def)
-    prefer 4
-    apply sep_auto
-    prefer 4
-    apply sep_auto
-    prefer 2
-    apply sep_auto
-    apply(simp_all)
-    prefer 2
-    apply((subst(asm) bdd_node_valid_def)+)
-    apply(clarify)
-    apply(rule brofix.IFimpl_inv)
-    apply(simp_all)[4]*)
+    apply (sep_auto split: Option.bind_splits)
+    find_theorems brofix.restrict_top_impl
     sorry
 next    
-    case 1 thus ?case apply(clarsimp) find_theorems "ccpo.admissible" sorry
+    case 1 thus ?case apply(clarsimp) sorry
 qed
 
 end

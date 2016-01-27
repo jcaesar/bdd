@@ -60,14 +60,14 @@ fun lowest_tops_impl where
 "lowest_tops_impl (e#es) s = 
 	do {
 	  oassert (I s \<and> e \<in> Domain (R s));
-	  (case DESTRimpl e s of
+	  rec \<leftarrow> lowest_tops_impl es s;
+	  Some (case DESTRimpl e s of
 		(IFD v t e) \<Rightarrow> do {
-			rec \<leftarrow> lowest_tops_impl es s;
-			Some (case rec of 
+			(case rec of 
 				Some u \<Rightarrow> Some (min u v) | 
 				None \<Rightarrow> Some v)
 			} |
-        _ \<Rightarrow> lowest_tops_impl es s)
+        _ \<Rightarrow> rec)
 	}"
 		
 lemma "lowest_tops_impl [i, t, e] s = xxx"
