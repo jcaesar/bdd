@@ -1,7 +1,6 @@
 section{*Imparative implementation*}
 theory Conc_Impl
 imports PointerMapImpl AbstractInterpretation
-  (*"$AFP/Automatic_Refinement/Lib/Refine_Lib"*)
 begin
 
 instantiation prod :: (default, default) default
@@ -63,8 +62,6 @@ definition "restrict_topci p var val bdd = do {
 	d \<leftarrow> destrci p bdd;
 	return (case d of IFD v t e \<Rightarrow> (if v = var then (if val then t else e) else p) | _ \<Rightarrow> p)
 }"
-
-thm brofix.restrict_top_R[THEN bdd_node_valid_RmiI]
 
 lemma [sep_heap_rules]: "
 	bdd_node_valid bdd p \<Longrightarrow>
@@ -144,18 +141,8 @@ next
     apply (split IFEXD.split option.splits; intro impI conjI; clarsimp) []
     apply sep_auto
     apply sep_auto
-
-    apply (clarsimp split: Option.bind_splits)
-    apply sep_auto
-    proof -
-    	case goal1
-    	from `\<forall>n. bdd_node_valid b n \<longrightarrow> bdd_node_valid ba n` `bdd_node_valid b a` 
-    	have "bdd_node_valid ba a" by blast
-    	show ?case by(rule ifmi_saneI2_reordered[OF `ifmi x a aa ba = (p, bdd')` `bdd_sane ba` `bdd_node_valid ba a` `bdd_node_valid ba aa`])
-    next
-    	case goal2
-    	show ?case using `bdd_sane ba`  `bdd_node_valid ba aa` `ifmi x a aa ba = (p, bdd')` by(rule ifmi_result_validI)
-    qed
+    apply (sep_auto intro: ifmi_saneI2 ifmi_result_validI split: Option.bind_splits)
+  done
 next    
     case 1 thus ?case apply(clarsimp) find_theorems "ccpo.admissible" sorry
 qed
