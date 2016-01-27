@@ -44,9 +44,10 @@ by(sep_auto simp: fci_def)
 
 lemma [sep_heap_rules]: "\<lbrakk>ifmi v t e bdd = (p, bdd'); ti = t; ei = e; bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
 	<is_bdd_impl bdd bddi> ifci v ti ei bddi
-	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
+	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> bdd_node_valid bdd' n))>\<^sub>t"
 	apply(clarsimp simp: is_bdd_impl_def simp del: ifmi.simps)
 	apply(frule (3) ifmi_saneI2[of bdd t e])
+	apply(frule (1) ifmi_modification_validI)
 	apply(sep_auto
 	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def
 	  split: prod.splits if_splits)
@@ -127,7 +128,7 @@ lemma "
   ) \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci i t e bddi 
-  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p \<and> bdd_sane bdd' \<and> bdd_node_valid bdd p \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> bdd_node_valid bdd' n))>\<^sub>t"
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p \<and> bdd_sane bdd' \<and> bdd_node_valid bdd' p \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> bdd_node_valid bdd' n))>\<^sub>t"
 proof (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
 	case 2 thus ?case by simp
 next
@@ -146,36 +147,15 @@ next
 
     apply (clarsimp split: Option.bind_splits)
     apply sep_auto
-    apply(drule_tac (1) ifmi_saneI2_reordered)
-    
-    prefer 4
-    apply(sep_auto)
-    prefer 3
-    apply(sep_auto)
-    apply(auto)
-    apply(drule_tac s=ba in ifmi_saneI2)
-    
-    thm brofix.restrict_top_R
-    (*apply((subst(asm) bdd_node_valid_def)+, clarify, rule bdd_node_valid_RmiI, rule brofix.restrict_top_R; simp add: bdd_sane_def)+
-    apply(sep_auto)
-    apply((subst(asm) bdd_node_valid_def)+)
-    apply(clarify)
-    apply(rule bdd_node_valid_RmiI)
-    apply(drule (1) brofix.restrict_top_R[of _ i])
-    apply(simp add: bdd_sane_def)
-    prefer 4
-    apply sep_auto
-    prefer 4
-    apply sep_auto
-    prefer 2
-    apply sep_auto
-    apply(simp_all)
-    prefer 2
-    apply((subst(asm) bdd_node_valid_def)+)
-    apply(clarify)
-    apply(rule brofix.IFimpl_inv)
-    apply(simp_all)[4]*)
-    sorry
+    proof -
+    	case goal1
+    	from `\<forall>n. bdd_node_valid b n \<longrightarrow> bdd_node_valid ba n` `bdd_node_valid b a` 
+    	have "bdd_node_valid ba a" by blast
+    	show ?case by(rule ifmi_saneI2_reordered[OF `ifmi x a aa ba = (p, bdd')` `bdd_sane ba` `bdd_node_valid ba a` `bdd_node_valid ba aa`])
+    next
+    	case goal2
+    	show ?case using `bdd_sane ba`  `bdd_node_valid ba aa` `ifmi x a aa ba = (p, bdd')` by(rule ifmi_result_validI)
+    qed
 next    
     case 1 thus ?case apply(clarsimp) find_theorems "ccpo.admissible" sorry
 qed
