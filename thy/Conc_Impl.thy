@@ -1,7 +1,7 @@
 section{*Imparative implementation*}
 theory Conc_Impl
 imports PointerMapImpl AbstractInterpretation
-  "$AFP/Automatic_Refinement/Lib/Refine_Lib"
+  (*"$AFP/Automatic_Refinement/Lib/Refine_Lib"*)
 begin
 
 instantiation prod :: (default, default) default
@@ -16,6 +16,8 @@ begin
 	instance ..
 end
 
+definition "is_bdd_impl bdd bddi = is_pointermap_impl bdd bddi * \<up>(bdd_sane bdd)"
+
 definition "tci bdd \<equiv> return (1,bdd)"
 definition "fci bdd \<equiv> return (0,bdd)"
 definition "ifci v t e bdd \<equiv> (if t = e then return (t, bdd) else do {
@@ -29,41 +31,32 @@ definition destrci :: "nat \<Rightarrow> (nat \<times> nat \<times> nat) pointer
 	Suc (Suc p) \<Rightarrow> pm_pthi bdd p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
 
 lemma [sep_heap_rules]: "tmi bdd = (p,bdd') 
-  \<Longrightarrow> <is_pointermap_impl bdd bddi> 
+  \<Longrightarrow> <is_bdd_impl bdd bddi> 
         tci bddi 
-      <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi = p)>"
+      <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>"
 by(sep_auto simp: tci_def)
 
 lemma [sep_heap_rules]: "fmi bdd = (p,bdd') 
-  \<Longrightarrow> <is_pointermap_impl bdd bddi> 
+  \<Longrightarrow> <is_bdd_impl bdd bddi> 
         fci bddi 
-      <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi = p)>"
+      <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>"
 by(sep_auto simp: fci_def)
 
-lemma [sep_heap_rules]: "\<lbrakk>(p, bdd') = ifmi v t e bdd; ti = t; ei = e \<rbrakk> \<Longrightarrow>
-	<is_pointermap_impl bdd bddi> ifci v ti ei bddi
-	<\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
-by(sep_auto
-  simp: ifci_def apfst_def map_prod_def
-  split: prod.splits if_splits)
+lemma [sep_heap_rules]: "\<lbrakk>ifmi v t e bdd = (p, bdd'); ti = t; ei = e; bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
+	<is_bdd_impl bdd bddi> ifci v ti ei bddi
+	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
+	apply(clarsimp simp: is_bdd_impl_def simp del: ifmi.simps)
+	apply(frule (3) ifmi_saneI2[of bdd t e])
+	apply(sep_auto
+	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def
+	  split: prod.splits if_splits)
+done
 
 lemma [sep_heap_rules]: "
 	bdd_node_valid bdd n \<Longrightarrow>
-	bdd_sane bdd \<Longrightarrow>
-	<is_pointermap_impl bdd bddi> destrci n bddi
-	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = destrmi n bdd \<and> ifexd_valid bdd r)>"
-	apply (subst is_pi_sane_subst; clarsimp)
-	apply(cases "(n, bdd)" rule: destrmi.cases) 
-	apply(sep_auto simp: destrci_def bdd_node_valid_def ifexd_valid_def)
-	apply(sep_auto simp: destrci_def bdd_node_valid_def ifexd_valid_def)
-	apply(clarify)
-	apply(subst (asm) bdd_sane_def[of bdd])
-	apply(clarify)
-	apply(sep_auto simp: destrci_def)
-	apply(sep_auto simp: destrci_def bdd_node_valid_def)
-	apply(clarsimp split: prod.splits)
-	apply(sep_auto)
-done
+	<is_bdd_impl bdd bddi> destrci n bddi
+	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = destrmi n bdd \<and> ifexd_valid bdd (destrmi n bdd))>"
+	using ifexd_validI[of bdd n] by(cases "(n, bdd)" rule: destrmi.cases) (sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def)+
 
 definition "restrict_topci p var val bdd = do {
 	d \<leftarrow> destrci p bdd;
@@ -73,10 +66,9 @@ definition "restrict_topci p var val bdd = do {
 thm brofix.restrict_top_R[THEN bdd_node_valid_RmiI]
 
 lemma [sep_heap_rules]: "
-	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd p \<Longrightarrow>
-	<is_pointermap_impl bdd bddi> restrict_topci p var val bddi
-	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = brofix.restrict_top_impl p var val bdd)>"
+	<is_bdd_impl bdd bddi> restrict_topci p var val bddi
+	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = brofix.restrict_top_impl p var val bdd \<and> bdd_node_valid bdd (brofix.restrict_top_impl p var val bdd))>"
   by(sep_auto simp: restrict_topci_def ifexd_valid_def split split: IFEXD.splits)
 
 fun lowest_topsci where
@@ -94,8 +86,8 @@ fun lowest_topsci where
 lemma [sep_heap_rules]: "
 	bdd_sane bdd \<Longrightarrow>
 	list_all (bdd_node_valid bdd) es \<Longrightarrow>
-	<is_pointermap_impl bdd bddi> lowest_topsci es bddi
-	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = brofix.lowest_tops_impl es bdd)>"
+	<is_bdd_impl bdd bddi> lowest_topsci es bddi
+	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = brofix.lowest_tops_impl es bdd)>"
 by(induction es) (sep_auto simp:)+
 
 partial_function(heap) iteci where
@@ -133,9 +125,9 @@ lemma "
   \<and> bdd_node_valid bdd t
   \<and> bdd_node_valid bdd e
   ) \<longrightarrow>
-  <is_pointermap_impl bdd bddi> 
+  <is_bdd_impl bdd bddi> 
     iteci i t e bddi 
-  <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi=p)>\<^sub>t"
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p \<and> bdd_sane bdd' \<and> bdd_node_valid bdd p \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> bdd_node_valid bdd' n))>\<^sub>t"
 proof (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
 	case 2 thus ?case by simp
 next
@@ -154,12 +146,35 @@ next
 
     apply (clarsimp split: Option.bind_splits)
     apply sep_auto
+    apply(drule_tac (1) ifmi_saneI2_reordered)
+    
+    prefer 4
+    apply(sep_auto)
+    prefer 3
+    apply(sep_auto)
+    apply(auto)
+    apply(drule_tac s=ba in ifmi_saneI2)
+    
+    thm brofix.restrict_top_R
+    (*apply((subst(asm) bdd_node_valid_def)+, clarify, rule bdd_node_valid_RmiI, rule brofix.restrict_top_R; simp add: bdd_sane_def)+
+    apply(sep_auto)
+    apply((subst(asm) bdd_node_valid_def)+)
+    apply(clarify)
+    apply(rule bdd_node_valid_RmiI)
+    apply(drule (1) brofix.restrict_top_R[of _ i])
+    apply(simp add: bdd_sane_def)
     prefer 4
     apply sep_auto
-    prefer 6
-    apply sep_auto
     prefer 4
     apply sep_auto
+    prefer 2
+    apply sep_auto
+    apply(simp_all)
+    prefer 2
+    apply((subst(asm) bdd_node_valid_def)+)
+    apply(clarify)
+    apply(rule brofix.IFimpl_inv)
+    apply(simp_all)[4]*)
     sorry
 next    
     case 1 thus ?case apply(clarsimp) find_theorems "ccpo.admissible" sorry

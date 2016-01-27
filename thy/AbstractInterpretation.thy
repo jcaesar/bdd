@@ -239,6 +239,13 @@ proof -
 	with pms' show ?thesis unfolding bdd_sane_def by blast
 qed
 
+lemma ifmi_saneI2_reordered:
+	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
+	assumes sane: "bdd_sane s"
+	assumes valid: "bdd_node_valid s ni1"  "bdd_node_valid s ni2" 
+	shows "bdd_sane s'"
+using ifmi_saneI2 assms by blast  
+
 interpretation brofix!: bdd_impl_eq bdd_sane Rmi tmi fmi ifmi destrmi
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def[simp]
