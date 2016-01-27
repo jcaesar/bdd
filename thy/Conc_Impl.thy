@@ -136,15 +136,16 @@ lemma "
   <is_pointermap_impl bdd bddi> 
     iteci i t e bddi 
   <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi=p)>"
-proof -
-  note [simp del] = destrmi.simps lowest_topsci.simps
-    brofix.lowest_tops_impl.simps
-    brofix.restrict_top_impl.simps
-    ifmi.simps
-  show ?thesis
-    apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
-    defer
-    apply simp
+proof (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
+	case 2 thus ?case by simp
+next
+	case (3 s)
+	note [simp del] = destrmi.simps lowest_topsci.simps
+		brofix.lowest_tops_impl.simps
+		brofix.restrict_top_impl.simps
+		ifmi.simps
+	note [sep_heap_rules] = 3[THEN mp, OF conjI, OF _ conjI, OF _ _ conjI, OF _ _ _ conjI]
+  show ?case
     apply (subst iteci.simps)
     apply (sep_auto)
     apply (split IFEXD.split option.splits; intro impI conjI; clarsimp) []
@@ -161,6 +162,7 @@ proof -
     apply(simp add: node_rel_def)
     apply(simp add: node_rel_def)
     apply sep_auto
+    
 
 
 qed
