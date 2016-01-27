@@ -15,7 +15,9 @@ record 'a pointermap =
 	entries :: "'a list"
 	getentry :: "'a \<Rightarrow> nat option"
 	
-definition "pointermap_sane m \<equiv> (distinct (entries m) \<and> (\<forall>n \<in> {..<length (entries m)}. getentry m (entries m ! n) = Some n) \<and> (\<forall>p i. getentry m p = Some i \<longrightarrow> entries m ! i = p \<and> i < length (entries m)))"
+definition "pointermap_sane m \<equiv> (distinct (entries m) \<and> 
+	(\<forall>n \<in> {..<length (entries m)}. getentry m (entries m ! n) = Some n) \<and> 
+	(\<forall>p i. getentry m p = Some i \<longrightarrow> entries m ! i = p \<and> i < length (entries m)))"
 
 definition "empty_pointermap \<equiv> \<lparr>entries = [], getentry = \<lambda>p. None \<rparr>"
 lemma pointermap_empty_sane[simp, intro!]: "pointermap_sane empty_pointermap" unfolding empty_pointermap_def pointermap_sane_def by simp

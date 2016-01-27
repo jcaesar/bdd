@@ -16,7 +16,7 @@ begin
 	instance ..
 end
 
-definition "is_bdd_impl bdd bddi = is_pointermap_impl bdd bddi * \<up>(bdd_sane bdd)"
+definition "is_bdd_impl bdd bddi = is_pointermap_impl bdd bddi"
 
 definition "tci bdd \<equiv> return (1,bdd)"
 definition "fci bdd \<equiv> return (0,bdd)"
@@ -42,13 +42,12 @@ lemma [sep_heap_rules]: "fmi bdd = (p,bdd')
       <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>"
 by(sep_auto simp: fci_def)
 
-lemma [sep_heap_rules]: "\<lbrakk>ifmi v t e bdd = (p, bdd'); ti = t; ei = e; bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
+lemma [sep_heap_rules]: "\<lbrakk>bdd_sane bdd; ifmi v t e bdd = (p, bdd'); ti = t; ei = e; bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
 	<is_bdd_impl bdd bddi> ifci v ti ei bddi
 	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
 	apply(clarsimp simp: is_bdd_impl_def simp del: ifmi.simps)
-	apply(frule (3) ifmi_saneI2[of bdd t e])
 	apply(sep_auto
-	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def
+	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def bdd_sane_def
 	  split: prod.splits if_splits)
 done
 

@@ -2,6 +2,7 @@ section{*Abstract ITE Implementation*}
 theory Abstract_Impl
 imports BDT
         "~~/src/HOL/Library/Monad_Syntax"
+        "$AFP/Automatic_Refinement/Lib/Refine_Lib"
 begin
 
 primrec oassert :: "bool \<Rightarrow> unit option" where
@@ -55,54 +56,75 @@ lemma les_trans[trans]:"les s1 s2 \<Longrightarrow> les s2 s3 \<Longrightarrow> 
 lemmas DESTRimpl_rules = DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3
 
 fun lowest_tops_impl where
-"lowest_tops_impl [] s = None" |
+"lowest_tops_impl [] s = Some None" |
 "lowest_tops_impl (e#es) s = 
-	(case DESTRimpl e s of
-		(IFD v t e) \<Rightarrow> (case lowest_tops_impl es s of 
-			Some u \<Rightarrow> Some (min u v) | 
-			None \<Rightarrow> Some v) |
-		_           \<Rightarrow> lowest_tops_impl es s)"
-
+	do {
+	  oassert (I s \<and> e \<in> Domain (R s));
+	  (case DESTRimpl e s of
+		(IFD v t e) \<Rightarrow> do {
+			rec \<leftarrow> lowest_tops_impl es s;
+			Some (case rec of 
+				Some u \<Rightarrow> Some (min u v) | 
+				None \<Rightarrow> Some v)
+			} |
+        _ \<Rightarrow> lowest_tops_impl es s)
+	}"
+		
+lemma "lowest_tops_impl [i, t, e] s = xxx"
+apply(unfold lowest_tops_impl.simps)
+oops
+term "List.map_filter"
 fun restrict_top_impl where
-"restrict_top_impl e vr vl s = (case DESTRimpl e s of
+"restrict_top_impl e vr vl s = do {
+	oassert (I s \<and> e \<in> Domain (R s));
+	Some (case DESTRimpl e s of
 	IFD v te ee \<Rightarrow> (if v = vr then (if vl then te else ee) else e) |
-	_ \<Rightarrow> e)"
+	_ \<Rightarrow> e)
+	}"
 
-lemma restrict_top_R: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow>
-                       (restrict_top_impl ni vr vl s, restrict_top i vr vl) \<in> R s"
-by (induction i vr vl rule: restrict_top.induct,
-    auto dest: DESTRimpl_rules)
+lemma restrict_top_R: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow> restrict_top_impl ni vr vl s = Some res \<Longrightarrow>
+                       (res, restrict_top i vr vl) \<in> R s"
+apply (induction i vr vl rule: restrict_top.induct)
+apply (auto split: Option.bind_splits dest: DESTRimpl_rules)
+done
 
 partial_function(option) ite_impl where
-"ite_impl i t e s = 
-	(case lowest_tops_impl [i, t, e] s of
-		Some a \<Rightarrow> (let
-			ti = restrict_top_impl i a True s;
-			tt = restrict_top_impl t a True s;
-			te = restrict_top_impl e a True s;
-			fi = restrict_top_impl i a False s;
-			ft = restrict_top_impl t a False s;
-			fe = restrict_top_impl e a False s
-			in do {
+"ite_impl i t e s = do {
+	lt \<leftarrow> lowest_tops_impl [i, t, e] s;
+	(case lt of
+		Some a \<Rightarrow> do {
+			ti \<leftarrow> restrict_top_impl i a True s;
+			tt \<leftarrow> restrict_top_impl t a True s;
+			te \<leftarrow> restrict_top_impl e a True s;
+			fi \<leftarrow> restrict_top_impl i a False s;
+			ft \<leftarrow> restrict_top_impl t a False s;
+			fe \<leftarrow> restrict_top_impl e a False s;
 			(tb,s) \<leftarrow> ite_impl ti tt te s;
 			(fb,s) \<leftarrow> ite_impl fi ft fe s;
-            Some (IFimpl a tb fb s)}) |
-    None \<Rightarrow> do {
-      (case DESTRimpl i s of TD \<Rightarrow> Some (t, s) | FD \<Rightarrow> Some (e, s) | _ \<Rightarrow> None)
-      })"
+			oassert (I s \<and> tb \<in> Domain (R s) \<and> fb \<in> Domain (R s));
+            Some (IFimpl a tb fb s)} |
+        None \<Rightarrow> do {
+        	oassert (I s \<and> e \<in> Domain (R s));
+        	(case DESTRimpl i s of TD \<Rightarrow> Some (t, s) | FD \<Rightarrow> Some (e, s) | _ \<Rightarrow> None)
+     })}"
 
 
 lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> les s s' \<and> (r, ifex_ite i t e) \<in> R s' \<and> I s'"
+       sorry (*
 proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
 case (IF i t e a)
   note IFCase = IF
   note inR = `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e`
   from \<open>I s\<close> inR \<open>lowest_tops [i, t, e] = Some a\<close>
-    have 0: "lowest_tops_impl [ii, ti, ei] s = Some a"
-    by(case_tac[!] i, case_tac[!] t, case_tac[!] e,
-       (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+) (* takes quite a while *)
+    have 0: "lowest_tops_impl [ii, ti, ei] s = Some (Some a)"
+    apply(case_tac[!] i, case_tac[!] t, case_tac[!] e) 
+    apply(auto simp: DomainI)
+    using DESTRimpl_rules[OF \<open>I s\<close>]
+    
+    oops
+       (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: Option.bind_split IFEXD.split)+) (* takes quite a while *)
   from IFCase obtain tb st
     where tb_def: "ite_impl (restrict_top_impl ii a True s) (restrict_top_impl ti a True s)
                        (restrict_top_impl ei a True s) s = Some (tb, st)"
@@ -161,7 +183,7 @@ case(Falseif i t e)
        (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+)
   with Falseif show ?case by(auto simp add: ite_impl.simps)
 qed
-
+*)
 
 
 partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option"
@@ -185,7 +207,7 @@ locale bdd_impl_eq = bdd_impl +
 begin
 
 
-
+(*
 partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s =
   (case DESTRimpl i s of TD \<Rightarrow> Some (t,s) | FD \<Rightarrow> Some (e,s) | _ \<Rightarrow>
@@ -341,7 +363,7 @@ qed
 qed
 qed
 qed
-
+*)
 
 end
 end
