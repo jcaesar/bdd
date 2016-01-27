@@ -28,27 +28,23 @@ definition destrci :: "nat \<Rightarrow> (nat \<times> nat \<times> nat) pointer
 	Suc 0 \<Rightarrow> return TD |
 	Suc (Suc p) \<Rightarrow> pm_pthi bdd p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
 
-lemma "(42,1)\<in>{(v,v). v=1}" by simp
-
-definition "node_rel bdd \<equiv> {(v,v) | v. bdd_node_valid bdd v}"
-
 lemma [sep_heap_rules]: "tmi bdd = (p,bdd') 
   \<Longrightarrow> <is_pointermap_impl bdd bddi> 
         tci bddi 
-      <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>((pi,p)\<in>node_rel bdd')>"
-by(sep_auto simp: tci_def node_rel_def bdd_node_valid_def)
+      <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi = p)>"
+by(sep_auto simp: tci_def)
 
 lemma [sep_heap_rules]: "fmi bdd = (p,bdd') 
   \<Longrightarrow> <is_pointermap_impl bdd bddi> 
         fci bddi 
-      <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>((pi,p)\<in>node_rel bdd')>"
-by(sep_auto simp: fci_def node_rel_def bdd_node_valid_def)
+      <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi = p)>"
+by(sep_auto simp: fci_def)
 
-lemma [sep_heap_rules]: "\<lbrakk>(p, bdd') = ifmi v t e bdd; (ti,t)\<in>node_rel bdd; (ei,e)\<in>node_rel bdd \<rbrakk> \<Longrightarrow>
+lemma [sep_heap_rules]: "\<lbrakk>(p, bdd') = ifmi v t e bdd; ti = t; ei = e \<rbrakk> \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> ifci v ti ei bddi
-	<\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>((pi,p)\<in>node_rel bdd')>\<^sub>t"
-by(sep_auto 
-  simp: ifci_def apfst_def map_prod_def node_rel_def bdd_node_valid_def
+	<\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
+by(sep_auto
+  simp: ifci_def apfst_def map_prod_def
   split: prod.splits if_splits)
 
 lemma [sep_heap_rules]: "
@@ -80,8 +76,7 @@ lemma [sep_heap_rules]: "
 	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd p \<Longrightarrow>
 	<is_pointermap_impl bdd bddi> restrict_topci p var val bddi
-	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>((r, brofix.restrict_top_impl p var val bdd) \<in> node_rel bdd)>"
-	unfolding node_rel_def apply (simp del: brofix.restrict_top_impl.simps)
+	<\<lambda>r. is_pointermap_impl bdd bddi * \<up>(r = brofix.restrict_top_impl p var val bdd)>"
   by(sep_auto simp: restrict_topci_def ifexd_valid_def split split: IFEXD.splits)
 
 fun lowest_topsci where
@@ -126,6 +121,11 @@ partial_function(heap) iteci where
    }
   }"
 
+(*
+	Just noticed that in the current state, the destr-operator has to be called multiple times for each object.
+	Let's not go all premature optimization on this though.
+*)
+
 lemma "
   ( bdd_sane bdd
   \<and> brofix.ite_impl i t e bdd = Some (p,bdd') 
@@ -135,7 +135,7 @@ lemma "
   ) \<longrightarrow>
   <is_pointermap_impl bdd bddi> 
     iteci i t e bddi 
-  <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi=p)>"
+  <\<lambda>(pi,bddi'). is_pointermap_impl bdd' bddi' * \<up>(pi=p)>\<^sub>t"
 proof (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
 	case 2 thus ?case by simp
 next
@@ -154,48 +154,15 @@ next
 
     apply (clarsimp split: Option.bind_splits)
     apply sep_auto
-    apply (simp only: atomize_imp[symmetric] conj_imp_eq_imp_imp)
-    apply rprems
-    apply assumption
-    apply(simp add: node_rel_def)
-    apply(simp add: node_rel_def)
-    apply(simp add: node_rel_def)
-    apply(simp add: node_rel_def)
+    prefer 4
     apply sep_auto
-    
-
-
+    prefer 6
+    apply sep_auto
+    prefer 4
+    apply sep_auto
+    sorry
+next    
+    case 1 thus ?case apply(clarsimp) find_theorems "ccpo.admissible" sorry
 qed
-
-term brofix.ite_impl
-
-context bdd_impl begin
-thm iteci_def
-thm ite_impl.fixp_induct
-
-(*
-	Just noticed that in the current state, the destr-operator has to be called multiple times for each object.
-	Let's not go all premature optimization on this though.
-*)
-
-(* partial_function(option) ite_impl_opt where
-"ite_impl_opt i t e s =
-  (case DESTRimpl i s of TD \<Rightarrow> Some (t,s) | FD \<Rightarrow> Some (e,s) | _ \<Rightarrow>
-  (if DESTRimpl t s = TD \<and> DESTRimpl e s = FD then Some (i,s) else
-  (if e = t then Some (t,s) else
-	(case lowest_tops_impl [i, t, e] s of
-		Some a \<Rightarrow> (let
-			ti = restrict_top_impl i a True s;
-			tt = restrict_top_impl t a True s;
-			te = restrict_top_impl e a True s;
-			fi = restrict_top_impl i a False s;
-			ft = restrict_top_impl t a False s;
-			fe = restrict_top_impl e a False s
-			in do {
-			(tb,s) \<leftarrow> ite_impl_opt ti tt te s;
-			(fb,s) \<leftarrow> ite_impl_opt fi ft fe s;
-            Some (IFimpl a tb fb s)}) |
-        None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s))))))"*)
-
 
 end
