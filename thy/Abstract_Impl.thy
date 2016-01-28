@@ -137,12 +137,6 @@ fun lowest_tops_alt where
 lemma lowest_tops_alt: "lowest_tops l = lowest_tops_alt l" 
   apply (induction l rule: lowest_tops.induct) apply (auto split: option.splits)
   done
-  
-lemma foo: 
-  assumes "ospec mi (\<lambda>(r,s'). r = m \<and> s'=s)"
-  assumes "\<And>rec s. ospec (fi rec s) (\<lambda>(r,s'). r = f rec \<and> s' = s)"
-  shows "ospec (do {(rec,s) \<leftarrow> mi; fi rec s}) (\<lambda>(r,s'). r = (let rec = m in f rec) \<and> s'=s)"
-  sorry
 
 lemma ospec_cons: 
   assumes "ospec m Q"
@@ -156,7 +150,7 @@ lemma pull_Some: "(case n of None \<Rightarrow> \<lambda>s. Some (fn s,s) | Some
   = (\<lambda>s. Some (case n of None \<Rightarrow> (fn s) | Some v \<Rightarrow> (fs v s),s))" by (auto split: option.split)
 
 lemma lowest_tops_impl_R: 
-  assumes "list_all2 (\<lambda>ni n. (ni,n) \<in> R s) li l" "I s"
+  assumes "list_all2 (in_rel (R s)) li l" "I s"
   shows "ospec (lowest_tops_impl li s) (\<lambda>(r,s'). r = lowest_tops l \<and> s'=s)"
   unfolding lowest_tops_alt
   using assms
@@ -203,105 +197,50 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_
   apply simp
   done  
 
-  
-  
-
-lemma restrict_top_R: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow> restrict_top_impl ni vr vl s = Some res \<Longrightarrow>
-                       (res, restrict_top i vr vl) \<in> R s"
-apply (induction i vr vl rule: restrict_top.induct)
-apply (auto split: Option.bind_splits dest: DESTRimpl_rules)
-done
-
-
 partial_function(option) ite_impl where
 "ite_impl i t e s = do {
-	lt \<leftarrow> lowest_tops_impl [i, t, e] s;
+	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
 	(case lt of
 		Some a \<Rightarrow> do {
-			ti \<leftarrow> restrict_top_impl i a True s;
-			tt \<leftarrow> restrict_top_impl t a True s;
-			te \<leftarrow> restrict_top_impl e a True s;
-			fi \<leftarrow> restrict_top_impl i a False s;
-			ft \<leftarrow> restrict_top_impl t a False s;
-			fe \<leftarrow> restrict_top_impl e a False s;
+			(ti,_) \<leftarrow> restrict_top_impl i a True s;
+			(tt,_) \<leftarrow> restrict_top_impl t a True s;
+			(te,_) \<leftarrow> restrict_top_impl e a True s;
+			(fi,_) \<leftarrow> restrict_top_impl i a False s;
+			(ft,_) \<leftarrow> restrict_top_impl t a False s;
+			(fe,_) \<leftarrow> restrict_top_impl e a False s;
 			(tb,s) \<leftarrow> ite_impl ti tt te s;
 			(fb,s) \<leftarrow> ite_impl fi ft fe s;
-      IFimpl a tb fb s} 
-  | None \<Rightarrow> do {
-      dest \<leftarrow> DESTRimpl i s;
-      (case dest of TD \<Rightarrow> Some (t, s) | FD \<Rightarrow> Some (e, s) | _ \<Rightarrow> None)
-     })}"
-thm ifex_ite.induct
+      IFimpl a tb fb s}
+  | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_. undefined) i s 
+)}"
 
-lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
+lemma ite_impl_R: "I s
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
-       \<Longrightarrow> les s s' \<and> (r, ifex_ite i t e) \<in> R s' \<and> I s'"
-proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
-case (IF i t e a) show ?case sorry
-(*  note IFCase = IF
-  note inR = `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e`
-  from \<open>I s\<close> inR \<open>lowest_tops [i, t, e] = Some a\<close>
-    have 0: "lowest_tops_impl [ii, ti, ei] s = Some (Some a)"
-    using lowest_tops_impl_R by auto
-  from IFCase obtain tb st
-    where tb_def: "ite_impl (restrict_top_impl ii a True s) (restrict_top_impl ti a True s)
-                       (restrict_top_impl ei a True s) s = Some (Some (tb, st)"
-    by (auto simp: Option.bind_eq_Some_conv 0 ite_impl.simps
-             simp del: restrict_top_impl.simps lowest_tops_impl.simps)
-  from `ite_impl ii ti ei s = Some (r, s')` obtain eb se
-    where eb_def: "ite_impl (restrict_top_impl ii a False s) (restrict_top_impl ti a False s)
-                       (restrict_top_impl ei a False s) st = Some (eb, se)"
-    by (subst (asm) (2) ite_impl.simps,
-        auto simp del: lowest_tops_impl.simps restrict_top_impl.simps
-             simp add: Option.bind_eq_Some_conv 0 tb_def)
-  from `I s` inR IFCase(1)[OF \<open>I s\<close> tb_def, of True] have
-    3: "(tb,
-         ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R st"
-       "les s st" "I st" by (auto dest: restrict_top_R simp del: restrict_top_impl.simps)
-  from inR `les s st` IFCase(1)[OF `I st` eb_def, of False]
-  have "(eb,
-        ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)) \<in> R se
-        \<and> les st se \<and> I se" unfolding les_def
-  by(fastforce dest: restrict_top_R[OF `I s`, of ii i] restrict_top_R[OF `I s`, of ti t] restrict_top_R[OF `I s`, of ei e]
-             simp del: restrict_top_impl.simps restrict_top.simps ifex_ite.simps)
-  then have 4:
-    "(eb, ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)) \<in> R se"
-    "les st se"
-    "I se" by auto
-  from IFCase(4) have 5: "ite_impl ii ti ei s = Some (IFimpl a tb eb se)"
-    apply(subst (asm) ite_impl.simps, subst (asm) 0,
-          auto simp del: restrict_top_impl.simps simp add: Option.bind_eq_Some_conv)
-    using tb_def eb_def by auto
-  from 3 4 les_def[of st se]
-    have 6: "(tb, 
-           ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True)) \<in> R se"
-    by blast
-  from IFimpl_mono[OF `I se` this, of _ _ a r s'] 4 5 IFCase have "les se s'" by force
-  from IFimpl_inv[OF `I se` 6 4(1), of a r s'] 5 IFCase have "I s'" by auto
-  from `les se s'` 3 4 les_trans have goal11: "les s s'" by blast
-  from IFCase(2)
-    have 7:
-    "ifex_ite i t e =
-     IFC a (ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True))
-      (ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False))"
-    by simp
-  from 5 IFCase(4) have "IFimpl a tb eb se = (r, s')" by force
-  from goal11 IFimpl_rule[OF `I se` 6 4(1) this] `I s'` 7 show ?case
-  by(auto split: ifc_split) *)
+       \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite i t e) \<in> R s' \<and> I s')"
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
+	case goal1 
+	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
+	show ?case proof(cases "lowest_tops [i,t,e]")
+		case None from goal1(3-6) show ?thesis
+	apply(subst ite_impl.simps)
+	apply(rule obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e] \<and> s'=s"])
+	apply(rule ospec_cons)
+	apply(rule lowest_tops_impl_R[OF la2])
+	apply(assumption)
+	apply(clarsimp split: prod.splits)
+	apply(simp add: None split: prod.splits)
+	apply(clarsimp)
+	apply(rule ospec_cons)
+	apply(rule case_ifexi_rule[where I'="\<lambda>s'. s'=s"])
+	apply(assumption)+
+	apply(simp)
+	apply(simp)
+	using None apply(simp)
+	using None apply(clarsimp split: prod.splits ifex.splits)
+done
 next
-case(Trueif i t e)
-  then have  "DESTRimpl ii s = TD"  
-      by (fastforce dest: DESTRimpl_rules[OF `I s`] split: IFEXD.split)
-  moreover from Trueif have "lowest_tops_impl [ii, ti, ei] s = Some None"
-    using lowest_tops_impl_R by auto
-  ultimately show ?case using Trueif by (auto simp add: ite_impl.simps DomainI)
-next
-case(Falseif i t e)
-  then have  "DESTRimpl ii s = FD"  
-      by (fastforce dest: DESTRimpl_rules[OF `I s`] split: IFEXD.split)
-  moreover from Falseif have "lowest_tops_impl [ii, ti, ei] s = Some None"
-    using lowest_tops_impl_R by auto
-  ultimately show ?case using Falseif by (auto simp add: ite_impl.simps DomainI)
+	case (Some lv) thus ?thesis sorry
+qed
 qed
 
 
