@@ -69,11 +69,18 @@ fun lowest_tops_impl where
 			} |
         _ \<Rightarrow> rec)
 	}"
-		
-lemma "lowest_tops_impl [i, t, e] s = xxx"
-apply(unfold lowest_tops_impl.simps)
-oops
-term "List.map_filter"
+
+
+lemma lowest_tops_impl_R: 
+assumes "I s" "lowest_tops [i, t, e] = l"
+        "(ii, i) \<in> R s" "(ti, t) \<in> R s" "(ei, e) \<in> R s"
+shows "lowest_tops_impl [ii, ti, ei] s = Some l"
+proof -
+  from assms show ?thesis 
+    by (cases i; cases t; cases e;
+        fastforce simp add: DomainI dest: DESTRimpl_rules[OF `I s`] split: IFEXD.split)
+qed
+
 fun restrict_top_impl where
 "restrict_top_impl e vr vl s = do {
 	oassert (I s \<and> e \<in> Domain (R s));
