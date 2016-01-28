@@ -239,12 +239,29 @@ proof -
 	with pms' show ?thesis unfolding bdd_sane_def by blast
 qed
 
-lemma ifmi_saneI2_reordered:
-	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
+lemma ifmi_modification_validI:
 	assumes sane: "bdd_sane s"
-	assumes valid: "bdd_node_valid s ni1"  "bdd_node_valid s ni2" 
-	shows "bdd_sane s'"
-using ifmi_saneI2 assms by blast  
+	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
+	shows "\<forall>n. bdd_node_valid s n \<longrightarrow> bdd_node_valid s' n"
+proof(cases "ni1 = ni2")
+	case True with ifm show ?thesis by simp
+next
+	case False
+	show ?thesis using ifm sane
+		apply(clarify)
+		apply(rename_tac n)
+		apply(case_tac "n < 2")
+		apply(simp_all add: False apfst_def map_prod_def bdd_node_valid_def bdd_sane_def pointermap_p_valid_inv split: prod.splits)
+	done
+qed
+
+lemma ifmi_result_validI:
+	assumes sane: "bdd_sane s"
+	assumes vld: "bdd_node_valid s ni2"
+	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
+	shows "bdd_node_valid s' ni"
+using assms
+using pointermap_sane_getmkD by(simp add: apfst_def map_prod_def bdd_node_valid_def bdd_sane_def split: if_splits prod.splits, force)
 
 interpretation brofix!: bdd_impl_eq bdd_sane Rmi tmi fmi ifmi destrmi
 proof  -
@@ -301,6 +318,5 @@ proof  -
 		case goal14 thus ?case by (simp add: rmigeq)
 	qed(simp_all)
 qed
-
 
 end
