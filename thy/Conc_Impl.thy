@@ -42,8 +42,8 @@ lemma [sep_heap_rules]: "fmi bdd = (p,bdd')
       <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>"
 by(sep_auto simp: fci_def)
 
-lemma [sep_heap_rules]: "\<lbrakk>bdd_sane bdd; ifmi v t e bdd = (p, bdd'); ti = t; ei = e; bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
-	<is_bdd_impl bdd bddi> ifci v ti ei bddi
+lemma [sep_heap_rules]: "\<lbrakk>bdd_sane bdd; ifmi v t e bdd = (p, bdd'); bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
+	<is_bdd_impl bdd bddi> ifci v t e bddi
 	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
 	apply(clarsimp simp: is_bdd_impl_def simp del: ifmi.simps)
 	apply(sep_auto
@@ -55,18 +55,15 @@ lemma [sep_heap_rules]: "
 	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd n \<Longrightarrow>
 	<is_bdd_impl bdd bddi> destrci n bddi
-	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = destrmi n bdd)>"
-	using ifexd_validI[of bdd n] 
+	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = destrmi n bdd)>" 
 	apply(cases "(n, bdd)" rule: destrmi.cases)
-	apply(sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def bdd_sane_def)+
+	apply(sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def bdd_sane_def dest: p_valid_RmiI)+
 done
 
 definition "restrict_topci p var val bdd = do {
 	d \<leftarrow> destrci p bdd;
 	return (case d of IFD v t e \<Rightarrow> (if v = var then (if val then t else e) else p) | _ \<Rightarrow> p)
 }"
-
-thm brofix.restrict_top_R[THEN bdd_node_valid_RmiI]
 
 lemma [sep_heap_rules]: "
 	bdd_sane bdd \<Longrightarrow>
@@ -104,7 +101,7 @@ next
 		case (Some rec)
 		note [sep_heap_rules] = Cons.IH[OF Some]
 		show ?thesis using Cons.prems Some 
-			by(sep_auto split: Option.bind_splits dest: bdd_node_valid_RmiI)
+			by(sep_auto split: Option.bind_splits dest: n_valid_RmiI)
 	qed
 qed
 
@@ -159,8 +156,22 @@ next
   show ?case
     apply (subst iteci.simps)
     apply (sep_auto split: Option.bind_splits)
-    find_theorems brofix.restrict_top_impl
-    sorry
+    using bdd_node_valid_def apply blast+
+    apply (sep_auto split: Option.bind_splits)
+    apply (clarsimp split: IFEXD.splits)
+    (* NOOOOPE *)
+    oops
+    prefer 4
+    apply (sep_auto split: Option.bind_splits)
+    prefer 10 
+    apply (sep_auto split: Option.bind_splits split: IFEXD.splits)
+    prefer 5
+    apply (sep_auto split: Option.bind_splits)
+    prefer 4
+    apply (sep_auto split: Option.bind_splits)
+    proof -
+    	case goal1 thus ?case
+    
 next    
     case 1 thus ?case apply(clarsimp) sorry
 qed

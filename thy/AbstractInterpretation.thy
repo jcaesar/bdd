@@ -9,25 +9,6 @@ fun destrmi :: "nat \<Rightarrow> bdd \<Rightarrow> (nat, nat) IFEXD" where
 "destrmi 0 bdd = FD" |
 "destrmi (Suc 0) bdd = TD" |
 "destrmi (Suc (Suc n)) bdd = (case pm_pth bdd n of (v, t, e) \<Rightarrow> IFD v t e)"
-
-definition "bdd_node_valid bdd n \<equiv> n < 2 \<or> pointermap_p_valid (n - 2) bdd"
-lemma [simp]: 
-  "bdd_node_valid bdd 0"
-  "bdd_node_valid bdd (Suc 0)"
-  by (auto simp: bdd_node_valid_def)
-  
-definition "ifexd_valid bdd e \<equiv> (case e of IFD _ t e \<Rightarrow> bdd_node_valid bdd t \<and> bdd_node_valid bdd e | _ \<Rightarrow> True)"
-definition "bdd_sane bdd \<equiv> pointermap_sane bdd \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> ifexd_valid bdd (destrmi n bdd))"
-
-lemma ifexd_validI: 
-	assumes sane: "bdd_sane bdd" and valid: "bdd_node_valid bdd n"
-	shows "ifexd_valid bdd (destrmi n bdd)" 
-proof(cases "destrmi n bdd")
-	case (IFD v t e)
-	note mp[OF spec[OF conjunct2[OF sane[unfolded bdd_sane_def]]], OF valid]
-	thus ?thesis .
-qed(simp_all add: ifexd_valid_def)
-
 fun tmi where "tmi bdd = (1, bdd)"
 fun fmi where "fmi bdd = (0, bdd)"
 fun ifmi :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bdd \<Rightarrow> (nat \<times> bdd)" where
@@ -42,11 +23,16 @@ fun Rmi_g :: "nat \<Rightarrow> nat ifex \<Rightarrow> bdd \<Rightarrow> bool" w
 definition "Rmi s \<equiv> {(a,b)|a b. Rmi_g a b s}"
 
 
-lemma bdd_node_valid_RmiI: "(ni,n)\<in>Rmi bdd \<Longrightarrow> bdd_node_valid bdd ni"
-  apply (auto simp: Rmi_def)
-  apply (cases "(ni,n,bdd)" rule: Rmi_g.cases; simp)
-  apply (auto simp: bdd_node_valid_def)
+definition "bdd_node_valid bdd n \<equiv> n \<in> Domain (Rmi bdd)"
+lemma [simp]:
+  "bdd_node_valid bdd 0"
+  "bdd_node_valid bdd (Suc 0)"
+  apply (simp_all add: bdd_node_valid_def Rmi_def)
+  using Rmi_g.simps(1,2) apply blast+
   done
+
+definition "ifexd_valid bdd e \<equiv> (case e of IFD _ t e \<Rightarrow> bdd_node_valid bdd t \<and> bdd_node_valid bdd e | _ \<Rightarrow> True)"
+definition "bdd_sane bdd \<equiv> pointermap_sane bdd"
 
 lemma prod_split3: "P (case prod of (x, xa, xaa) \<Rightarrow> f x xa xaa) = (\<forall>x1 x2 x3. prod = (x1, x2, x3) \<longrightarrow> P (f x1 x2 x3))"
 by(simp split: prod.splits)
@@ -153,115 +139,34 @@ lemma in_lesI:
     shows "(ni1, n1) \<in> Rmi s'" "(ni2, n2) \<in> Rmi s'"
 by (meson assms bdd_impl_pre.les_def)+
 
-lemma ifmi_valid_set_modification:
-	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
-	assumes ne: "ni1 \<noteq> ni2"
-	shows "{n. bdd_node_valid s' n} \<subseteq> insert ni {n. bdd_node_valid s n}"
-proof
-	case goal1
-	hence bv: "bdd_node_valid s' x" by simp
-	thus ?case proof(cases "x = ni")
-		case True thus ?thesis by simp
-	next
-		case False thus ?thesis proof(cases "x < 2")
-			case True thus ?thesis by(simp add: bdd_node_valid_def)
-		next
-			case False
-			have gni: "2 \<le> ni" using ifm ne by(simp add: apfst_def map_prod_def split: prod.splits)
-			have pv: "pointermap_p_valid (x - 2) s'" using bv False unfolding bdd_node_valid_def by simp
-			have ne': "ni - 2 \<noteq> x - 2" using `x \<noteq> ni` gni False by simp
-			have "pointermap_p_valid (x - 2) s" using ifm ne' 
-				by(auto simp add: ne apfst_def map_prod_def split: prod.splits dest: pointermap_backward_valid[OF pv])
-			thus ?thesis by(simp add: bdd_node_valid_def)
-		qed
-	qed
-qed
-
-lemma ifmi_saneI2:
-	assumes sane: "bdd_sane s"
-	assumes valid: "bdd_node_valid s ni1"  "bdd_node_valid s ni2" 
-	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
-	shows "bdd_sane s'"
-proof -
-	have pms: "pointermap_sane s" using sane[unfolded bdd_sane_def] by simp
-	hence pms': "pointermap_sane s'" using ifm ifmi_saneI by blast
-	have vp: "\<forall>n. bdd_node_valid s n \<longrightarrow> ifexd_valid s (destrmi n s)" using sane unfolding bdd_sane_def by simp
-	have "(\<forall>n. bdd_node_valid s' n \<longrightarrow> ifexd_valid s' (destrmi n s'))"
-	proof(cases "ni1 = ni2")
-		case True thus ?thesis using vp ifm by simp
-	next
-		case False
-		have "\<forall>n. (n = ni \<or> bdd_node_valid s n) \<longrightarrow> ifexd_valid s' (destrmi n s')"
-		proof(clarify)
-			fix n
-			assume eov: "n = ni \<or> bdd_node_valid s n"
-			have gmk: "pointermap_getmk (v, ni1, ni2) s = (ni - 2, s')"
-				using ifm by(clarsimp simp: `ni1 \<noteq> ni2` apfst_def map_prod_def split: prod.splits)
-			hence dme: "destrmi ni s' = IFD v ni1 ni2"
-				using ifm pointermap_update_pthI[OF pms gmk]
-				by(cases "(ni, s')" rule: destrmi.cases)
-				  (clarsimp simp: `ni1 \<noteq> ni2` apfst_def map_prod_def pointermap_update_pthI[OF pms gmk] split: prod.splits)+
-			show "ifexd_valid s' (destrmi n s')"
-			proof(cases "n = ni")
-				case True
-					show "ifexd_valid s' (destrmi n s')" unfolding True
-					unfolding dme
-					using ifm
-					apply(clarsimp simp: False apfst_def map_prod_def ifexd_valid_def split: prod.splits)
-					apply(frule pointermap_update_pthI[OF pms])
-					apply(rule)
-					using valid(1) apply(case_tac "ni1 < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv;fail)
-					using valid(2) apply(case_tac "ni2 < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv)
-				done
-			next
-				case False
-				with eov have nv: "bdd_node_valid s n" by simp
-				with vp have dv: "ifexd_valid s (destrmi n s)" by simp
-				thus ?thesis proof(cases "(n, s')" rule: destrmi.cases)
-					case (3 p bdd)
-					with nv have pv: "pointermap_p_valid p s" unfolding bdd_node_valid_def by auto
-					note ifm[unfolded ifmi.simps if_not_P[OF `ni1 \<noteq> ni2`] apfst_def map_prod_def comp_def id_def]
-					show ?thesis 
-						using dv 3 pointermap_p_pth_inv[OF pv gmk] gmk
-						apply(clarsimp split: prod.splits)
-						apply(clarsimp simp: ifexd_valid_def)
-						apply(rename_tac a b)
-						apply(rule)
-						apply(case_tac "a < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv; fail)
-						apply(case_tac "b < 2"; simp add: bdd_node_valid_def pointermap_p_valid_inv; fail)
-					done
-				qed (simp_all add: ifexd_valid_def)
-			qed
-		qed
-		with ifmi_valid_set_modification[OF ifm False]
-		show ?thesis by blast
-	qed
-	with pms' show ?thesis unfolding bdd_sane_def by blast
-qed
-
+(*
 lemma ifmi_modification_validI:
 	assumes sane: "bdd_sane s"
 	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
-	shows "\<forall>n. bdd_node_valid s n \<longrightarrow> bdd_node_valid s' n"
+	assumes vld: "bdd_node_valid s n"
+	shows "bdd_node_valid s' n"
 proof(cases "ni1 = ni2")
-	case True with ifm show ?thesis by simp
+	case True with ifm vld show ?thesis by simp
 next
 	case False
-	show ?thesis using ifm sane
-		apply(clarify)
-		apply(rename_tac n)
-		apply(case_tac "n < 2")
-		apply(simp_all add: False apfst_def map_prod_def bdd_node_valid_def bdd_sane_def pointermap_p_valid_inv split: prod.splits)
-	done
+	{
+		fix b
+		from ifm have "(n, b) \<in> Rmi s \<Longrightarrow> (n, b) \<in> Rmi s'" 
+			by(induction n b _ rule: Rmi_g.induct) (auto dest: pointermap_p_pth_inv pointermap_p_valid_inv simp: apfst_def map_prod_def False Rmi_def split: prod.splits)
+	}
+	thus ?thesis
+		using vld unfolding bdd_node_valid_def by blast
 qed
 
 lemma ifmi_result_validI:
 	assumes sane: "bdd_sane s"
-	assumes vld: "bdd_node_valid s ni2"
+	assumes vld: "bdd_node_valid s ni1" "bdd_node_valid s ni2"
 	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
 	shows "bdd_node_valid s' ni"
 using assms
-using pointermap_sane_getmkD by(simp add: apfst_def map_prod_def bdd_node_valid_def bdd_sane_def split: if_splits prod.splits, force)
+using pointermap_sane_getmkD
+apply(simp add: apfst_def map_prod_def bdd_node_valid_def bdd_sane_def split: if_splits prod.splits)
+apply(intro DomainI, elim DomainE)*)
 
 interpretation brofix!: bdd_impl_eq bdd_sane Rmi tmi fmi ifmi destrmi
 proof  -
@@ -311,12 +216,18 @@ proof  -
 		done
 	next
 		case goal12 
-		thus ?case by(blast dest: bdd_node_valid_RmiI ifmi_saneI2)
+		thus ?case unfolding bdd_sane_def by(blast dest: ifmi_saneI)
 	next
 		case goal13 thus ?case using rmigneq bdd_sane_def by fastforce
 	next
 		case goal14 thus ?case by (simp add: rmigeq)
 	qed(simp_all)
 qed
+
+lemma p_valid_RmiI: "(Suc (Suc na), b) \<in> Rmi bdd \<Longrightarrow> pointermap_p_valid na bdd"
+	unfolding Rmi_def by(cases b) (auto)
+lemma n_valid_RmiI: "(na, b) \<in> Rmi bdd \<Longrightarrow> bdd_node_valid bdd na"
+	unfolding bdd_node_valid_def
+	by(intro DomainI, assumption)  
 
 end
