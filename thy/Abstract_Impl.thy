@@ -52,15 +52,10 @@ locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a ::
   fixes IFimpl :: "'a \<Rightarrow> 'ni \<Rightarrow> 'ni \<Rightarrow> 's \<rightharpoonup> ('ni \<times> 's)"
   fixes DESTRimpl :: "'ni  \<Rightarrow> 's \<rightharpoonup> ('a, 'ni) IFEXD"
 
-  assumes Timpl_mono: "I s \<Longrightarrow> Timpl s = Some (ni, s') \<Longrightarrow> les s s'"
-  assumes Fimpl_mono: "I s \<Longrightarrow> Fimpl s = Some (ni, s') \<Longrightarrow> les s s'"
-  assumes IFimpl_mono: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = Some (ni, s')\<rbrakk>
-                       \<Longrightarrow> les s s'"
-
-  assumes Timpl_rule: "I s \<Longrightarrow> ospec (Timpl s) (\<lambda>(ni, s'). (ni, Trueif) \<in> R s' \<and> I s')"
-  assumes Fimpl_rule: "I s \<Longrightarrow> ospec (Fimpl s) (\<lambda>(ni, s'). (ni, Falseif) \<in> R s' \<and> I s')"
+  assumes Timpl_rule: "I s \<Longrightarrow> ospec (Timpl s) (\<lambda>(ni, s'). (ni, Trueif) \<in> R s' \<and> I s' \<and> les s s')"
+  assumes Fimpl_rule: "I s \<Longrightarrow> ospec (Fimpl s) (\<lambda>(ni, s'). (ni, Falseif) \<in> R s' \<and> I s' \<and> les s s')"
   assumes IFimpl_rule: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s\<rbrakk>
-                       \<Longrightarrow> ospec (IFimpl v ni1 ni2 s) (\<lambda>(ni, s'). (ni, IFC v n1 n2) \<in> R s' \<and> I s')"
+                       \<Longrightarrow> ospec (IFimpl v ni1 ni2 s) (\<lambda>(ni, s'). (ni, IFC v n1 n2) \<in> R s' \<and> I s' \<and> les s s')"
 
   assumes DESTRimpl_rule1: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. r = TD)"
   assumes DESTRimpl_rule2: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. r = FD)"
@@ -168,7 +163,7 @@ lemma lowest_tops_impl_R:
   apply simp
   apply (subst pull_Some)
   apply simp
-  apply assumption
+  apply simp
   done
 
 
@@ -216,7 +211,7 @@ partial_function(option) ite_impl where
 
 lemma ite_impl_R: "I s
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
-       \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite i t e) \<in> R s' \<and> I s')"
+       \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite i t e) \<in> R s' \<and> I s' \<and> les s s')"
 proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
 	case goal1 
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
@@ -251,17 +246,21 @@ next
 	apply(clarsimp split: prod.splits)
 	apply(simp add: Some split: prod.splits)
 	apply(clarsimp)
-	
+	(* take care of all those restrict_tops *)
 	apply(rule obind_rule, rule restrict_top_impl_spec, assumption+, clarsimp split: prod.splits)+
-
 	apply(rule obind_rule)
 	apply(rule mIH(1))
 	apply(simp;fail)+
 	apply(clarsimp)
 	apply(rule obind_rule)
-	apply(rule mIH(1))
-	apply(simp;fail)+
-	sorry
+	apply(rule mIH(2))
+	apply(simp add: les_def;fail)+
+	apply(simp split: prod.splits)
+	apply(rule ospec_cons)
+	apply(rule IFimpl_rule)
+	apply(simp add: les_def;fail)+
+	using les_def les_trans apply blast+
+	done
 qed
 qed
 
