@@ -13,6 +13,27 @@ lemma oassert_iff[simp]:
   "oassert \<Phi> = None \<longleftrightarrow> \<not>\<Phi>"  
   by (cases \<Phi>) auto
 
+primrec ospec :: "('a option) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" where
+  "ospec None _ = False"
+| "ospec (Some v) Q = Q v"
+
+named_theorems ospec_rules
+
+lemma oreturn_rule[ospec_rules]: "\<lbrakk> P r \<rbrakk> \<Longrightarrow> ospec (Some r) P" by simp
+
+lemma obind_rule[ospec_rules]: "\<lbrakk> ospec m Q; \<And>r. Q r \<Longrightarrow> ospec (f r) P \<rbrakk> \<Longrightarrow> ospec (m\<guillemotright>=f) P"
+  apply (cases m)
+  apply (auto split: Option.bind_splits)
+  done
+
+lemma ospec_alt: "ospec m P = (case m of None \<Rightarrow> False | Some x \<Rightarrow> P x)"
+  by (auto split: option.splits)
+
+lemma ospec_bind_simp: "ospec (m\<guillemotright>=f) P \<longleftrightarrow> (ospec m (\<lambda>r. ospec (f r) P))"
+  apply (cases m)
+  apply (auto split: Option.bind_splits)
+  done
+  
 
 
 datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni 
@@ -26,76 +47,171 @@ begin
 end
 
 locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set" +
-  fixes Timpl :: "'s \<Rightarrow> ('ni \<times> 's)"
-  fixes Fimpl :: "'s \<Rightarrow> ('ni \<times> 's)"
-  fixes IFimpl :: "'a \<Rightarrow> 'ni \<Rightarrow> 'ni \<Rightarrow> 's \<Rightarrow> ('ni \<times> 's)"
-  fixes DESTRimpl :: "'ni  \<Rightarrow> 's \<Rightarrow> ('a, 'ni) IFEXD"
+  fixes Timpl :: "'s \<rightharpoonup> ('ni \<times> 's)"
+  fixes Fimpl :: "'s \<rightharpoonup> ('ni \<times> 's)"
+  fixes IFimpl :: "'a \<Rightarrow> 'ni \<Rightarrow> 'ni \<Rightarrow> 's \<rightharpoonup> ('ni \<times> 's)"
+  fixes DESTRimpl :: "'ni  \<Rightarrow> 's \<rightharpoonup> ('a, 'ni) IFEXD"
 
-  assumes Timpl_mono: "I s \<Longrightarrow> Timpl s = (ni, s') \<Longrightarrow> les s s'"
-  assumes Fimpl_mono: "I s \<Longrightarrow> Fimpl s = (ni, s') \<Longrightarrow> les s s'"
-  assumes IFimpl_mono: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk>
+  assumes Timpl_mono: "I s \<Longrightarrow> Timpl s = Some (ni, s') \<Longrightarrow> les s s'"
+  assumes Fimpl_mono: "I s \<Longrightarrow> Fimpl s = Some (ni, s') \<Longrightarrow> les s s'"
+  assumes IFimpl_mono: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = Some (ni, s')\<rbrakk>
                        \<Longrightarrow> les s s'"
 
-  assumes Timpl_rule: "I s \<Longrightarrow> Timpl s = (ni, s') \<Longrightarrow> (ni, Trueif) \<in> R s'"
-  assumes Fimpl_rule: "I s \<Longrightarrow> Fimpl s = (ni, s') \<Longrightarrow> (ni, Falseif) \<in> R s'"
-  assumes IFimpl_rule: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk>
-                       \<Longrightarrow> (ni, IFC v n1 n2) \<in> R s'"
+  assumes Timpl_rule: "I s \<Longrightarrow> ospec (Timpl s) (\<lambda>(ni, s'). (ni, Trueif) \<in> R s' \<and> I s')"
+  assumes Fimpl_rule: "I s \<Longrightarrow> ospec (Fimpl s) (\<lambda>(ni, s'). (ni, Falseif) \<in> R s' \<and> I s')"
+  assumes IFimpl_rule: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s\<rbrakk>
+                       \<Longrightarrow> ospec (IFimpl v ni1 ni2 s) (\<lambda>(ni, s'). (ni, IFC v n1 n2) \<in> R s' \<and> I s')"
 
-  assumes DESTRimpl_rule1: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<Longrightarrow> DESTRimpl ni s = TD"
-  assumes DESTRimpl_rule2: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<Longrightarrow> DESTRimpl ni s = FD"
-  assumes DESTRimpl_rule3: "I s \<Longrightarrow> (ni, IF v n1 n2) \<in> R s \<Longrightarrow> \<exists>ni1 ni2. DESTRimpl ni s = IFD v ni1 ni2 
-                                                       \<and> (ni1, n1) \<in> R s \<and> (ni2, n2) \<in> R s"
-
-  assumes Timpl_inv: "I s \<Longrightarrow> Timpl s = (ni, s') \<Longrightarrow> I s'"
-  assumes Fimpl_inv: "I s \<Longrightarrow> Fimpl s = (ni, s') \<Longrightarrow> I s'"
-  assumes IFimpl_inv: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s; IFimpl v ni1 ni2 s = (ni, s')\<rbrakk> \<Longrightarrow> I s'"
+  assumes DESTRimpl_rule1: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. r = TD)"
+  assumes DESTRimpl_rule2: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. r = FD)"
+  assumes DESTRimpl_rule3: "I s \<Longrightarrow> (ni, IF v n1 n2) \<in> R s \<Longrightarrow> 
+    ospec (DESTRimpl ni s) (\<lambda>r. \<exists>ni1 ni2. 
+      r = (IFD v ni1 ni2) \<and> (ni1, n1) \<in> R s \<and> (ni2, n2) \<in> R s)"
 begin
 
 lemma les_refl[simp,intro!]:"les s s" by (auto simp add: les_def)
 lemma les_trans[trans]:"les s1 s2 \<Longrightarrow> les s2 s3 \<Longrightarrow> les s1 s3" by (auto simp add: les_def)
 lemmas DESTRimpl_rules = DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3
 
+definition "case_ifexi fti ffi fii ni s \<equiv> do {
+  dest \<leftarrow> DESTRimpl ni s;
+  case dest of
+    TD \<Rightarrow> fti s  
+  | FD \<Rightarrow> ffi s 
+  | IFD v ti ei \<Rightarrow> fii v ti ei s}"
+
+lemma case_ifexi_rule:
+  assumes INV: "I s"
+  assumes NI: "(ni,n)\<in>R s"
+  assumes FTI: "\<lbrakk> n = Trueif \<rbrakk> \<Longrightarrow> ospec (fti s) (\<lambda>(r,s'). (r,ft) \<in> Q s \<and> I' s')"
+  assumes FFI: "\<lbrakk> n = Falseif \<rbrakk> \<Longrightarrow> ospec (ffi s) (\<lambda>(r,s'). (r,ff) \<in> Q s \<and> I' s')"
+  assumes FII: "\<And>ti ei v t e. \<lbrakk> n = IF v t e; (ti,t)\<in>R s; (ei,e)\<in>R s \<rbrakk> \<Longrightarrow> ospec (fii v ti ei s) (\<lambda>(r,s'). (r,fi v t e) \<in> Q s \<and> I' s')"
+  shows "ospec (case_ifexi fti ffi fii ni s) (\<lambda>(r,s'). (r,case_ifex ft ff fi n) \<in> Q s \<and> I' s')"
+  apply (cases n; simp)
+  unfolding case_ifexi_def
+  apply (rule obind_rule)
+  apply (rule DESTRimpl_rule1[OF INV, of ni])
+  using NI apply simp apply simp apply (erule FTI)
+  
+  apply (rule obind_rule)
+  apply (rule DESTRimpl_rule2[OF INV, of ni])
+  using NI apply simp apply simp apply (erule FFI)
+
+  apply (rule obind_rule)
+  apply (rule DESTRimpl_rule3[OF INV, of ni])
+  using NI apply simp apply clarsimp apply (erule (2) FII)
+  done
+  
+abbreviation "return x \<equiv> \<lambda>s. Some (x,s)"
+
+
 fun lowest_tops_impl where
-"lowest_tops_impl [] s = Some None" |
+"lowest_tops_impl [] s = Some (None,s)" |
 "lowest_tops_impl (e#es) s = 
 	do {
-	  oassert (I s \<and> e \<in> Domain (R s));
-	  rec \<leftarrow> lowest_tops_impl es s;
-	  Some (case DESTRimpl e s of
-		(IFD v t e) \<Rightarrow> do {
-			(case rec of 
-				Some u \<Rightarrow> Some (min u v) | 
-				None \<Rightarrow> Some v)
-			} |
-        _ \<Rightarrow> rec)
+	  (rec,s) \<leftarrow> lowest_tops_impl es s;
+
+	  case_ifexi 
+	    (return rec) 
+	    (return rec) 
+	    (\<lambda>v t e. do {
+        (case rec of 
+          Some u \<Rightarrow> return (Some (min u v)) | 
+          None \<Rightarrow> return (Some v))
+       }) e s
 	}"
 
+fun lowest_tops_alt where
+"lowest_tops_alt [] = None" |
+"lowest_tops_alt (e#es) = (
+	  let rec = lowest_tops_alt es in
+	  case_ifex
+	    rec 
+	    rec 
+	    (\<lambda>v t e. (case rec of 
+          Some u \<Rightarrow> (Some (min u v)) | 
+          None \<Rightarrow> (Some v))
+       ) e
+	)"
+
+lemma lowest_tops_alt: "lowest_tops l = lowest_tops_alt l" 
+  apply (induction l rule: lowest_tops.induct) apply (auto split: option.splits)
+  done
+  
+lemma foo: 
+  assumes "ospec mi (\<lambda>(r,s'). r = m \<and> s'=s)"
+  assumes "\<And>rec s. ospec (fi rec s) (\<lambda>(r,s'). r = f rec \<and> s' = s)"
+  shows "ospec (do {(rec,s) \<leftarrow> mi; fi rec s}) (\<lambda>(r,s'). r = (let rec = m in f rec) \<and> s'=s)"
+  sorry
+
+lemma ospec_cons: 
+  assumes "ospec m Q"
+  assumes "\<And>r. Q r \<Longrightarrow> P r"
+  shows "ospec m P"
+  using assms by (cases m) auto
+
+lemma oreturn_synth: "ospec (Some x) (\<lambda>r. r=x)" by simp
+
+lemma pull_Some: "(case n of None \<Rightarrow> \<lambda>s. Some (fn s,s) | Some v \<Rightarrow> \<lambda>s. Some (fs v s, s))
+  = (\<lambda>s. Some (case n of None \<Rightarrow> (fn s) | Some v \<Rightarrow> (fs v s),s))" by (auto split: option.split)
 
 lemma lowest_tops_impl_R: 
-assumes "I s" "lowest_tops [i, t, e] = l"
-        "(ii, i) \<in> R s" "(ti, t) \<in> R s" "(ei, e) \<in> R s"
-shows "lowest_tops_impl [ii, ti, ei] s = Some l"
-proof -
-  from assms show ?thesis 
-    apply (cases i; cases t; cases e)
-    apply (simp_all add: DomainI DESTRimpl_rules[OF `I s`] split: Option.bind_splits IFEXD.split)
-    apply(fastforce dest!: DESTRimpl_rules[OF `I s`])+
-    done
-qed
+  assumes "list_all2 (\<lambda>ni n. (ni,n) \<in> R s) li l" "I s"
+  shows "ospec (lowest_tops_impl li s) (\<lambda>(r,s'). r = lowest_tops l \<and> s'=s)"
+  unfolding lowest_tops_alt
+  using assms
+  apply (induction rule: list_all2_induct)
+  apply simp
+  apply simp
+  apply (rule ospec_cons)
+  apply (rule obind_rule)
+  apply assumption
+  apply (split prod.split; intro allI impI)
+  apply simp
+  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id", simplified])
+  apply assumption+
+  apply simp
+  apply simp
+  apply (subst pull_Some)
+  apply simp
+  apply assumption
+  done
+
 
 fun restrict_top_impl where
-"restrict_top_impl e vr vl s = do {
-	oassert (I s \<and> e \<in> Domain (R s));
-	Some (case DESTRimpl e s of
-	IFD v te ee \<Rightarrow> (if v = vr then (if vl then te else ee) else e) |
-	_ \<Rightarrow> e)
-	}"
+"restrict_top_impl e vr vl s = 
+  case_ifexi
+    (return e)
+    (return e)
+    (\<lambda>v te ee. return (if v = vr then (if vl then te else ee) else e))
+    e s
+	"
+
+lemma restrict_top_alt: "restrict_top n var val = (case n of 
+  (IF v t e) \<Rightarrow> (if v = var then (if val then t else e) else (IF v t e))
+| _ \<Rightarrow> n)"
+  apply (induction n var val rule: restrict_top.induct)
+  apply simp_all
+  done
+
+lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_top_impl ni vr vl s) (\<lambda>(res,s'). (res, restrict_top n vr vl) \<in> R s \<and> s'=s)"
+  unfolding restrict_top_impl.simps restrict_top_alt
+  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="R", simplified])
+  apply assumption+
+  apply simp
+  apply simp
+  apply simp
+  done  
+
+  
+  
 
 lemma restrict_top_R: "I s \<Longrightarrow> (ni,i) \<in> R s \<Longrightarrow> restrict_top_impl ni vr vl s = Some res \<Longrightarrow>
                        (res, restrict_top i vr vl) \<in> R s"
 apply (induction i vr vl rule: restrict_top.induct)
 apply (auto split: Option.bind_splits dest: DESTRimpl_rules)
 done
+
 
 partial_function(option) ite_impl where
 "ite_impl i t e s = do {
@@ -110,13 +226,12 @@ partial_function(option) ite_impl where
 			fe \<leftarrow> restrict_top_impl e a False s;
 			(tb,s) \<leftarrow> ite_impl ti tt te s;
 			(fb,s) \<leftarrow> ite_impl fi ft fe s;
-			oassert (I s \<and> tb \<in> Domain (R s) \<and> fb \<in> Domain (R s));
-            Some (IFimpl a tb fb s)} |
-        None \<Rightarrow> do {
-        	oassert (I s \<and> e \<in> Domain (R s));
-        	(case DESTRimpl i s of TD \<Rightarrow> Some (t, s) | FD \<Rightarrow> Some (e, s) | _ \<Rightarrow> None)
+      IFimpl a tb fb s} 
+  | None \<Rightarrow> do {
+      dest \<leftarrow> DESTRimpl i s;
+      (case dest of TD \<Rightarrow> Some (t, s) | FD \<Rightarrow> Some (e, s) | _ \<Rightarrow> None)
      })}"
-
+thm ifex_ite.induct
 
 lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
