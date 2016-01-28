@@ -119,22 +119,16 @@ partial_function(option) ite_impl where
 lemma ite_impl_R: "I s \<Longrightarrow> ite_impl ii ti ei s = Some (r, s')
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> les s s' \<and> (r, ifex_ite i t e) \<in> R s' \<and> I s'"
-       sorry (*
 proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
-case (IF i t e a)
-  note IFCase = IF
+case (IF i t e a) show ?case sorry
+(*  note IFCase = IF
   note inR = `in_rel (R s) ii i` `in_rel (R s) ti t` `in_rel (R s) ei e`
   from \<open>I s\<close> inR \<open>lowest_tops [i, t, e] = Some a\<close>
     have 0: "lowest_tops_impl [ii, ti, ei] s = Some (Some a)"
-    apply(case_tac[!] i, case_tac[!] t, case_tac[!] e) 
-    apply(auto simp: DomainI)
-    using DESTRimpl_rules[OF \<open>I s\<close>]
-    
-    oops
-       (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: Option.bind_split IFEXD.split)+) (* takes quite a while *)
+    using lowest_tops_impl_R by auto
   from IFCase obtain tb st
     where tb_def: "ite_impl (restrict_top_impl ii a True s) (restrict_top_impl ti a True s)
-                       (restrict_top_impl ei a True s) s = Some (tb, st)"
+                       (restrict_top_impl ei a True s) s = Some (Some (tb, st)"
     by (auto simp: Option.bind_eq_Some_conv 0 ite_impl.simps
              simp del: restrict_top_impl.simps lowest_tops_impl.simps)
   from `ite_impl ii ti ei s = Some (r, s')` obtain eb se
@@ -176,21 +170,22 @@ case (IF i t e a)
     by simp
   from 5 IFCase(4) have "IFimpl a tb eb se = (r, s')" by force
   from goal11 IFimpl_rule[OF `I se` 6 4(1) this] `I s'` 7 show ?case
-  by(auto split: ifc_split)
+  by(auto split: ifc_split) *)
 next
 case(Trueif i t e)
-  then have "lowest_tops_impl [ii, ti, ei] s = None" and "DESTRimpl ii s = TD"  
-      by (case_tac[!] i, case_tac[!] t, case_tac[!] e,
-         (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+)
-  with Trueif show ?case  by(auto simp add: ite_impl.simps)
+  then have  "DESTRimpl ii s = TD"  
+      by (fastforce dest: DESTRimpl_rules[OF `I s`] split: IFEXD.split)
+  moreover from Trueif have "lowest_tops_impl [ii, ti, ei] s = Some None"
+    using lowest_tops_impl_R by auto
+  ultimately show ?case using Trueif by (auto simp add: ite_impl.simps DomainI)
 next
 case(Falseif i t e)
-  then have "lowest_tops_impl [ii, ti, ei] s = None" and "DESTRimpl ii s = FD"  
-    by (case_tac[!] i, case_tac[!] t, case_tac[!] e,
-       (fastforce dest: DESTRimpl_rules[OF \<open>I s\<close>] split: IFEXD.split)+)
-  with Falseif show ?case by(auto simp add: ite_impl.simps)
+  then have  "DESTRimpl ii s = FD"  
+      by (fastforce dest: DESTRimpl_rules[OF `I s`] split: IFEXD.split)
+  moreover from Falseif have "lowest_tops_impl [ii, ti, ei] s = Some None"
+    using lowest_tops_impl_R by auto
+  ultimately show ?case using Falseif by (auto simp add: ite_impl.simps DomainI)
 qed
-*)
 
 
 partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option"
