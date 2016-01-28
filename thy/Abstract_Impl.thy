@@ -103,18 +103,16 @@ abbreviation "return x \<equiv> \<lambda>s. Some (x,s)"
 fun lowest_tops_impl where
 "lowest_tops_impl [] s = Some (None,s)" |
 "lowest_tops_impl (e#es) s = 
-	do {
-	  (rec,s) \<leftarrow> lowest_tops_impl es s;
-
 	  case_ifexi 
-	    (return rec) 
-	    (return rec) 
-	    (\<lambda>v t e. do {
+	    (\<lambda>s. lowest_tops_impl es s) 
+	    (\<lambda>s. lowest_tops_impl es s) 
+	    (\<lambda>v t e s. do {
+	    (rec,s) \<leftarrow> lowest_tops_impl es s;
         (case rec of 
-          Some u \<Rightarrow> return (Some (min u v)) | 
-          None \<Rightarrow> return (Some v))
+          Some u \<Rightarrow> Some ((Some (min u v)), s) | 
+          None \<Rightarrow> Some ((Some v), s))
        }) e s
-	}"
+   "
 
 fun lowest_tops_alt where
 "lowest_tops_alt [] = None" |
@@ -152,18 +150,11 @@ lemma lowest_tops_impl_R:
   apply (induction rule: list_all2_induct)
   apply simp
   apply simp
-  apply (rule ospec_cons)
+  apply (rule case_ifexi_rule[where Q="\<lambda>s. Id", unfolded pair_in_Id_conv])
+  apply assumption+
   apply (rule obind_rule)
   apply assumption
-  apply (split prod.split; intro allI impI)
-  apply simp
-  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id", simplified])
-  apply assumption+
-  apply simp
-  apply simp
-  apply (subst pull_Some)
-  apply simp
-  apply simp
+  apply (clarsimp split: option.splits)
   done
 
 
