@@ -77,8 +77,10 @@ assumes "I s" "lowest_tops [i, t, e] = l"
 shows "lowest_tops_impl [ii, ti, ei] s = Some l"
 proof -
   from assms show ?thesis 
-    by (cases i; cases t; cases e;
-        fastforce simp add: DomainI dest: DESTRimpl_rules[OF `I s`] split: IFEXD.split)
+    apply (cases i; cases t; cases e)
+    apply (simp_all add: DomainI DESTRimpl_rules[OF `I s`] split: Option.bind_splits IFEXD.split)
+    apply(fastforce dest!: DESTRimpl_rules[OF `I s`])+
+    done
 qed
 
 fun restrict_top_impl where
