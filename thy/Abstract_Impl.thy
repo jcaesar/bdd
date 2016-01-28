@@ -188,7 +188,7 @@ lemma restrict_top_alt: "restrict_top n var val = (case n of
   apply simp_all
   done
 
-lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_top_impl ni vr vl s) (\<lambda>(res,s'). (res, restrict_top n vr vl) \<in> R s \<and> s'=s)"
+lemma restrict_top_impl_spec: "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_top_impl ni vr vl s) (\<lambda>(res,s'). (res, restrict_top n vr vl) \<in> R s \<and> s'=s)"
   unfolding restrict_top_impl.simps restrict_top_alt
   apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="R", simplified])
   apply assumption+
@@ -239,7 +239,29 @@ proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
 	using None apply(clarsimp split: prod.splits ifex.splits)
 done
 next
-	case (Some lv) thus ?thesis sorry
+	note [simp del] = restrict_top_impl.simps 
+	case (Some lv)
+	note mIH = goal1(1,2)[OF Some]
+	from goal1(3-6) show ?thesis
+	apply(subst ite_impl.simps)
+	apply(rule obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e]"])
+	apply(rule ospec_cons)
+	apply(rule lowest_tops_impl_R[OF la2])
+	apply(assumption)
+	apply(clarsimp split: prod.splits)
+	apply(simp add: Some split: prod.splits)
+	apply(clarsimp)
+	
+	apply(rule obind_rule, rule restrict_top_impl_spec, assumption+, clarsimp split: prod.splits)+
+
+	apply(rule obind_rule)
+	apply(rule mIH(1))
+	apply(simp;fail)+
+	apply(clarsimp)
+	apply(rule obind_rule)
+	apply(rule mIH(1))
+	apply(simp;fail)+
+	sorry
 qed
 qed
 
