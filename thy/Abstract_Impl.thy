@@ -255,20 +255,67 @@ next
 qed
 qed
 
+lemma case_ifexi_mono[partial_function_mono]:
+  assumes [partial_function_mono]: 
+    "mono_option (\<lambda>F. fti F s)"
+    "mono_option (\<lambda>F. ffi F s)"
+    "\<And>x31 x32 x33. mono_option (\<lambda>F. fii F x31 x32 x33 s)"
+  shows "mono_option (\<lambda>F. case_ifexi (fti F) (ffi F) (fii F) ni s)"
+  unfolding case_ifexi_def
+  apply (tactic \<open>Partial_Function.mono_tac @{context} 1\<close>)
+  done
 
-partial_function(option) val_impl :: "'ni \<Rightarrow> 's \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool option"
+partial_function(option) val_impl :: "'ni \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> (bool\<times>'s) option"
 where
-"val_impl e s ass = (case (DESTRimpl e s) of
-	TD \<Rightarrow> Some True |
-	FD \<Rightarrow> Some False |
-	(IFD v t e) \<Rightarrow> val_impl (if ass v then t else e) s ass)"
+"val_impl e ass s = case_ifexi
+	(\<lambda>s. Some (True,s))
+	(\<lambda>s. Some (False,s)) 
+	(\<lambda>v t e s. val_impl (if ass v then t else e) ass s)
+	e	s"
 
-lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> Some (val_ifex n ass) = val_impl ni s ass"
-by (induction n arbitrary: ni, 
-    auto dest: DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3 simp add: val_impl.simps)
+lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl ni ass s) (\<lambda>(r,s'). r = (val_ifex n ass) \<and> s'=s)"
+  apply (induction n arbitrary: ni)
+  apply (subst val_impl.simps)
+  apply (rule ospec_cons)
+  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+  apply simp
+  apply simp
+  apply simp
+  apply simp
 
+  apply (subst val_impl.simps)
+  apply (rule ospec_cons)
+  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+  apply simp
+  apply clarsimp apply simp
+  apply simp
+  apply simp
 
-end
+  apply (subst val_impl.simps)
+  apply (subst val_ifex.simps)
+  apply (clarsimp; intro impI conjI)
+  apply (rule ospec_cons)
+  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+  apply simp
+  apply simp
+  apply simp
+  apply (rule ospec_cons)
+  apply (rprems; simp)
+  apply simp
+  apply simp
+
+  apply (rule ospec_cons)
+  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+  apply simp
+  apply simp
+  apply simp
+  apply (rule ospec_cons)
+  apply (rprems; simp)
+  apply simp
+  apply simp
+  done  
+
+  end
 
 
 locale bdd_impl_eq = bdd_impl +
