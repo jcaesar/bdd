@@ -40,16 +40,6 @@ by(simp split: prod.splits)
 lemma IfI: "(c \<Longrightarrow> P x) \<Longrightarrow> (\<not>c \<Longrightarrow> P y) \<Longrightarrow> P (if c then x else y)" by simp
 lemma fstsndI: "x = (a,b) \<Longrightarrow> fst x = a \<and> snd x = b" by simp
 
-
-(*lemma rmi_appendD: "Rmi_g ni1 n1 s \<Longrightarrow> (v2,t2,e2) \<notin> set (entries s) \<Longrightarrow> Rmi_g ni1 n1 (pointermap_getmk (v2,t2,e2) s)"
-proof(induction ni1 n1 s rule: Rmi_g.induct)
-	case goal3
-	have fprems: "Rmi_g (fst (snd (pm_pth bdd n))) t bdd" "Rmi_g (snd (snd (pm_pth bdd n))) e bdd" using goal3(3) by(simp_all split: prod.splits)
-	note mIHp = goal3(1,2)[OF pair_collapse pair_collapse _ goal3(4)]
-	note mIH = mIHp(1)[OF fprems(1)] mIHp(2)[OF fprems(2)]
-	show ?case using goal3(3,4) by(auto simp add: pm_pth_append intro: pointermap_insert_p_validI mIH dest: fstsndI pointermap_sane_appendD[of bdd "(v2, t2, e2)"])
-qed simp_all*)
-
 lemma rmigeq: "Rmi_g ni1 n1 s \<Longrightarrow> Rmi_g ni2 n2 s \<Longrightarrow> ni1 = ni2 \<Longrightarrow> n1 = n2"
 proof(induction ni1 n1 s arbitrary: n2 ni2 rule: Rmi_g.induct)
 	case goal3 
@@ -139,7 +129,7 @@ lemma in_lesI:
     shows "(ni1, n1) \<in> Rmi s'" "(ni2, n2) \<in> Rmi s'"
 by (meson assms bdd_impl_pre.les_def)+
 
-(*
+
 lemma ifmi_modification_validI:
 	assumes sane: "bdd_sane s"
 	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
@@ -158,21 +148,19 @@ next
 		using vld unfolding bdd_node_valid_def by blast
 qed
 
-lemma ifmi_result_validI:
-	assumes sane: "bdd_sane s"
-	assumes vld: "bdd_node_valid s ni1" "bdd_node_valid s ni2"
-	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
-	shows "bdd_node_valid s' ni"
-using assms
-using pointermap_sane_getmkD
-apply(simp add: apfst_def map_prod_def bdd_node_valid_def bdd_sane_def split: if_splits prod.splits)
-apply(intro DomainI, elim DomainE)*)
-
 definition "tmi' s \<equiv> do {oassert (bdd_sane s); Some (tmi s)}"
 definition "fmi' s \<equiv> do {oassert (bdd_sane s); Some (fmi s)}"
 definition "ifmi' v ni1 ni2 s \<equiv> do {oassert (bdd_sane s \<and> bdd_node_valid s ni1 \<and> bdd_node_valid s ni2); Some (ifmi v ni1 ni2 s)}"
 
+lemma ifmi'_spec: "\<lbrakk>bdd_sane s; bdd_node_valid s ni1; bdd_node_valid s ni2\<rbrakk> \<Longrightarrow> ospec (ifmi' v ni1 ni2 s) (\<lambda>r. r = ifmi v ni1 ni2 s)"
+	unfolding ifmi'_def by(simp split: Option.bind_splits)
+lemma ifmi'_ifmi: "\<lbrakk>bdd_sane s; bdd_node_valid s ni1; bdd_node_valid s ni2\<rbrakk> \<Longrightarrow> ifmi' v ni1 ni2 s = Some (ifmi v ni1 ni2 s)"
+	unfolding ifmi'_def by(simp split: Option.bind_splits)
+
 definition "destrmi' ni s \<equiv> do {oassert (bdd_sane s \<and> bdd_node_valid s ni); Some (destrmi ni s)}"
+
+lemma destrmi_someD: "destrmi' e bdd = Some x \<Longrightarrow> bdd_sane bdd \<and> bdd_node_valid bdd e"
+by(simp add: destrmi'_def split: Option.bind_splits)
 
 lemma Rmi_sv: 
   assumes "bdd_sane s" "(ni,n) \<in> Rmi s" "(ni',n') \<in> Rmi s"  
@@ -233,13 +221,30 @@ proof  -
     case goal7 from Rmi_sv[OF this] show ?case by auto  
 	next
     case goal8 from Rmi_sv[OF this] show ?case by auto  
-  qed  
+  qed
 qed
+
 
 lemma p_valid_RmiI: "(Suc (Suc na), b) \<in> Rmi bdd \<Longrightarrow> pointermap_p_valid na bdd"
 	unfolding Rmi_def by(cases b) (auto)
 lemma n_valid_RmiI: "(na, b) \<in> Rmi bdd \<Longrightarrow> bdd_node_valid bdd na"
 	unfolding bdd_node_valid_def
-	by(intro DomainI, assumption)  
+	by(intro DomainI, assumption)
+lemma n_valid_Rmi_alt: "bdd_node_valid bdd na \<longleftrightarrow> (\<exists>b. (na, b) \<in> Rmi bdd)"
+	unfolding bdd_node_valid_def
+	by auto
+
+	
+lemma ifmi_result_validI:
+	assumes sane: "bdd_sane s"
+	assumes vld: "bdd_node_valid s ni1" "bdd_node_valid s ni2"
+	assumes ifm: "ifmi v ni1 ni2 s = (ni, s')"
+	shows "bdd_node_valid s' ni"
+proof -
+	from vld obtain n1 n2 where "(ni1, n1) \<in> Rmi s" "(ni2, n2) \<in> Rmi s" unfolding bdd_node_valid_def by blast
+	note brofix.IFimpl_rule[OF sane this]
+	note this[unfolded ifmi'_ifmi[OF sane vld] ospec.simps, of v, unfolded ifm, unfolded prod.simps]
+	thus ?thesis unfolding bdd_node_valid_def by blast
+qed
 
 end

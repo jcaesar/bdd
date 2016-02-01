@@ -98,12 +98,7 @@ fun lowest_tops_alt where
 	)"
 
 lemma lowest_tops_alt: "lowest_tops l = lowest_tops_alt l" 
-  apply (induction l rule: lowest_tops.induct) apply (auto split: option.splits)
-  done
-
-
-lemma pull_Some: "(case n of None \<Rightarrow> \<lambda>s. Some (fn s,s) | Some v \<Rightarrow> \<lambda>s. Some (fs v s, s))
-  = (\<lambda>s. Some (case n of None \<Rightarrow> (fn s) | Some v \<Rightarrow> (fs v s),s))" by (auto split: option.split)
+  by (induction l rule: lowest_tops.induct) (auto split: option.splits)
 
 lemma lowest_tops_impl_R: 
   assumes "list_all2 (in_rel (R s)) li l" "I s"
