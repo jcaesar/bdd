@@ -140,11 +140,11 @@ proof(induction nia n s rule: Rmi_g.induct)
 		by(simp split: prod.splits)
 qed simp_all
 lemma ifmi_les:
-    assumes "pointermap_sane s"
+    assumes "bdd_sane s"
     assumes "ifmi v ni1 ni2 s = (ni, s')"
     shows "bdd_impl_pre.les Rmi s s'"
 using assms
-by(clarsimp simp: comp_def apfst_def map_prod_def bdd_impl_pre.les_def Rmi_def ifmi_les_hlp split: if_splits prod.splits)
+by(clarsimp simp: bdd_sane_def comp_def apfst_def map_prod_def bdd_impl_pre.les_def Rmi_def ifmi_les_hlp split: if_splits prod.splits)
 
 lemma in_lesI:
 	assumes "bdd_impl_pre.les Rmi s s'"
@@ -292,27 +292,29 @@ interpretation brofix!: bdd_impl_eq bdd_sane Rmi tmi' fmi' ifmi' destrmi'
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def
 
-  note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def
+  note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
 	show "bdd_impl_eq bdd_sane Rmi tmi' fmi' ifmi' destrmi'"
 	proof(unfold_locales)
-	     case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
+		case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal2 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal3 
-	  note [simp] = Rmi_sv[OF this]
-
-	from goal3 show ?case
-	  apply -
-	  (* TODO/FIXME: Die HilfsLemma, die hier benutzt werden, gehen quer durch verschiedene
-	    Ebenen: Mal hat man Rmi, mal Rmi_g, mal ifmi, mal ist ifmi ausgefaltet, usw.! *)
-	  apply (auto simp: IFC_def split: Option.bind_split intro: bdd_node_valid_RmiI)
-  	apply (clarsimp simp: apfst_def map_prod_def Rmi_def IFC_def split: prod.splits)
-  	apply (metis bdd_sane_def ifmi_les_hlp pointermap_sane_getmkD pointermap_update_pthI prod.sel(2) swap_simp)  
-  	apply (clarsimp simp: apfst_def map_prod_def Rmi_def IFC_def split: prod.splits)
-  	apply (metis apfst_conv ifmi.elims ifmi_saneI2)
-  	apply (clarsimp simp: apfst_def map_prod_def Rmi_def IFC_def split: prod.splits)
-  	apply (clarsimp simp: bdd_sane_def ifmi_les_hlp)
-  	done
+		note [simp] = Rmi_sv[OF this]
+		have e: "n1 = n2 \<Longrightarrow> ni1 = ni2" by(rule ccontr) simp
+		obtain ni s' where[simp]: "(ifmi' v ni1 ni2 s) = Some (ni, s')"
+			unfolding ifmi'_def using goal3 bdd_node_valid_RmiI by fastforce
+		hence ifm: "ifmi v ni1 ni2 s = (ni, s')" using goal3 bdd_node_valid_RmiI by simp
+		have ifmi'_ospec: "\<And>P. ospec (ifmi' v ni1 ni2 s) P \<longleftrightarrow> P (ifmi v ni1 ni2 s)" by(simp del: ifmi'_def ifmi.simps add: ifm)
+		from goal3 show ?case
+			unfolding ifmi'_ospec
+			apply(split prod.splits; clarify)
+			apply(rule conjI)
+			(* for the first thing, we don't have a helper lemma *)
+			apply(clarsimp simp: Rmi_def IFC_def bdd_sane_def ifmi_les_hlp pointermap_sane_getmkD pointermap_update_pthI split: if_splits prod.splits)
+			(* rest goes by the helper lemmas *)
+			using ifmi_les[OF `bdd_sane s` ifm]  ifmi_saneI2[OF _ bdd_node_valid_RmiI bdd_node_valid_RmiI, OF goal3 ifm]
+			unfolding ifm apply blast
+		done
 	next case goal4 thus ?case 
 	  apply (clarsimp simp add: const_def split: Option.bind_splits if_splits)
 	  done

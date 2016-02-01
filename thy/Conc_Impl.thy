@@ -66,15 +66,16 @@ definition "restrict_topci p var val bdd = do {
 	return (case d of IFD v t e \<Rightarrow> (if v = var then (if val then t else e) else p) | _ \<Rightarrow> p)
 }"
 
-thm brofix.restrict_top_R[THEN bdd_node_valid_RmiI]
 
 lemma [sep_heap_rules]: "
 	bdd_sane bdd \<Longrightarrow>
 	bdd_node_valid bdd p \<Longrightarrow>
-	brofix.restrict_top_impl p var val bdd = Some r \<Longrightarrow>
+	brofix.restrict_top_impl p var val bdd = Some (r,bdd') \<Longrightarrow>
 	<is_bdd_impl bdd bddi> restrict_topci p var val bddi
 	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
-  by(sep_auto simp: restrict_topci_def ifexd_valid_def split split: IFEXD.splits Option.bind_splits)
+apply(frule brofix.restrict_top_impl_spec[THEN ospecI])
+  apply(sep_auto simp: restrict_topci_def ifexd_valid_def split: IFEXD.splits)
+ oops
 
 fun lowest_topsci where
 "lowest_topsci [] s = return None" |
