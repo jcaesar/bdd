@@ -30,105 +30,114 @@ definition destrci :: "nat \<Rightarrow> (nat \<times> nat \<times> nat) pointer
 	Suc 0 \<Rightarrow> return TD |
 	Suc (Suc p) \<Rightarrow> pm_pthi bdd p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
 
-lemma [sep_heap_rules]: "tmi bdd = (p,bdd') 
+lemma [sep_heap_rules]: "tmi' bdd = Some (p,bdd') 
   \<Longrightarrow> <is_bdd_impl bdd bddi> 
         tci bddi 
       <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>"
-by(sep_auto simp: tci_def)
+  by (sep_auto simp: tci_def tmi'_def split: Option.bind_splits)
 
-lemma [sep_heap_rules]: "fmi bdd = (p,bdd') 
+lemma [sep_heap_rules]: "fmi' bdd = Some (p,bdd') 
   \<Longrightarrow> <is_bdd_impl bdd bddi> 
         fci bddi 
       <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>"
-by(sep_auto simp: fci_def)
+by(sep_auto simp: fci_def fmi'_def split: Option.bind_splits)
 
-lemma [sep_heap_rules]: "\<lbrakk>bdd_sane bdd; ifmi v t e bdd = (p, bdd'); bdd_node_valid bdd t; bdd_node_valid bdd e \<rbrakk> \<Longrightarrow>
+lemma [sep_heap_rules]: "ifmi' v t e bdd = Some (p, bdd') \<Longrightarrow>
 	<is_bdd_impl bdd bddi> ifci v t e bddi
 	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
-	apply(clarsimp simp: is_bdd_impl_def simp del: ifmi.simps)
+	apply(clarsimp simp: is_bdd_impl_def ifmi'_def simp del: ifmi.simps)
 	apply(sep_auto
 	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def bdd_sane_def
-	  split: prod.splits if_splits)
+	  split: prod.splits if_splits Option.bind_splits)
 done
 
 lemma [sep_heap_rules]: "
-	bdd_sane bdd \<Longrightarrow>
-	bdd_node_valid bdd n \<Longrightarrow>
+	destrmi' n bdd = Some r \<Longrightarrow>
 	<is_bdd_impl bdd bddi> destrci n bddi
-	<\<lambda>r. is_bdd_impl bdd bddi * \<up>(r = destrmi n bdd)>" 
+	<\<lambda>r'. is_bdd_impl bdd bddi * \<up>(r' = r)>" 
+	unfolding destrmi'_def
+	apply (clarsimp split: Option.bind_splits)
 	apply(cases "(n, bdd)" rule: destrmi.cases)
 	apply(sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def bdd_sane_def dest: p_valid_RmiI)+
 done
 
-definition "restrict_topci p var val bdd = do {
-	d \<leftarrow> destrci p bdd;
-	return (case d of IFD v t e \<Rightarrow> (if v = var then (if val then t else e) else p) | _ \<Rightarrow> p)
+term brofix.restrict_top_impl
+
+thm brofix.case_ifexi_def
+
+definition "case_ifexici fti ffi fii ni bddi \<equiv> do {
+  dest \<leftarrow> destrci ni bddi;
+  case dest of TD \<Rightarrow> fti | FD \<Rightarrow> ffi | IFD v ti ei \<Rightarrow> fii v ti ei
 }"
 
+lemma [sep_decon_rules]:
+  assumes S: "brofix.case_ifexi fti ffi fii ni bdd = Some r"
+  assumes [sep_heap_rules]: 
+    "destrmi' ni bdd = Some TD \<Longrightarrow> fti bdd = Some r \<Longrightarrow> <is_bdd_impl bdd bddi> ftci <Q>"
+    "destrmi' ni bdd = Some FD \<Longrightarrow> ffi bdd = Some r \<Longrightarrow> <is_bdd_impl bdd bddi> ffci <Q>"
+    "\<And>v t e. destrmi' ni bdd = Some (IFD v t e) \<Longrightarrow> fii v t e bdd = Some r \<Longrightarrow> <is_bdd_impl bdd bddi> fici v t e <Q> "
+  shows "<is_bdd_impl bdd bddi> case_ifexici ftci ffci fici ni bddi <Q>"
+  using S
+  unfolding brofix.case_ifexi_def 
+  apply (clarsimp split: Option.bind_splits IFEXD.splits)
+  apply (sep_auto simp: case_ifexici_def) 
+  apply (sep_auto simp: case_ifexici_def) 
+  apply (sep_auto simp: case_ifexici_def) 
+  done
+
+
+definition "restrict_topci p vr vl bdd = 
+  case_ifexici
+    (return p)
+    (return p)
+    (\<lambda>v te ee. return (if v = vr then (if vl then te else ee) else p))
+    p bdd
+	"
 
 lemma [sep_heap_rules]:
-	assumes sane: "bdd_sane bdd"
-	assumes valid: "bdd_node_valid bdd p"
-	assumes res: "brofix.restrict_top_impl p var val bdd = Some (r,bdd')"
+	assumes "brofix.restrict_top_impl p var val bdd = Some (r,bdd')"
 	shows "<is_bdd_impl bdd bddi> restrict_topci p var val bddi
-	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
-using assms
-by(sep_auto 
-	simp: restrict_topci_def brofix.case_ifexi_def destrmi'_def 
-	split: IFEXD.splits)
+        	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
+    using assms    	
+    unfolding brofix.restrict_top_impl_def restrict_topci_def
+    by sep_auto
 
 fun lowest_topsci where
 "lowest_topsci [] s = return None" |
-"lowest_topsci (e#es) s = do {
-		des \<leftarrow> destrci e s;
-		rec \<leftarrow> lowest_topsci es s;
-		return (case des of
-			(IFD v t e) \<Rightarrow> (case rec of 
-				Some u \<Rightarrow> Some (min u v) | 
-				None \<Rightarrow> Some v) |
-			_ \<Rightarrow> rec)
-	}"
+"lowest_topsci (e#es) s = 
+	  case_ifexici 
+	    (lowest_topsci es s) 
+	    (lowest_topsci es s) 
+	    (\<lambda>v t e. do {
+	    (rec) \<leftarrow> lowest_topsci es s;
+        (case rec of 
+          Some u \<Rightarrow> return ((Some (min u v))) | 
+          None \<Rightarrow> return ((Some v)))
+       }) e s
+   "
 
-lemma [sep_heap_rules]: "
-	bdd_sane bdd \<Longrightarrow>
-	list_all (bdd_node_valid bdd) es \<Longrightarrow>
-	brofix.lowest_tops_impl es bdd = Some (r,bdd') \<Longrightarrow>
-	<is_bdd_impl bdd bddi> lowest_topsci es bddi
-	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
-proof(induction es arbitrary: r)
-	case Nil thus ?case by sep_auto
-next
-	case (Cons e es)
-	from Cons.prems have lap: "list_all (bdd_node_valid bdd) es" by simp
-	(*from Cons.prems(3) obtain x bdd' where somep: "bdd_impl.lowest_tops_impl destrmi' es bdd = Some (x, bdd')" 
-		by(simp add: brofix.case_ifexi_def split: IFEXD.splits prod.splits Option.bind_splits)*)
-	note brofix.lowest_tops_impl_R[THEN ospecI]
-	from Cons show ?case
-	proof(cases "fst (the (brofix.lowest_tops_impl es bdd))")
-		note [sep_heap_rules] = Cons.IH[OF `bdd_sane bdd` lap]
-		case None
-		with Cons.prems show ?thesis
-			by(simp add: destrmi'_def;fail | 
-				sep_auto simp: brofix.case_ifexi_def dest: destrmi_someD split: Option.bind_splits IFEXD.splits)+
-	next
-		note [sep_heap_rules] = Cons.IH[OF `bdd_sane bdd` lap]
-		case (Some rec)
-		show ?thesis using Cons.prems Some
-			by(simp 
-					add:  destrmi'_def 
-					split: IFEXD.splits prod.splits Option.bind_splits; 
-				fail 
-			|
-				sep_auto 
-					simp: brofix.case_ifexi_def
-					split: Option.bind_splits)+
-	qed
+declare lowest_topsci.simps[simp del]
+
+lemma [sep_heap_rules]: 
+	assumes "brofix.lowest_tops_impl es bdd = Some (r,bdd')"
+	shows "<is_bdd_impl bdd bddi> lowest_topsci es bddi
+	<\<lambda>(ri). is_bdd_impl bdd bddi * \<up>(ri = r \<and> bdd'=bdd)>"
+proof -
+  note [simp] = lowest_topsci.simps brofix.lowest_tops_impl.simps
+
+  show ?thesis using assms
+	apply (induction es arbitrary: bdd r bdd' bddi)
+	apply (sep_auto ) (* TODO: Have to split on destrmi'-cases manually, else sep-aut introduces schematic before case-split is done *)
+	apply (clarsimp simp: brofix.case_ifexi_def split: Option.bind_splits IFEXD.splits)
+	apply (sep_auto simp: brofix.case_ifexi_def)
+	apply (sep_auto simp: brofix.case_ifexi_def)
+	apply (sep_auto simp: brofix.case_ifexi_def)
+	done
 qed
-
 
 partial_function(heap) iteci where
 "iteci i t e s = do {
-  lt \<leftarrow> lowest_topsci [i, t, e] s;
+  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
   case lt of
 		Some a \<Rightarrow> do {
 			ti \<leftarrow> restrict_topci i a True s;
@@ -142,76 +151,51 @@ partial_function(heap) iteci where
       (ifci a tb fb s'')
      } 
   | None \<Rightarrow> do {
-    d \<leftarrow> destrci i s;
-    case d of
-      TD \<Rightarrow> return (t,s)
-    | FD \<Rightarrow> return (e,s)
+    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
    }
   }"
 
-(*
-	Just noticed that in the current state, the destr-operator has to be called multiple times for each object.
-	Let's not go all premature optimization on this though.
-*)
+lemma aux_prod_compr: "(\<forall>x1 x2 x3 x4 r1 r2. f (((x1,x2),x3),x4) = Some (r1,r2) \<longrightarrow> P x1 x2 x3 x4 r1 r2) \<longleftrightarrow>
+  (\<forall>x y. f x = Some y \<longrightarrow> (case (x,y) of ((((x1,x2),x3),x4),(r1,r2)) \<Rightarrow> P x1 x2 x3 x4 r1 r2))" by auto
+
 
 lemma "
-  ( bdd_sane bdd
-  \<and> brofix.ite_impl i t e bdd = Some (p,bdd') 
-  \<and> bdd_node_valid bdd i
-  \<and> bdd_node_valid bdd t
-  \<and> bdd_node_valid bdd e
-  ) \<longrightarrow>
+  ( brofix.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci i t e bddi 
-  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p \<and> (\<forall>n. bdd_node_valid bdd n \<longrightarrow> bdd_node_valid bdd' n) \<and> bdd_sane bdd' \<and> bdd_node_valid bdd' p  )>\<^sub>t"
-proof (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
-	case 2 thus ?case by simp
-next
-	case (3 s)
-	note [simp del] = destrmi.simps lowest_topsci.simps
-		brofix.lowest_tops_impl.simps
-		brofix.restrict_top_impl.simps
-		ifmi.simps
-  show ?case 
-  proof(clarify)
-	note [sep_heap_rules] = 3[THEN mp, OF conjI, OF _ conjI, OF _ _ conjI, OF _ _ _ conjI]
-	case goal1
-	obtain ia ta ea where "list_all2 (in_rel (Rmi bdd)) [i, t, e] [ia, ta, ea]" using goal1 
-		by(simp add: bdd_node_valid_def) (blast elim: DomainE)
-	note ltuc = brofix.lowest_tops_impl_R[THEN ospecI, OF this `bdd_sane bdd`]
-	note rtuc = brofix.restrict_top_impl_spec[THEN ospecI, OF `bdd_sane bdd`]
-	find_theorems bdd_node_valid Rmi
-	from goal1 show ?case
-		apply (subst iteci.simps)
-		apply (sep_auto split: Option.bind_splits IFEXD.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] split: Option.bind_splits IFEXD.splits prod.splits option.splits;fail)+
-		apply (sep_auto split: Option.bind_splits IFEXD.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] split: Option.bind_splits IFEXD.splits prod.splits option.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] split: Option.bind_splits IFEXD.splits prod.splits option.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] split: Option.bind_splits IFEXD.splits prod.splits option.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] brofix.case_ifexi_def split: Option.bind_splits IFEXD.splits prod.splits option.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] brofix.case_ifexi_def split: Option.bind_splits IFEXD.splits prod.splits option.splits)
-		apply (sep_auto split: Option.bind_splits IFEXD.splits)
-		apply(simp add: brofix.lowest_tops_impl.simps brofix.case_ifexi_def destrmi'_def ent_true_drop(2)[OF ent_refl] split: Option.bind_splits IFEXD.splits prod.splits option.splits)
-		apply (sep_auto split: Option.bind_splits IFEXD.splits)
-		apply(unfold n_valid_Rmi_alt; fast dest: rtuc)
-		apply(unfold n_valid_Rmi_alt; fast dest: rtuc)
-		apply(unfold n_valid_Rmi_alt; fast dest: rtuc)
-		apply (sep_auto split: Option.bind_splits IFEXD.splits)
-		apply(unfold n_valid_Rmi_alt)[1] apply(clarify) using rtuc apply blast
-		apply(unfold n_valid_Rmi_alt)[1] apply(clarify) using rtuc apply blast
-		apply(unfold n_valid_Rmi_alt)[1] apply(clarify) using rtuc apply blast
-		apply (sep_auto simp: ifmi'_def split: Option.bind_splits IFEXD.splits)
-		apply(meson ifmi_modification_validI)
-		apply(blast dest: ifmi_saneI)
-		apply(rule ifmi_result_validI)
-		prefer 4
-		apply(assumption)
-		apply simp_all
-		done
-	qed
-next
-    case 1 thus ?case apply(clarsimp) sorry
-qed
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
+  defer
+  apply simp
+  apply clarify
+  apply (clarsimp split: option.splits Option.bind_splits prod.splits)
+  apply (subst iteci.simps)
+  apply (sep_auto )
+
+  apply (subst iteci.simps)
+  apply (sep_auto )
+
+  unfolding imp_to_meta
+  apply rprems  
+  apply simp
+  apply sep_auto
+  apply (rule fi_rule)
+  apply rprems  
+  apply simp
+  apply frame_inference
+  apply sep_auto
+
+  apply simp  (* Warning: Dragons ahead! *)
+  using option_admissible[where P=
+    "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi. 
+      <is_bdd_impl x4 bddi> 
+        iteci x1 x2 x3 bddi  
+      <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
+  apply auto
+  apply (fo_rule subst[rotated])
+  apply (assumption)
+  apply auto
+  done
+
 
 end

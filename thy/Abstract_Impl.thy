@@ -70,7 +70,7 @@ lemma case_ifexi_rule:
 abbreviation "return x \<equiv> \<lambda>s. Some (x,s)"
 
 
-fun lowest_tops_impl where
+primrec lowest_tops_impl where
 "lowest_tops_impl [] s = Some (None,s)" |
 "lowest_tops_impl (e#es) s = 
 	  case_ifexi 
@@ -83,6 +83,8 @@ fun lowest_tops_impl where
           None \<Rightarrow> Some ((Some v), s))
        }) e s
    "
+
+declare lowest_tops_impl.simps[simp del]
 
 fun lowest_tops_alt where
 "lowest_tops_alt [] = None" |
@@ -106,8 +108,8 @@ lemma lowest_tops_impl_R:
   unfolding lowest_tops_alt
   using assms
   apply (induction rule: list_all2_induct)
-  apply simp
-  apply simp
+  apply (simp add: lowest_tops_impl.simps)
+  apply (simp add: lowest_tops_impl.simps)
   apply (rule case_ifexi_rule[where Q="\<lambda>s. Id", unfolded pair_in_Id_conv])
   apply assumption+
   apply (rule obind_rule)
@@ -116,7 +118,7 @@ lemma lowest_tops_impl_R:
   done
 
 
-fun restrict_top_impl where
+definition restrict_top_impl where
 "restrict_top_impl e vr vl s = 
   case_ifexi
     (return e)
@@ -133,7 +135,7 @@ lemma restrict_top_alt: "restrict_top n var val = (case n of
   done
 
 lemma restrict_top_impl_spec: "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_top_impl ni vr vl s) (\<lambda>(res,s'). (res, restrict_top n vr vl) \<in> R s \<and> s'=s)"
-  unfolding restrict_top_impl.simps restrict_top_alt
+  unfolding restrict_top_impl_def restrict_top_alt
   apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="R", simplified])
   apply assumption+
   apply simp
@@ -155,7 +157,7 @@ partial_function(option) ite_impl where
 			(tb,s) \<leftarrow> ite_impl ti tt te s;
 			(fb,s) \<leftarrow> ite_impl fi ft fe s;
       IFimpl a tb fb s}
-  | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_. undefined) i s 
+  | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
 )}"
 
 lemma ite_impl_R: "I s
@@ -183,7 +185,6 @@ proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
 	using None apply(clarsimp split: prod.splits ifex.splits)
 done
 next
-	note [simp del] = restrict_top_impl.simps 
 	case (Some lv)
 	note mIH = goal1(1,2)[OF Some]
 	from goal1(3-6) show ?thesis
