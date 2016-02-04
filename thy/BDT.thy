@@ -425,7 +425,7 @@ proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
              split: ifc_split)
 qed (simp add: bf_ite_def bf_ifex_rel_def)+
 
-theorem "
+theorem ifex_ite_rel_bf: "
 	in_rel bf_ifex_rel fi i \<Longrightarrow>
 	in_rel bf_ifex_rel ft t \<Longrightarrow>
 	in_rel bf_ifex_rel fe e \<Longrightarrow>

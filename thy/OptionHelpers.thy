@@ -40,7 +40,7 @@ lemma ospec_cons:
 
 lemma oreturn_synth: "ospec (Some x) (\<lambda>r. r=x)" by simp
 
-lemma ospecI: "ospec x P \<Longrightarrow> x = Some y \<Longrightarrow> P y" by simp
-lemma ospecI2: "ospec x P \<Longrightarrow> \<exists>y. x = Some y \<and> P y" by(cases x) simp_all
+lemma ospecD: "ospec x P \<Longrightarrow> x = Some y \<Longrightarrow> P y" by simp
+lemma ospecD2: "ospec x P \<Longrightarrow> \<exists>y. x = Some y \<and> P y" by(cases x) simp_all
 
 end

@@ -18,6 +18,7 @@ end
 
 definition "is_bdd_impl bdd bddi = is_pointermap_impl bdd bddi"
 
+definition "emptyci \<equiv> pointermap_empty"
 definition "tci bdd \<equiv> return (1,bdd)"
 definition "fci bdd \<equiv> return (0,bdd)"
 definition "ifci v t e bdd \<equiv> (if t = e then return (t, bdd) else do {
@@ -78,7 +79,7 @@ lemma [sep_decon_rules]:
     "\<And>v t e. destrmi' ni bdd = Some (IFD v t e) \<Longrightarrow> fii v t e bdd = Some r \<Longrightarrow> <is_bdd_impl bdd bddi> fici v t e <Q> "
   shows "<is_bdd_impl bdd bddi> case_ifexici ftci ffci fici ni bddi <Q>"
   using S
-  unfolding brofix.case_ifexi_def 
+  unfolding brofix.case_ifexi_def
   apply (clarsimp split: Option.bind_splits IFEXD.splits)
   apply (sep_auto simp: case_ifexici_def) 
   apply (sep_auto simp: case_ifexici_def) 
@@ -154,12 +155,9 @@ partial_function(heap) iteci where
     case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
    }
   }"
+declare iteci.simps[code]
 
-lemma aux_prod_compr: "(\<forall>x1 x2 x3 x4 r1 r2. f (((x1,x2),x3),x4) = Some (r1,r2) \<longrightarrow> P x1 x2 x3 x4 r1 r2) \<longleftrightarrow>
-  (\<forall>x y. f x = Some y \<longrightarrow> (case (x,y) of ((((x1,x2),x3),x4),(r1,r2)) \<Rightarrow> P x1 x2 x3 x4 r1 r2))" by auto
-
-
-lemma "
+lemma iteci_rule: "
   ( brofix.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci i t e bddi 
@@ -197,5 +195,20 @@ lemma "
   apply auto
   done
 
+declare  iteci_rule[THEN mp, sep_heap_rules]
+
+definition "notci e s \<equiv> do {
+	(f,s) \<leftarrow> fci s;
+	(t,s) \<leftarrow> tci s;
+	iteci e f t s
+}"
+definition "orci e1 e2 s \<equiv> do {
+	(t,s) \<leftarrow> tci s;
+	iteci e1 t e2 s
+}"
+definition "andci e1 e2 s \<equiv> do {
+	(f,s) \<leftarrow> fci s;
+	iteci e1 e2 f s
+}"
 
 end
