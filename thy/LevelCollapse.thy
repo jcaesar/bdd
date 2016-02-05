@@ -9,13 +9,13 @@ definition "bdd_relator a d s \<equiv> \<exists>\<^sub>Acs. is_bdd_impl cs s * \
 thm bdd_relator_def[unfolded bddmi_rel_def, simplified]
 lemma join_hlp1: "is_bdd_impl a s * is_bdd_impl b s \<Longrightarrow>\<^sub>A is_bdd_impl a s * is_bdd_impl b s * \<up>(a = b)"
 unfolding is_bdd_impl_def
-apply clarsimp
-apply(rule preciseD[where p=s and R="is_pointermap_impl" and F="is_pointermap_impl b s" and F'="is_pointermap_impl a s"])
-apply(rule is_pointermap_impl_prec)
-apply(unfold mod_and_dist)
-apply(rule conjI)
-apply assumption
-apply(simp add: star_aci(2))
+	apply clarsimp
+	apply(rule preciseD[where p=s and R="is_pointermap_impl" and F="is_pointermap_impl b s" and F'="is_pointermap_impl a s"])
+	 apply(rule is_pointermap_impl_prec)
+	apply(unfold mod_and_dist)
+	apply(rule conjI)
+	apply assumption
+	apply(simp add: star_aci(2))
 done
 
 lemma join_hlp: "is_bdd_impl a s * is_bdd_impl b s = is_bdd_impl b s * is_bdd_impl a s * \<up>(a = b)"
@@ -87,7 +87,9 @@ lemma "
 	apply assumption
 done
 
-(* Todo: Verify all of these\<dots> *)
-export_code open iteci notci andci orci ifci tci fci emptyci in Haskell file "output"
+(* Todo: Verify all of these\<dots>, except graphifyci *)
+export_code open iteci notci andci orci ifci tci fci emptyci graphifyci in Haskell module_name IBDD file "output"
+
+value "do { e \<leftarrow> emptyci; (graphifyci ''asdf'' 1 e) }" (* hm. *)
 
 end

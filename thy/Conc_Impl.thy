@@ -4,6 +4,8 @@ imports PointerMapImpl AbstractInterpretation
   (*"$AFP/Automatic_Refinement/Lib/Refine_Lib"*)
 begin
 
+type_synonym bddi = "(nat \<times> nat \<times> nat) pointermap_impl"
+
 instantiation prod :: (default, default) default
 begin
 	definition "default_prod :: ('a \<times> 'b) \<equiv> (default, default)" 
@@ -18,7 +20,7 @@ end
 
 definition "is_bdd_impl bdd bddi = is_pointermap_impl bdd bddi"
 
-definition "emptyci \<equiv> pointermap_empty"
+definition "emptyci :: bddi Heap \<equiv> pointermap_empty"
 definition "tci bdd \<equiv> return (1,bdd)"
 definition "fci bdd \<equiv> return (0,bdd)"
 definition "ifci v t e bdd \<equiv> (if t = e then return (t, bdd) else do {
@@ -209,6 +211,69 @@ definition "orci e1 e2 s \<equiv> do {
 definition "andci e1 e2 s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
 	iteci e1 e2 f s
+}"
+
+partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
+"serializeci p s = do {
+	d \<leftarrow> destrci p s;
+	(case d of 
+		IFD v t e \<Rightarrow> do {
+			r \<leftarrow> serializeci t s;
+			l \<leftarrow> serializeci e s;
+			return (remdups ([((p,t),1),((p,e),0)] @ r @ l))
+		} |
+		_ \<Rightarrow> return []
+	)
+}"
+declare serializeci.simps[code]
+(* why does this snap to heap as a monad? Well, it doesn't matter\<dots> *)
+fun mapM where
+"mapM f [] = return []" |
+"mapM f (a#as) = do {
+	r \<leftarrow> f a;
+	rs \<leftarrow> mapM f as;
+	return (r#rs)
+}"
+definition "liftM f ma = do { a \<leftarrow> ma; return (f a) }"
+definition "sequence = mapM id"
+term "liftM (map f)"
+lemma "liftM (map f) (sequence l) = sequence (map (liftM f) l)"
+apply(induction l)
+apply(simp add: sequence_def liftM_def)
+apply(simp)
+oops
+
+(*http://stackoverflow.com/questions/23864965/string-of-nat-in-isabelle*)
+fun string_of_nat :: "nat \<Rightarrow> string" where
+  "string_of_nat n = (if n < 10 then [char_of_nat (48 + n)] else 
+     string_of_nat (n div 10) @ [char_of_nat (48 + (n mod 10))])"
+definition stringifyci1 :: "nat \<Rightarrow> bddi \<Rightarrow> string Heap" where
+"stringifyci1 n s = do {
+	 d \<leftarrow> destrci n s;
+	 return (case d of
+	 	TD \<Rightarrow> ''T'' |
+	 	FD \<Rightarrow> ''F'' |
+	 	(IFD v t e) \<Rightarrow> string_of_nat v
+	 )
+}"
+definition stringifyci2 :: "(nat\<times>nat) \<Rightarrow> bddi \<Rightarrow> (string\<times>string) Heap" where
+"stringifyci2 p s = do {
+	fs \<leftarrow> stringifyci1 (fst p) s;
+	ts \<leftarrow> stringifyci1 (snd p) s;
+	return (fs, ts)
+}"
+definition "graphifyci1 bdd a \<equiv> do {
+	let (u,y) = a;
+	(f,t) \<leftarrow> stringifyci2 u bdd;
+	let c = (f @ '' -> '' @ t);
+	return (c @ (case y of 0 \<Rightarrow> '' [style=dotted]'' | Suc _ \<Rightarrow> '''') @ '';\010'')
+}"
+definition graphifyci :: "string \<Rightarrow> nat \<Rightarrow> bddi \<Rightarrow> string Heap" where
+"graphifyci name ep bdd \<equiv> do {
+	s \<leftarrow> serializeci ep bdd;
+	e \<leftarrow> mapM (graphifyci1 bdd) s;
+	let emptyhlp = (case ep of 0 \<Rightarrow> ''F;\010'' | Suc 0 \<Rightarrow> ''T;\010'' | _ \<Rightarrow> '''');  
+	return (''digraph '' @ name @ '' {\010'' @ concat e @ emptyhlp @ ''}'')
 }"
 
 end
