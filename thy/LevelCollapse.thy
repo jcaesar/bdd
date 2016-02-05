@@ -88,8 +88,8 @@ lemma "
 done
 
 (* Todo: Verify all of these\<dots>, except graphifyci *)
-export_code open iteci notci andci orci ifci tci fci emptyci graphifyci in Haskell module_name IBDD file "output"
-
-value "do { e \<leftarrow> emptyci; (graphifyci ''asdf'' 1 e) }" (* hm. *)
+export_code open iteci notci andci orci ifci tci fci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
+  
+(* value "do { e \<leftarrow> emptyci; (graphifyci ''asdf'' 1 e) }" hm. *)
 
 end

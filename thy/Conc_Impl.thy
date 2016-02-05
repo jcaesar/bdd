@@ -212,6 +212,11 @@ definition "andci e1 e2 s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
 	iteci e1 e2 f s
 }"
+definition "litci v bdd \<equiv> do {
+	(t,bdd) \<leftarrow> tci bdd;
+	(f,bdd) \<leftarrow> fci bdd;
+	ifci v t f bdd
+}"
 
 partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
 "serializeci p s = do {
@@ -247,33 +252,29 @@ oops
 fun string_of_nat :: "nat \<Rightarrow> string" where
   "string_of_nat n = (if n < 10 then [char_of_nat (48 + n)] else 
      string_of_nat (n div 10) @ [char_of_nat (48 + (n mod 10))])"
-definition stringifyci1 :: "nat \<Rightarrow> bddi \<Rightarrow> string Heap" where
-"stringifyci1 n s = do {
+
+definition labelci :: "bddi \<Rightarrow> nat \<Rightarrow> string Heap" where
+"labelci s n = do {
 	 d \<leftarrow> destrci n s;
-	 return (case d of
+	 return (string_of_nat n @ ''[label='' @ (case d of
 	 	TD \<Rightarrow> ''T'' |
 	 	FD \<Rightarrow> ''F'' |
-	 	(IFD v t e) \<Rightarrow> string_of_nat v
-	 )
-}"
-definition stringifyci2 :: "(nat\<times>nat) \<Rightarrow> bddi \<Rightarrow> (string\<times>string) Heap" where
-"stringifyci2 p s = do {
-	fs \<leftarrow> stringifyci1 (fst p) s;
-	ts \<leftarrow> stringifyci1 (snd p) s;
-	return (fs, ts)
+	 	(IFD v _ _) \<Rightarrow> string_of_nat v
+	 ) @ ''];\010'')
 }"
 definition "graphifyci1 bdd a \<equiv> do {
-	let (u,y) = a;
-	(f,t) \<leftarrow> stringifyci2 u bdd;
-	let c = (f @ '' -> '' @ t);
+	let ((f,t),y) = a;
+	let c = (string_of_nat f @ '' -> '' @ string_of_nat t);
 	return (c @ (case y of 0 \<Rightarrow> '' [style=dotted]'' | Suc _ \<Rightarrow> '''') @ '';\010'')
 }"
 definition graphifyci :: "string \<Rightarrow> nat \<Rightarrow> bddi \<Rightarrow> string Heap" where
 "graphifyci name ep bdd \<equiv> do {
 	s \<leftarrow> serializeci ep bdd;
+	let e = map fst s;
+	l \<leftarrow> mapM (labelci bdd) (remdups (map fst e @ map snd e)); 
 	e \<leftarrow> mapM (graphifyci1 bdd) s;
 	let emptyhlp = (case ep of 0 \<Rightarrow> ''F;\010'' | Suc 0 \<Rightarrow> ''T;\010'' | _ \<Rightarrow> '''');  
-	return (''digraph '' @ name @ '' {\010'' @ concat e @ emptyhlp @ ''}'')
+	return (''digraph '' @ name @ '' {\010'' @ concat l @ concat e @ emptyhlp @ ''}'')
 }"
 
 end
