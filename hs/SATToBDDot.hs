@@ -6,6 +6,7 @@ import Data.List (isPrefixOf)
 import IBDD (emptyci,tci,fci,ifci,iteci,andci,orci,notci,litci,graphifyci)
 import qualified IBDD
 import ToPreludeChar (isToHs)
+import Control.Monad (liftM)
 import Control.Monad.ST (stToIO)
 
 parseLiteral :: String -> Either Integer Integer
@@ -34,13 +35,16 @@ toDisj (a:as) s = do
 	orci p d s
 
 toBdd l = emptyci >>= toDisj l
-toGraph s = do
+
+toGraphS s = do
 	(ep,d) <- toBdd s
 	graphifyci [] ep d
+toGraph :: String -> IO String
+toGraph s = liftM isToHs . stToIO . toGraphS . parseFile $ s
 
 main :: IO ()
 main = do
 	inp <- getContents
-	gvz <- stToIO . toGraph . parseFile $ inp
-	putStrLn $ isToHs gvz
+	g <- toGraph inp
+	putStr g
 	return ()
