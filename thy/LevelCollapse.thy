@@ -87,6 +87,20 @@ lemma "
 	apply assumption
 done
 
+code_printing code_module "ArrayBlit" \<rightharpoonup> (Haskell)
+{*
+	import qualified Heap;
+	blita :: forall a. Heap.STArray Heap.RealWorld a -> Integer -> Heap.STArray Heap.RealWorld a -> Integer -> Integer -> Heap.ST Heap.RealWorld ();
+	blita _ _  _ _  0 = return ();
+	blita s si d di l = do {
+		x <- Heap.readArray s si;
+		Heap.writeArray d di x;
+		blita s (si+1) d (di+1) (l-1);
+	};
+*}
+code_printing constant blit' \<rightharpoonup>
+   (Haskell) "ArrayBlit.blita"
+
 (* Todo: Verify all of these\<dots>, except graphifyci *)
 export_code open iteci notci andci orci ifci tci fci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
   
