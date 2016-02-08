@@ -22,19 +22,19 @@ toLit (Left v) s = do
 	(l,s) <- litci (IBDD.Nat v) s
 	notci l s
 
-toConj [] s = tci s
-toConj (a:as) s = do
-	(c,s) <- toConj as s
-	(p,s) <- toLit a s
-	andci p c s
-
 toDisj [] s = fci s
 toDisj (a:as) s = do
 	(d,s) <- toDisj as s
-	(p,s) <- toConj a s
+	(p,s) <- toLit a s
 	orci p d s
 
-toBdd l = emptyci >>= toDisj l
+toConj [] s = tci s
+toConj (a:as) s = do
+	(c,s) <- toConj as s
+	(p,s) <- toDisj a s
+	andci p c s
+
+toBdd l = emptyci >>= toConj l
 
 toGraphS s = do
 	(ep,d) <- toBdd s
