@@ -1,0 +1,13 @@
+initial 100 100;
+
+inputs
+   a b c;
+
+actions
+   t1i = a or b;
+   t1 = t1i and c;
+   t2i1 = a and b;
+   t2i2 = b and c;
+   t2 = t2i1 or t2i2;
+   t3 = t1 biimp t2;
+   tautology t3;

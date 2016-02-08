@@ -212,10 +212,30 @@ definition "andci e1 e2 s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
 	iteci e1 e2 f s
 }"
+definition "norci e1 e2 s \<equiv> do {
+	(r,s) \<leftarrow> orci e1 e2 s;
+	notci r s
+}"
+definition "nandci e1 e2 s \<equiv> do {
+	(r,s) \<leftarrow> andci e1 e2 s;
+	notci r s
+}"
+definition "biimpci a b s \<equiv> do {
+	(nb,s) \<leftarrow> notci b s;
+	iteci a b nb s
+}"
+definition "xorci a b s \<equiv> do {
+	(nb,s) \<leftarrow> notci b s;
+	iteci a nb b s
+}"
 definition "litci v bdd \<equiv> do {
 	(t,bdd) \<leftarrow> tci bdd;
 	(f,bdd) \<leftarrow> fci bdd;
 	ifci v t f bdd
+}"
+definition "tautci v bdd \<equiv> do {
+	d \<leftarrow> destrci v bdd;
+	return (d = TD)
 }"
 
 partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
