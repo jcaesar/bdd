@@ -276,14 +276,13 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl 
 
   end
 
-
-locale bdd_impl_eq = bdd_impl +
-  assumes ifex_eq: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> ni = ni'"
-  assumes ifexd_eq: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni, i') \<in> R s \<Longrightarrow> i = i'"
+locale bdd_impl_cmp = bdd_impl +
+  assumes ifexd_cmp: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
+  assumes ifex_cmp: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> i = i'"
 begin
 
-
 (*
+
 partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s =
   (case DESTRimpl i s of TD \<Rightarrow> Some (t,s) | FD \<Rightarrow> Some (e,s) | _ \<Rightarrow>
