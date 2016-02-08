@@ -159,6 +159,33 @@ partial_function(heap) iteci where
   }"
 declare iteci.simps[code]
 
+
+partial_function(heap) iteci_opt where
+"iteci_opt i t e s = (case i of 0 \<Rightarrow> return (e,s) | Suc 0 \<Rightarrow> return (t,s) |
+   i \<Rightarrow> (if t = 1 \<and> e = 0 then return (i,s) else
+  (if t = e then return (t,s) else
+  (if i = t then iteci_opt i 1 e s else (
+  (if i = e then iteci_opt i t 0 s else ( 
+   do {
+  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
+  case lt of
+		Some a \<Rightarrow> do {
+			ti \<leftarrow> restrict_topci i a True s;
+			tt \<leftarrow> restrict_topci t a True s;
+			te \<leftarrow> restrict_topci e a True s;
+			fi \<leftarrow> restrict_topci i a False s;
+			ft \<leftarrow> restrict_topci t a False s;
+			fe \<leftarrow> restrict_topci e a False s;
+			(tb,s') \<leftarrow> iteci ti tt te s;
+			(fb,s'') \<leftarrow> iteci fi ft fe s';
+      (ifci a tb fb s'')
+     } 
+  | None \<Rightarrow> do {
+    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
+   }
+  })))))))"
+
+
 lemma iteci_rule: "
   ( brofix.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
