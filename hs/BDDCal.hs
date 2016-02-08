@@ -33,6 +33,7 @@ doAction (ids, bdd) line =
 	if null wl || head wl == "autoreorder" then return ((ids, bdd), Nothing) else
 	if length wl < 2 then cnp "Too few tokens" else
 	if head wl == "tautology" then liftM (\r-> ((ids,bdd),Just r)) (checkTaut (wl !! 1) bdd ids) else
+	if head wl == "graph" then liftM (\r-> ((ids,bdd),Just $ isToHs r)) (graphifyci [] (ga 1) bdd) else
 	if length wl < 3 || wl !! 1 /= "=" then cnp "'=' expected"  else
 	let f = 
 		if length wl == 3 then return . (,) (ga 2) else
@@ -55,7 +56,7 @@ actionChain [] _ = return []
 actionChain (a:as) s = do
 	(s,r) <- doAction s a
 	rec <- actionChain as s
-	return (fromMaybe rec (liftM (:as) r))
+	return (fromMaybe rec (liftM (:rec) r))
 	
 progs i a = do
 	bdd <- emptyci
