@@ -6,6 +6,7 @@ session "BDDs" = Datastructs +
 		Abstract_Impl
 		AbstractInterpretation
 		Conc_Impl
+		LevelCollapse
 	document_files
 		"root.tex"
 

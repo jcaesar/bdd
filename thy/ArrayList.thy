@@ -1,15 +1,18 @@
 (* Array implementation for list, contributed by Peter Lammich (except for the whacky parts) *)
 section{*Array List*}
+text{*This has been contributed by Peter Lammich*}
 theory ArrayList
 imports
 	"$AFP/Separation_Logic_Imperative_HOL/Examples/Array_Blit"
 begin
   text{*
-    This implements a datastructure that efficiently supports appending an element and looking up the nth element. 
+    This implements a datastructure that efficiently supports two operations: appending an element and looking up the nth element. 
 	The implementation is straightforward.
   *}
   text{*
-    As the underlying data structure, we use an array. Since changing the length of an array requires copying, we add a counter for the current length which allows to keep spare unused array elements 
+    As underlying data structure an array is used.
+	Since changing the length of an array requires copying, we double the size whenever the array needs to be expanded.
+	We use a counter for the current length to track which elements are used and which are spares.
   *}
   type_synonym 'a array_list = "'a array \<times> nat"
 
