@@ -276,36 +276,48 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl 
 
   end
 
-locale bdd_impl_eq = bdd_impl +
-  assumes ifex_eq: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> ni = ni'"
-  assumes ifexd_eq: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni, i') \<in> R s \<Longrightarrow> i = i'"
-(*
-  assumes ifexd_cmp: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
-  assumes ifex_cmp: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> i = i'"
-*)
+(* How do I get 'ni in here? *)
+locale bdd_impl_cmp = bdd_impl +
+  fixes cmp :: "'b \<Rightarrow> 'b \<Rightarrow> bool"
+  fixes Tni :: "'b"
+  fixes Fni :: "'b"
+  assumes tni_rule: "I s \<Longrightarrow> (Tni, Trueif) \<in> R s"
+  assumes fni_rule: "I s \<Longrightarrow> (Fni, Falseif) \<in> R s"
+  assumes cmp_rule1: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
+  assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s"
 begin
 
-(*
+lemma tni_subst: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<longleftrightarrow> cmp Tni ni"
+  using tni_rule1 cmp_rule1 cmp_rule2 by blast
+
+lemma fni_subst: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<longleftrightarrow> cmp Fni ni"
+  using fni_rule1 cmp_rule1 cmp_rule2 by blast
+
 
 partial_function(option) ite_impl_opt where
-"ite_impl_opt i t e s =
-  (case DESTRimpl i s of TD \<Rightarrow> Some (t,s) | FD \<Rightarrow> Some (e,s) | _ \<Rightarrow>
-  (if DESTRimpl t s = TD \<and> DESTRimpl e s = FD then Some (i,s) else
-  (if e = t then Some (t,s) else
-	(case lowest_tops_impl [i, t, e] s of
-		Some a \<Rightarrow> (let
-			ti = restrict_top_impl i a True s;
-			tt = restrict_top_impl t a True s;
-			te = restrict_top_impl e a True s;
-			fi = restrict_top_impl i a False s;
-			ft = restrict_top_impl t a False s;
-			fe = restrict_top_impl e a False s
-			in do {
+"ite_impl_opt i t e s = 
+  (if tni i then Some (t,s) else
+  (if fni i then Some (e,s) else
+  (if tni t \<and> fni e then Some (i,s) else
+  (if cmp t e then Some (t,s) else
+  (if cmp 
+  do {
+	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
+	(case lt of
+		Some a \<Rightarrow> do {
+			(ti,_) \<leftarrow> restrict_top_impl i a True s;
+			(tt,_) \<leftarrow> restrict_top_impl t a True s;
+			(te,_) \<leftarrow> restrict_top_impl e a True s;
+			(fi,_) \<leftarrow> restrict_top_impl i a False s;
+			(ft,_) \<leftarrow> restrict_top_impl t a False s;
+			(fe,_) \<leftarrow> restrict_top_impl e a False s;
 			(tb,s) \<leftarrow> ite_impl_opt ti tt te s;
 			(fb,s) \<leftarrow> ite_impl_opt fi ft fe s;
-            Some (IFimpl a tb fb s)}) |
-        None \<Rightarrow> Some (case DESTRimpl i s of TD \<Rightarrow> (t, s) | FD \<Rightarrow> (e, s))))))"
+      IFimpl a tb fb s}
+  | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
+)}))))"
 
+(*
 lemma ite_impl_opt_R: "I s \<Longrightarrow> ite_impl_opt ii ti ei s = Some (r, s')
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> les s s' \<and> (r, ifex_ite_opt i t e) \<in> R s' \<and> I s'"

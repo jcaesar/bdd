@@ -181,13 +181,14 @@ lemma False_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Falseif)\<in>Rmi s \<lo
   using Rmi_def Rmi_g.simps(1) Rmi_sv(2) by blast
 
 
-interpretation brofix!: bdd_impl_eq bdd_sane Rmi tmi' fmi' ifmi' destrmi'
+
+interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op =" 1 0
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def
 
   note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
-	show "bdd_impl_eq bdd_sane Rmi tmi' fmi' ifmi' destrmi'"
+	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =) 1 0"
 	proof(unfold_locales)
 		case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal2 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
@@ -218,9 +219,13 @@ proof  -
 	  apply (auto simp: Rmi_def elim: Rmi_g.elims)
 	  done
 	next
-    case goal7 from Rmi_sv[OF this] show ?case by auto  
+    case goal7 show ?case unfolding Rmi_def by simp
 	next
-    case goal8 from Rmi_sv[OF this] show ?case by auto  
+    case goal8 show ?case unfolding Rmi_def by simp
+  next
+    case goal9 from this Rmi_sv show ?case by blast
+  next
+    case goal10 from this Rmi_sv show ?case by blast
   qed
 qed
 
