@@ -159,7 +159,7 @@ partial_function(heap) iteci where
   }"
 declare iteci.simps[code]
 
-
+(* nicer/cleaner way to do compare? *)
 partial_function(heap) iteci_opt where
 "iteci_opt i t e s = (case i of 0 \<Rightarrow> return (e,s) | Suc 0 \<Rightarrow> return (t,s) |
    i \<Rightarrow> (if t = 1 \<and> e = 0 then return (i,s) else
@@ -176,8 +176,8 @@ partial_function(heap) iteci_opt where
 			fi \<leftarrow> restrict_topci i a False s;
 			ft \<leftarrow> restrict_topci t a False s;
 			fe \<leftarrow> restrict_topci e a False s;
-			(tb,s') \<leftarrow> iteci ti tt te s;
-			(fb,s'') \<leftarrow> iteci fi ft fe s';
+			(tb,s') \<leftarrow> iteci_opt ti tt te s;
+			(fb,s'') \<leftarrow> iteci_opt fi ft fe s';
       (ifci a tb fb s'')
      } 
   | None \<Rightarrow> do {
