@@ -288,19 +288,20 @@ locale bdd_impl_cmp = bdd_impl +
 begin
 
 lemma tni_subst: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<longleftrightarrow> cmp Tni ni"
-  using tni_rule1 cmp_rule1 cmp_rule2 by blast
+  using tni_rule cmp_rule1 cmp_rule2 by blast
 
 lemma fni_subst: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<longleftrightarrow> cmp Fni ni"
-  using fni_rule1 cmp_rule1 cmp_rule2 by blast
+  using fni_rule cmp_rule1 cmp_rule2 by blast
 
 
 partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s = 
-  (if tni i then Some (t,s) else
-  (if fni i then Some (e,s) else
-  (if tni t \<and> fni e then Some (i,s) else
+  (if cmp Tni i then Some (t,s) else
+  (if cmp Fni i then Some (e,s) else
+  (if cmp Tni t \<and> cmp Fni e then Some (i,s) else
   (if cmp t e then Some (t,s) else
-  (if cmp 
+  (if cmp i t then ite_impl_opt i Tni e s else
+  (if cmp i e then ite_impl_opt i t Fni s else
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
 	(case lt of
@@ -315,7 +316,7 @@ partial_function(option) ite_impl_opt where
 			(fb,s) \<leftarrow> ite_impl_opt fi ft fe s;
       IFimpl a tb fb s}
   | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
-)}))))"
+)}))))))"
 
 (*
 lemma ite_impl_opt_R: "I s \<Longrightarrow> ite_impl_opt ii ti ei s = Some (r, s')
