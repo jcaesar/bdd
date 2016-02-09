@@ -159,13 +159,39 @@ partial_function(heap) iteci where
   }"
 declare iteci.simps[code]
 
-(* nicer/cleaner way to do compare? *)
+(* No idea, if that is useful *)
+definition ite_rec where "ite_rec i t e s f = 
+do {
+  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
+  case lt of
+		Some a \<Rightarrow> do {
+			ti \<leftarrow> restrict_topci i a True s;
+			tt \<leftarrow> restrict_topci t a True s;
+			te \<leftarrow> restrict_topci e a True s;
+			fi \<leftarrow> restrict_topci i a False s;
+			ft \<leftarrow> restrict_topci t a False s;
+			fe \<leftarrow> restrict_topci e a False s;
+			(tb,s') \<leftarrow> f ti tt te s;
+			(fb,s'') \<leftarrow> f fi ft fe s';
+      (ifci a tb fb s'')
+     } 
+  | None \<Rightarrow> do {
+    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
+   }
+  }"
+
+lemma "ite_rec i t e s iteci = iteci i t e s"
+  unfolding ite_rec_def using iteci.simps by metis
+
+(* TODO: nicer/cleaner way to do compare? *)
 partial_function(heap) iteci_opt where
-"iteci_opt i t e s = (case i of 0 \<Rightarrow> return (e,s) | Suc 0 \<Rightarrow> return (t,s) |
-   i \<Rightarrow> (if t = 1 \<and> e = 0 then return (i,s) else
+"iteci_opt i t e s =
+  (if i = 1 then return (t,s) else
+  (if i = 0 then return (e,s) else
+  (if t = 1 \<and> e = 0 then return (i,s) else
   (if t = e then return (t,s) else
-  (if i = t then iteci_opt i 1 e s else (
-  (if i = e then iteci_opt i t 0 s else ( 
+  (if i = t then iteci_opt i 1 e s else
+  (if i = e then iteci_opt i t 0 s else 
    do {
   (lt) \<leftarrow> lowest_topsci [i, t, e] s;
   case lt of
@@ -183,7 +209,39 @@ partial_function(heap) iteci_opt where
   | None \<Rightarrow> do {
     case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
    }
-  })))))))"
+  }))))))"
+declare iteci_opt.simps[code]
+(* If I would add a comment to everything I don't understand, that would be quite a lot of comments
+   :D *)
+
+lemma iteci_opt_rec: "i \<noteq> 0 \<Longrightarrow> i \<noteq> 1 \<Longrightarrow> (t \<noteq> 1 \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<Longrightarrow> i \<noteq> e \<Longrightarrow>
+       iteci_opt i t e s = ite_rec i t e s iteci_opt"
+  apply(subst iteci_opt.simps) by (auto simp add: ite_rec_def)
+
+lemma iteci_opt_split: "(i = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (i = 1 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (t = 1 \<and> e = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (t = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (i = t \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (i = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+ (i \<noteq> 0 \<Longrightarrow> i \<noteq> 1 \<Longrightarrow> (t \<noteq> 1 \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<Longrightarrow> i \<noteq> e \<Longrightarrow>  P (iteci_opt i t e s))
+ \<Longrightarrow> P (iteci_opt i t e s)"
+  by blast
+
+find_theorems bdd_impl_cmp.ite_impl_opt
+thm bdd_impl_cmp.ite_impl_opt.simps
+
+lemma iteci_opt_rule: "
+  ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    iteci_opt i t e bddi 
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
+  defer
+  apply(simp)
+  apply(clarify)
+oops
+(*TODO: figure out, what's really going on *)
 
 
 lemma iteci_rule: "
