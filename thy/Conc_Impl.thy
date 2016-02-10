@@ -159,71 +159,6 @@ partial_function(heap) iteci where
   }"
 declare iteci.simps[code]
 
-(* No idea, if that is useful *)
-definition ite_rec where "ite_rec i t e s f = 
-do {
-  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
-  case lt of
-		Some a \<Rightarrow> do {
-			ti \<leftarrow> restrict_topci i a True s;
-			tt \<leftarrow> restrict_topci t a True s;
-			te \<leftarrow> restrict_topci e a True s;
-			fi \<leftarrow> restrict_topci i a False s;
-			ft \<leftarrow> restrict_topci t a False s;
-			fe \<leftarrow> restrict_topci e a False s;
-			(tb,s') \<leftarrow> f ti tt te s;
-			(fb,s'') \<leftarrow> f fi ft fe s';
-      (ifci a tb fb s'')
-     } 
-  | None \<Rightarrow> do {
-    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
-   }
-  }"
-
-lemma "ite_rec i t e s iteci = iteci i t e s"
-  unfolding ite_rec_def using iteci.simps by metis
-
-
-
-
-(* TODO: nicer/cleaner way to do compare? *)
-partial_function(heap) iteci_opt where
-"iteci_opt i t e s =
-  (if i = Truenat then return (t,s) else
-  (if i = Falsenat then return (e,s) else
-  (if t = Truenat \<and> e = Falsenat then return (i,s) else
-  (if t = e then return (t,s) else
-  (if e = Truenat \<and> i = t then return (Truenat, s) else
-  (if t = Falsenat \<and> i = e then return (Falsenat, s) else
-   do {
-  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
-  case lt of
-		Some a \<Rightarrow> do {
-			ti \<leftarrow> restrict_topci i a True s;
-			tt \<leftarrow> restrict_topci t a True s;
-			te \<leftarrow> restrict_topci e a True s;
-			fi \<leftarrow> restrict_topci i a False s;
-			ft \<leftarrow> restrict_topci t a False s;
-			fe \<leftarrow> restrict_topci e a False s;
-			(tb,s') \<leftarrow> iteci_opt ti tt te s;
-			(fb,s'') \<leftarrow> iteci_opt fi ft fe s';
-      (ifci a tb fb s'')
-     } 
-  | None \<Rightarrow> do {
-    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
-   }
-  }))))))"
-declare iteci_opt.simps[code]
-                            
-
-lemma iteci_opt_rule: "
-  ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
-  <is_bdd_impl bdd bddi> 
-    iteci_opt i t e bddi 
-  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-oops
-
-
 lemma iteci_rule: "
   ( brofix.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
@@ -256,26 +191,110 @@ lemma iteci_rule: "
       <is_bdd_impl x4 bddi> 
         iteci x1 x2 x3 bddi  
       <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
-  apply auto
+  apply auto[1]
   apply (fo_rule subst[rotated])
   apply (assumption)
-  apply auto
+  apply auto[1]
   done
 
 declare  iteci_rule[THEN mp, sep_heap_rules]
 
+(* ITE VERSION WITH TURBO :) *)
+
+definition param_opt_ci where
+  "param_opt_ci i t e = (if i = Truenat then Some t else
+                        (if i = Falsenat then Some e else
+                        (if t = Truenat \<and> e = Falsenat then Some i else
+                        (if t = e then Some t else
+                        (if e = Truenat \<and> i = t then Some Truenat else
+                        (if t = Falsenat \<and> i = e then Some Falsenat else
+                        None))))))"
+
+lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
+ unfolding param_opt_ci_def brofix.param_opt_def by auto
+
+(* TODO: nicer/cleaner way to do compare? *)
+partial_function(heap) iteci_opt where
+"iteci_opt i t e s =
+  (case param_opt_ci i t e of Some b \<Rightarrow> return (b,s) |
+   None \<Rightarrow>
+  do {
+  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
+  case lt of
+		Some a \<Rightarrow> do {
+			ti \<leftarrow> restrict_topci i a True s;
+			tt \<leftarrow> restrict_topci t a True s;
+			te \<leftarrow> restrict_topci e a True s;
+			fi \<leftarrow> restrict_topci i a False s;
+			ft \<leftarrow> restrict_topci t a False s;
+			fe \<leftarrow> restrict_topci e a False s;
+			(tb,s') \<leftarrow> iteci_opt ti tt te s;
+			(fb,s'') \<leftarrow> iteci_opt fi ft fe s';
+      (ifci a tb fb s'')
+     } 
+  | None \<Rightarrow> do {
+    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
+   }
+  })"
+declare iteci_opt.simps[code]
+
+thm brofix.ite_impl_opt.fixp_induct
+
+(* Proof by copy-paste *)
+lemma iteci_opt_rule: "
+  ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    iteci_opt i t e bddi 
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_opt.fixp_induct)
+    apply simp  (* Warning: Dragons ahead! *)
+  using option_admissible[where P=
+    "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi. 
+      <is_bdd_impl x4 bddi> 
+        iteci_opt x1 x2 x3 bddi  
+      <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
+  apply auto[1]
+  apply (fo_rule subst[rotated])
+  apply (assumption)
+  apply auto[1]
+
+  apply(simp)
+
+  apply(case_tac "brofix.param_opt i t e = None")
+  apply(simp)
+  apply (clarsimp split: option.splits Option.bind_splits prod.splits)
+  apply (subst iteci_opt.simps)
+  apply (sep_auto simp add: param_opt_ci_eq)
+  apply (subst iteci_opt.simps)
+  apply (sep_auto simp add: param_opt_ci_eq)
+  unfolding imp_to_meta
+  apply rprems
+  apply(simp)
+  apply sep_auto
+  apply (rule fi_rule)
+  apply(rprems)
+  apply(simp)
+  apply(frame_inference)
+  apply(sep_auto)
+
+ apply (sep_auto simp add: param_opt_ci_eq iteci_opt.simps)
+done
+
+declare iteci_opt_rule[THEN mp, sep_heap_rules]
+
+
 definition "notci e s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
 	(t,s) \<leftarrow> tci s;
-	iteci e f t s
+	iteci_opt e f t s
 }"
 definition "orci e1 e2 s \<equiv> do {
 	(t,s) \<leftarrow> tci s;
-	iteci e1 t e2 s
+	iteci_opt e1 t e2 s
 }"
 definition "andci e1 e2 s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
-	iteci e1 e2 f s
+	iteci_opt e1 e2 f s
 }"
 definition "norci e1 e2 s \<equiv> do {
 	(r,s) \<leftarrow> orci e1 e2 s;
@@ -287,11 +306,11 @@ definition "nandci e1 e2 s \<equiv> do {
 }"
 definition "biimpci a b s \<equiv> do {
 	(nb,s) \<leftarrow> notci b s;
-	iteci a b nb s
+	iteci_opt a b nb s
 }"
 definition "xorci a b s \<equiv> do {
 	(nb,s) \<leftarrow> notci b s;
-	iteci a nb b s
+	iteci_opt a nb b s
 }"
 definition "litci v bdd \<equiv> do {
 	(t,bdd) \<leftarrow> tci bdd;

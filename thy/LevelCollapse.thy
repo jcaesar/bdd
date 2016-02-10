@@ -102,7 +102,7 @@ code_printing constant blit' \<rightharpoonup>
    (Haskell) "ArrayBlit.blita"
 
 (* Todo: Verify all of these\<dots>, except graphifyci *)
-export_code open iteci notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
+export_code open iteci_opt iteci notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
   
 (* value "do { e \<leftarrow> emptyci; (graphifyci ''asdf'' 1 e) }" hm. *)
 
