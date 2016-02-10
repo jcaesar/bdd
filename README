@@ -1,0 +1,8 @@
+How to build:
+
+	isabelle build -D thy
+	make -C hs
+
+Run an example:
+	
+	time hs/BDDCal <hs/examples/example.cal

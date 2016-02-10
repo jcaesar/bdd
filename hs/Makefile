@@ -1,13 +1,11 @@
+TARGETS=SATToBDDot BDDCal Urquhart
 
-.PHONY: all clean SATToBDDot BDDCal
+.PHONY: all clean $(TARGETS)
 
-all: SATToBDDot BDDCal
+all: $(TARGETS)
 
-SATToBDDot:
-	ghc -fno-warn-tabs -O4 SATToBDDot.hs -igen
-
-BDDCal:
-	ghc -fno-warn-tabs -O4 BDDCal.hs -igen
+$(TARGETS):
+	ghc -fno-warn-tabs -O4 $@.hs -igen
 
 clean:
 	rm -f SATToBDDot BDDCal *.hi *.o gen/*.hi gen/*.o
