@@ -219,27 +219,34 @@ lemma iteci_opt_rec: "i \<noteq> 0 \<Longrightarrow> i \<noteq> 1 \<Longrightarr
   apply(subst iteci_opt.simps) by (auto simp add: ite_rec_def)
 
 lemma iteci_opt_split: "(i = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (i = 1 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (t = 1 \<and> e = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (i = (Suc 0) \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (t = (Suc 0) \<and> e = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
                         (t = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (i = t \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (i = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
- (i \<noteq> 0 \<Longrightarrow> i \<noteq> 1 \<Longrightarrow> (t \<noteq> 1 \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<Longrightarrow> i \<noteq> e \<Longrightarrow>  P (iteci_opt i t e s))
+                        (i \<noteq> 0 \<Longrightarrow> i \<noteq> (Suc 0) \<Longrightarrow> (t \<noteq> (Suc 0) \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<and> i = t \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+                        (i \<noteq> 0 \<Longrightarrow> i \<noteq> (Suc 0) \<Longrightarrow> (t \<noteq> (Suc 0) \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<and> i = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
+ (i \<noteq> 0 \<Longrightarrow> i \<noteq> (Suc 0) \<Longrightarrow> (t \<noteq> (Suc 0) \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<Longrightarrow> i \<noteq> e \<Longrightarrow>  P (iteci_opt i t e s))
  \<Longrightarrow> P (iteci_opt i t e s)"
   by blast
 
 find_theorems bdd_impl_cmp.ite_impl_opt
 thm bdd_impl_cmp.ite_impl_opt.simps
 
+thm brofix.ite_impl_opt.fixp_induct
+thm brofix.ite_impl_opt.simps
+
+
+thm option.cases
+
 lemma iteci_opt_rule: "
   ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci_opt i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
-  defer
-  apply(simp)
-  apply(clarify)
+  apply(rule iteci_opt_split)
+  apply(sep_auto simp add: brofix.ite_impl_opt.simps iteci_opt.simps)
+  apply(sep_auto simp add: brofix.ite_impl_opt.simps iteci_opt.simps)
+  apply(sep_auto simp add: brofix.ite_impl_opt.simps iteci_opt.simps)
+  apply(sep_auto simp add: brofix.ite_impl_opt.simps iteci_opt.simps)
 oops
 (*TODO: figure out, what's really going on *)
 

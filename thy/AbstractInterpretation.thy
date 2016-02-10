@@ -182,13 +182,13 @@ lemma False_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Falseif)\<in>Rmi s \<lo
 
 
 
-interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op =" 1 0
+interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op =" "Suc 0" 0
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def
 
   note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
-	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =) 1 0"
+	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =) (Suc 0) 0"
 	proof(unfold_locales)
 		case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal2 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
