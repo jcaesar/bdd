@@ -300,8 +300,8 @@ partial_function(option) ite_impl_opt where
   (if cmp Fni i then Some (e,s) else
   (if cmp Tni t \<and> cmp Fni e then Some (i,s) else
   (if cmp t e then Some (t,s) else
-  (if cmp i t then ite_impl_opt i Tni e s else
-  (if cmp i e then ite_impl_opt i t Fni s else
+  (if cmp Tni e \<and> cmp i t then Some (Tni, s) else
+  (if cmp Fni t \<and> cmp i e then Some (Fni, s) else
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
 	(case lt of

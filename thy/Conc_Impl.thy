@@ -195,8 +195,6 @@ partial_function(heap) iteci_opt where
   (if t = e then return (t,s) else
   (if e = Truenat \<and> i = t then return (Truenat, s) else
   (if t = Falsenat \<and> i = e then return (Falsenat, s) else
-  (if i = t then iteci_opt i Truenat e s else
-  (if i = e then iteci_opt i t Falsenat s else 
    do {
   (lt) \<leftarrow> lowest_topsci [i, t, e] s;
   case lt of
@@ -214,21 +212,9 @@ partial_function(heap) iteci_opt where
   | None \<Rightarrow> do {
     case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
    }
-  }))))))))"
+  }))))))"
 declare iteci_opt.simps[code]
-(* If I would add a comment to everything I don't understand, that would be quite a lot of comments
-   :D *)
-
-(* TODO: doesnt really make sense any more *)
-lemma iteci_opt_split: "(i = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (i = (Suc 0) \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (t = (Suc 0) \<and> e = 0 \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (t = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (i \<noteq> 0 \<Longrightarrow> i \<noteq> (Suc 0) \<Longrightarrow> (t \<noteq> (Suc 0) \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i = t \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
-                        (i \<noteq> 0 \<Longrightarrow> i \<noteq> (Suc 0) \<Longrightarrow> (t \<noteq> (Suc 0) \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<Longrightarrow> i = e \<Longrightarrow> P (iteci_opt i t e s)) \<Longrightarrow>
- (i \<noteq> 0 \<Longrightarrow> i \<noteq> (Suc 0) \<Longrightarrow> (t \<noteq> (Suc 0) \<or> e \<noteq> 0) \<Longrightarrow> t \<noteq> e \<Longrightarrow> i \<noteq> t \<Longrightarrow> i \<noteq> e \<Longrightarrow>  P (iteci_opt i t e s))
- \<Longrightarrow> P (iteci_opt i t e s)"
-  by blast
+                            
 
 lemma iteci_opt_rule: "
   ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
@@ -236,10 +222,7 @@ lemma iteci_opt_rule: "
     iteci_opt i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
 oops
-(*TODO: figure out, what's really going on *)
 
-thm destrmi.simps
-find_theorems destrmi
 
 lemma iteci_rule: "
   ( brofix.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
