@@ -318,10 +318,12 @@ partial_function(option) ite_impl_opt where
   | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
 )}))))))"
 
-(*
+(* TODO *)
 lemma ite_impl_opt_R: "I s \<Longrightarrow> ite_impl_opt ii ti ei s = Some (r, s')
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> les s s' \<and> (r, ifex_ite_opt i t e) \<in> R s' \<and> I s'"
+oops
+(*
 proof(induction i t e arbitrary: s s' ii ti ei r rule: ifex_ite_induct)
 case(Trueif i t e)
   then have "lowest_tops_impl [ii, ti, ei] s = None" and "DESTRimpl ii s = TD"  
