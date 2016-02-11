@@ -91,8 +91,8 @@ fun lowest_tops_alt where
 "lowest_tops_alt (e#es) = (
 	  let rec = lowest_tops_alt es in
 	  case_ifex
-	    rec 
-	    rec 
+	    rec
+	    rec
 	    (\<lambda>v t e. (case rec of 
           Some u \<Rightarrow> (Some (min u v)) | 
           None \<Rightarrow> (Some v))
@@ -279,32 +279,37 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl 
 (* How do I get 'ni in here? *)
 locale bdd_impl_cmp = bdd_impl +
   fixes cmp :: "'b \<Rightarrow> 'b \<Rightarrow> bool"
-  fixes Tni :: "'b"
-  fixes Fni :: "'b"
-  assumes tni_rule: "I s \<Longrightarrow> (Tni, Trueif) \<in> R s"
-  assumes fni_rule: "I s \<Longrightarrow> (Fni, Falseif) \<in> R s"
   assumes cmp_rule1: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
   assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s"
 begin
 
-lemma tni_subst: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<longleftrightarrow> cmp Tni ni"
-  using tni_rule cmp_rule1 cmp_rule2 by blast
+fun param_opt_impl where
+  "param_opt_impl i t e s =  do {
+    id \<leftarrow> DESTRimpl i s;
+    td \<leftarrow> DESTRimpl t s;
+    ed \<leftarrow> DESTRimpl e s;
+    (tn,s) \<leftarrow> Timpl s;
+    (fn,s) \<leftarrow> Fimpl s;
+    Some ((if id = TD then Some t else
+    if id = FD then Some e else
+    if td = TD \<and> ed = FD then Some i else
+    if cmp t e then Some t else
+    if ed = TD \<and> cmp i t then Some t else
+    if td = FD \<and> cmp i e then Some e else
+    None), s)}"
 
-lemma fni_subst: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<longleftrightarrow> cmp Fni ni"
-  using fni_rule cmp_rule1 cmp_rule2 by blast
+lemma param_opt_impl_R: 
+  assumes "I s" "(ii,i) \<in> R s" "(ti,t) \<in> R s" "(ei,e) \<in> R s"
+  shows "ospec (param_opt_impl ii ti ei s) 
+               (\<lambda>(r,s'). case r of None \<Rightarrow> param_opt i t e = None
+                                 | Some r \<Rightarrow> (param_opt i t e  = Some r' \<and> (r, r') \<in> R s)
+                \<and> s = s')"
+oops (* TODO *)
 
-fun param_opt where
-  "param_opt i t e =  (if cmp Tni i then Some t else
-                      (if cmp Fni i then Some e else
-                      (if cmp Tni t \<and> cmp Fni e then Some i else
-                      (if cmp t e then Some t else
-                      (if cmp Tni e \<and> cmp i t then Some Tni else
-                      (if cmp Fni t \<and> cmp i e then Some Fni else
-                      None))))))"
 
 partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s = 
-  (case param_opt i t e of Some b \<Rightarrow> Some (b,s) |
+  (case param_opt_impl i t e s of Some bs \<Rightarrow> Some bs |
   None \<Rightarrow>
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
@@ -322,11 +327,12 @@ partial_function(option) ite_impl_opt where
   | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
 )})"
 
-(* TODO *)
-lemma ite_impl_opt_R: "I s \<Longrightarrow> ite_impl_opt ii ti ei s = Some (r, s')
-       \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
-       \<Longrightarrow> les s s' \<and> (r, ifex_ite_opt i t e) \<in> R s' \<and> I s'"
-oops
+lemma ite_impl_opt_R: "
+  I s
+  \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+  \<Longrightarrow> ospec (ite_impl_opt ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
+oops (* TODO *)
+
 
 end
 end
