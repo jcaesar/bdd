@@ -4,7 +4,9 @@ imports PointerMapImpl AbstractInterpretation
   (*"$AFP/Automatic_Refinement/Lib/Refine_Lib"*)
 begin
 
-type_synonym bddi = "(nat \<times> nat \<times> nat) pointermap_impl"
+record bddi =
+	dpm :: "(nat \<times> nat \<times> nat) pointermap_impl"
+	dcl :: "((nat \<times> nat \<times> nat),nat) hashtable"
 
 instantiation prod :: (default, default) default
 begin
@@ -20,18 +22,18 @@ end
 
 definition "is_bdd_impl bdd bddi = is_pointermap_impl bdd bddi"
 
-definition "emptyci :: bddi Heap \<equiv> pointermap_empty"
-definition "tci bdd \<equiv> return (1,bdd)"
-definition "fci bdd \<equiv> return (0,bdd)"
+definition "emptyci :: bddi Heap \<equiv> do { ep \<leftarrow> pointermap_empty; ehm \<leftarrow> hm_new; return \<lparr>dpm=ep, dcl=ehm\<rparr> }"
+definition "tci bdd \<equiv> return (1::nat,bdd::bddi)"
+definition "fci bdd \<equiv> return (0::nat,bdd::bddi)"
 definition "ifci v t e bdd \<equiv> (if t = e then return (t, bdd) else do {
-	(p,u) \<leftarrow> pointermap_getmki (v, t, e) bdd;
-	return (Suc (Suc p), u)
+	(p,u) \<leftarrow> pointermap_getmki (v, t, e) (dpm bdd);
+	return (Suc (Suc p), dpm_update (const u) bdd)
 })"
-definition destrci :: "nat \<Rightarrow> (nat \<times> nat \<times> nat) pointermap_impl \<Rightarrow> (nat, nat) IFEXD Heap" where
+definition destrci :: "nat \<Rightarrow> bddi \<Rightarrow> (nat, nat) IFEXD Heap" where
 "destrci n bdd \<equiv> (case n of
 	0 \<Rightarrow> return FD |
 	Suc 0 \<Rightarrow> return TD |
-	Suc (Suc p) \<Rightarrow> pm_pthi bdd p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
+	Suc (Suc p) \<Rightarrow> pm_pthi (dpm bdd) p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
 
 lemma [sep_heap_rules]: "tmi' bdd = Some (p,bdd') 
   \<Longrightarrow> <is_bdd_impl bdd bddi> 
@@ -202,25 +204,33 @@ declare  iteci_rule[THEN mp, sep_heap_rules]
 (* ITE VERSION WITH TURBO :) *)
 
 definition param_opt_ci where
-  "param_opt_ci i t e = (if i = Truenat then Some t else
-                        (if i = Falsenat then Some e else
-                        (if t = Truenat \<and> e = Falsenat then Some i else
-                        (if t = e then Some t else
-                        (if e = Truenat \<and> i = t then Some Truenat else
-                        (if t = Falsenat \<and> i = e then Some Falsenat else
-                        None))))))"
+  "param_opt_ci i t e bdd = do {
+  	(tr, bdd) \<leftarrow> tci bdd;
+  	(fl, bdd) \<leftarrow> fci bdd;
+  	id \<leftarrow> destrci i bdd;
+  	td \<leftarrow> destrci t bdd;
+  	ed \<leftarrow> destrci e bdd;
+  	lu \<leftarrow> ht_lookup (i,t,e) (dcl bdd);
+  						return (case lu of Some a \<Rightarrow> Some a | None \<Rightarrow> ( 
+  						if id = TD then Some t else
+                        if id = FD then Some e else
+                        if td = TD \<and> ed = FD then Some i else
+                        if t = e then Some t else
+                        if ed = TD \<and> i = t then Some tr else
+                        if td = FD \<and> i = e then Some fl else
+                        None), bdd)
+  }"
 
 lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
- unfolding param_opt_ci_def brofix.param_opt_def by auto
+ unfolding param_opt_ci_def brofix.param_opt_def oops
 
 (* TODO: nicer/cleaner way to do compare? *)
 partial_function(heap) iteci_opt where
-"iteci_opt i t e s =
-  (case param_opt_ci i t e of Some b \<Rightarrow> return (b,s) |
-   None \<Rightarrow>
-  do {
+"iteci_opt i t e s = do {
+  (po,s) \<leftarrow> param_opt_ci i t e s;
   (lt) \<leftarrow> lowest_topsci [i, t, e] s;
-  case lt of
+  (case po of Some b \<Rightarrow> return (b,s) | None \<Rightarrow>
+  (case lt of
 		Some a \<Rightarrow> do {
 			ti \<leftarrow> restrict_topci i a True s;
 			tt \<leftarrow> restrict_topci t a True s;
@@ -228,14 +238,15 @@ partial_function(heap) iteci_opt where
 			fi \<leftarrow> restrict_topci i a False s;
 			ft \<leftarrow> restrict_topci t a False s;
 			fe \<leftarrow> restrict_topci e a False s;
-			(tb,s') \<leftarrow> iteci_opt ti tt te s;
-			(fb,s'') \<leftarrow> iteci_opt fi ft fe s';
-      (ifci a tb fb s'')
+			(tb,s) \<leftarrow> iteci_opt ti tt te s;
+			(fb,s) \<leftarrow> iteci_opt fi ft fe s;
+			(r,s) \<leftarrow> ifci a tb fb s;
+			cl \<leftarrow> hm_update (i,t,e) r (dcl s);
+			return (r,dcl_update (const cl) s)
      } 
-  | None \<Rightarrow> do {
-    case_ifexici (return (t,s)) (return (e,s)) (\<lambda>_ _ _. raise ''Cannot happen'') i s
-   }
-  })"
+  | None \<Rightarrow> raise ''Cannot happen'' ))
+  }"
+term iteci_opt
 declare iteci_opt.simps[code]
 
 thm brofix.ite_impl_opt.fixp_induct
