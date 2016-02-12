@@ -180,16 +180,14 @@ lemma True_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Trueif)\<in>Rmi s \<long
 lemma False_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Falseif)\<in>Rmi s \<longleftrightarrow> ni=0"
   using Rmi_def Rmi_g.simps(1) Rmi_sv(2) by blast
 
-definition "Truenat = 1"
-definition "Falsenat = 0"
 
-interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op =" Truenat Falsenat
+interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op ="
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def
 
   note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
-	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =) Truenat Falsenat"
+	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =)"
 	proof(unfold_locales)
 		case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal2 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
@@ -220,13 +218,9 @@ proof  -
 	  apply (auto simp: Rmi_def elim: Rmi_g.elims)
 	  done
 	next
-    case goal7 show ?case unfolding Rmi_def Truenat_def by simp
+    case goal7 thus ?case using Rmi_sv by blast
 	next
-    case goal8 show ?case unfolding Rmi_def Falsenat_def by simp
-  next
-    case goal9 from this Rmi_sv show ?case by blast
-  next
-    case goal10 from this Rmi_sv show ?case by blast
+    case goal8 thus ?case using Rmi_sv by blast
   qed
 qed
 
