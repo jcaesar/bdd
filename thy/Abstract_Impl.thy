@@ -335,5 +335,18 @@ lemma ite_impl_opt_R: "
 oops (* TODO *)
 
 
+thm lowest_tops_impl_R
+
+(* TODO: better name *)
+lemma same_same: "I s \<Longrightarrow> I s' \<Longrightarrow> les s s' \<Longrightarrow> (ri, r) \<in> R s \<Longrightarrow> (ri', r) \<in> R s'
+                           \<Longrightarrow> cmp ri' ri"
+  unfolding les_def using cmp_rule1 by blast
+
+lemma "I s
+  \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+  \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r, s'). r = ri \<and> s' = s'')
+  \<Longrightarrow> ospec (ite_impl ii ti ei s'') (\<lambda>(r, s'). r = ri)"
+oops (* that shouldn't be so hard *)
+
 end
 end
