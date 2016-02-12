@@ -342,11 +342,23 @@ lemma same_same: "I s \<Longrightarrow> I s' \<Longrightarrow> les s s' \<Longri
                            \<Longrightarrow> cmp ri' ri"
   unfolding les_def using cmp_rule1 by blast
 
-lemma "I s
+(* TODO: rename, unmessy proof *)
+lemma is_this_it: "I s
   \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
   \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r, s'). r = ri \<and> s' = s'')
-  \<Longrightarrow> ospec (ite_impl ii ti ei s'') (\<lambda>(r, s'). r = ri)"
-oops (* that shouldn't be so hard *)
+  \<Longrightarrow> ospec (ite_impl ii ti ei s'') (\<lambda>(r, s'). cmp r ri)"
+  apply(frule ite_impl_R[of s ii i ti t ei e])
+  apply(simp, simp, simp)
+  apply(drule ospecD2)
+  apply(drule ospecD2)
+  apply(clarsimp simp del: ifex_ite.simps)
+  apply(frule ite_impl_R[of s'' ii i ti t ei e])
+  apply(simp add: les_def)
+  apply(simp add: les_def)
+  apply(simp add: les_def)
+  apply(drule ospecD2)
+  apply(clarsimp simp del: ifex_ite.simps)
+  using same_same by blast
 
 end
 end
