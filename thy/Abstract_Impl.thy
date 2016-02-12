@@ -308,8 +308,9 @@ oops (* TODO *)
 
 
 partial_function(option) ite_impl_opt where
-"ite_impl_opt i t e s = 
-  (case param_opt_impl i t e s of Some bs \<Rightarrow> Some bs |
+"ite_impl_opt i t e s = do {
+  (ld, s) \<leftarrow>  param_opt_impl i t e s;
+  (case ld of Some b \<Rightarrow> Some (b, s) |
   None \<Rightarrow>
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
@@ -325,7 +326,7 @@ partial_function(option) ite_impl_opt where
 			(fb,s) \<leftarrow> ite_impl_opt fi ft fe s;
       IFimpl a tb fb s}
   | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
-)})"
+)})}"
 
 lemma ite_impl_opt_R: "
   I s

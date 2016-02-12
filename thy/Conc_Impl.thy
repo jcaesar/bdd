@@ -210,46 +210,49 @@ definition param_opt_ci where
   	id \<leftarrow> destrci i bdd;
   	td \<leftarrow> destrci t bdd;
   	ed \<leftarrow> destrci e bdd;
-  	lu \<leftarrow> ht_lookup (i,t,e) (dcl bdd);
-  						return (case lu of Some a \<Rightarrow> Some a | None \<Rightarrow> ( 
+  						return (
   						if id = TD then Some t else
                         if id = FD then Some e else
                         if td = TD \<and> ed = FD then Some i else
                         if t = e then Some t else
                         if ed = TD \<and> i = t then Some tr else
                         if td = FD \<and> i = e then Some fl else
-                        None), bdd)
+                        None, bdd)
   }"
 
 lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
- unfolding param_opt_ci_def brofix.param_opt_def oops
+  oops
 
-(* TODO: nicer/cleaner way to do compare? *)
 partial_function(heap) iteci_opt where
 "iteci_opt i t e s = do {
-  (po,s) \<leftarrow> param_opt_ci i t e s;
-  (lt) \<leftarrow> lowest_topsci [i, t, e] s;
-  (case po of Some b \<Rightarrow> return (b,s) | None \<Rightarrow>
-  (case lt of
-		Some a \<Rightarrow> do {
-			ti \<leftarrow> restrict_topci i a True s;
-			tt \<leftarrow> restrict_topci t a True s;
-			te \<leftarrow> restrict_topci e a True s;
-			fi \<leftarrow> restrict_topci i a False s;
-			ft \<leftarrow> restrict_topci t a False s;
-			fe \<leftarrow> restrict_topci e a False s;
-			(tb,s) \<leftarrow> iteci_opt ti tt te s;
-			(fb,s) \<leftarrow> iteci_opt fi ft fe s;
-			(r,s) \<leftarrow> ifci a tb fb s;
-			cl \<leftarrow> hm_update (i,t,e) r (dcl s);
-			return (r,dcl_update (const cl) s)
-     } 
-  | None \<Rightarrow> raise ''Cannot happen'' ))
-  }"
+  lu \<leftarrow> ht_lookup (i,t,e) (dcl s);
+  (case lu of Some b \<Rightarrow> return (b,s)
+    | None \<Rightarrow> do {
+      (po,s) \<leftarrow> param_opt_ci i t e s;
+      (case po of Some b \<Rightarrow> do {
+        cl \<leftarrow> hm_update (i,t,e) b (dcl s);
+        return (b,dcl_update (const cl) s)}
+      | None \<Rightarrow> do {
+        (lt) \<leftarrow> lowest_topsci [i, t, e] s;
+        (case lt of Some a \<Rightarrow> do {
+			  ti \<leftarrow> restrict_topci i a True s;
+			  tt \<leftarrow> restrict_topci t a True s;
+			  te \<leftarrow> restrict_topci e a True s;
+			  fi \<leftarrow> restrict_topci i a False s;
+			  ft \<leftarrow> restrict_topci t a False s;
+			  fe \<leftarrow> restrict_topci e a False s;
+			  (tb,s) \<leftarrow> iteci_opt ti tt te s;
+			  (fb,s) \<leftarrow> iteci_opt fi ft fe s;
+			  (r,s) \<leftarrow> ifci a tb fb s;
+			  cl \<leftarrow> hm_update (i,t,e) r (dcl s);
+			  return (r,dcl_update (const cl) s)
+       } 
+         | None \<Rightarrow> raise ''Cannot happen'' )})
+  })}"
+
 term iteci_opt
 declare iteci_opt.simps[code]
 
-thm brofix.ite_impl_opt.fixp_induct
 
 (* Proof by copy-paste *)
 lemma iteci_opt_rule: "
