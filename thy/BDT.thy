@@ -254,6 +254,7 @@ termination ifex_ite
 
 
 definition "const x _ = x" (* Mehr Haskell wagen *)
+declare const_def[simp]
 lemma rel_true_false: "(a, Trueif) \<in> bf_ifex_rel \<Longrightarrow> a = const True" "(a, Falseif) \<in> bf_ifex_rel \<Longrightarrow> a = const False"
 	unfolding fun_eq_iff const_def
 	unfolding bf_ifex_rel_def 
