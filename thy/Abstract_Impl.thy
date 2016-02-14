@@ -344,5 +344,42 @@ locale bdd_impl_invar = bdd_impl_cmp +
                                 ospec (IFimpl v t e s'') (\<lambda>(r', s'). r' = r \<and> s' = s'')"
 begin
 
+thm ite_impl.fixp_induct
+thm ifex_ite.induct
+
+lemma ite_impl_state_fixp:
+  "I s \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+       \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r', s'). s' = s'')
+       \<Longrightarrow> ospec (ite_impl ii ti ei s'') (\<lambda>(r', s'). s' = s'')"
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_induct)
+	case goal1 
+	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
+  have sR: "les s s''" using ite_impl_R[OF goal1(3,4,5,6)] goal1(7)
+    by (auto dest!: ospecD2 simp del: ifex_ite.simps)
+  have "I s''" using ite_impl_R[OF goal1(3,4,5,6)] goal1(7)
+    by (auto dest!: ospecD2 simp del: ifex_ite.simps)
+  from sR la2 have la2': "list_all2 (in_rel (R s'')) [ii,ti,ei] [i,t,e]" unfolding les_def by auto
+	show ?case proof(cases "lowest_tops [i,t,e]")
+		case None from goal1(3-6) show ?thesis
+	apply(subst ite_impl.simps)
+	apply(rule obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e] \<and> s'=s''"])
+	apply(rule ospec_cons)
+	apply(rule lowest_tops_impl_R[OF la2'])
+	using `I s''` apply(simp)
+	apply(clarsimp split: prod.splits)
+	apply(simp add: None split: prod.splits)
+	apply(clarsimp)
+	apply(rule ospec_cons)
+	apply(rule case_ifexi_rule[where I'="\<lambda>s'. s'=s''"])
+	using `I s''` apply(simp)
+	using sR unfolding les_def apply(blast)
+	apply(simp)
+	apply(simp)
+	using None apply(simp)
+	using None apply(clarsimp split: prod.splits ifex.splits)
+done
+next
+oops
+
 end
 end
