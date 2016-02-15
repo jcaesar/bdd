@@ -364,45 +364,55 @@ oops (* TODO *)
 
 end
 
-locale bdd_impl_map = bdd_impl_cmp +
-  fixes M :: "'a \<Rightarrow> (('b \<times> 'b \<times> 'b) \<Rightarrow> 'b option)"
-  assumes Fimpl_rule: "I s \<Longrightarrow> ospec (Fimpl s) (\<lambda>(ni, s'). M s = M s')"
-  assumes Timpl_rule: "I s \<Longrightarrow> ospec (Timpl s) (\<lambda>(ni, s'). M s = M s')"
-  assumes IFimpl_rule: "I s \<Longrightarrow> ospec (IFimpl v t e s) (\<lambda>(ni, s'). M s = M s')"
-begin
-
-(* Use this instead of direct lookup ? ? *)
-partial_function(option) m_lookup where
-  "m_lookup i t e s = Some (M s (i,t,e))"
-
 partial_function(option) ite_impl_lu where
-"ite_impl_lu i t e s =
-  (case M s (i,t,e) of Some b \<Rightarrow> Some (b,s) | None \<Rightarrow> do {
-  (ld, s) \<leftarrow>  param_opt_impl i t e s;
+"ite_impl_lu pt i t e s = (let (lti, rti, poi, M, U, IFimpl) = pt in do {
+  lu \<leftarrow> M s (i,t,e);
+  (case lu of Some b \<Rightarrow> Some (b,s) | None \<Rightarrow> do {
+  (ld, s) \<leftarrow>  poi i t e s;
   (case ld of Some b \<Rightarrow> Some (b, s) |
   None \<Rightarrow>
   do {
-	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
+	(lt,_) \<leftarrow> lti [i, t, e] s;
 	(case lt of
 		Some a \<Rightarrow> do {
-			(ti,_) \<leftarrow> restrict_top_impl i a True s;
-			(tt,_) \<leftarrow> restrict_top_impl t a True s;
-			(te,_) \<leftarrow> restrict_top_impl e a True s;
-			(fi,_) \<leftarrow> restrict_top_impl i a False s;
-			(ft,_) \<leftarrow> restrict_top_impl t a False s;
-			(fe,_) \<leftarrow> restrict_top_impl e a False s;
-			(tb,s) \<leftarrow> ite_impl_lu ti tt te s;
-			(fb,s) \<leftarrow> ite_impl_lu fi ft fe s;
-      IFimpl a tb fb s}
-  | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
-)})})"
+			(ti,_) \<leftarrow> rti i a True s;
+			(tt,_) \<leftarrow> rti t a True s;
+			(te,_) \<leftarrow> rti e a True s;
+			(fi,_) \<leftarrow> rti i a False s;
+			(ft,_) \<leftarrow> rti t a False s;
+			(fe,_) \<leftarrow> rti e a False s;
+			(tb,s) \<leftarrow> ite_impl_lu pt ti tt te s;
+			(fb,s) \<leftarrow> ite_impl_lu pt fi ft fe s;
+			(r,s) \<leftarrow> IFimpl a tb fb s;
+			let s = U s (i,t,e) r;
+			Some (r,s)
+			} |
+		None \<Rightarrow> None
+)})})})"
 
-lemma ite_impl_lu_R: "
-      I s
-  \<Longrightarrow> in_rel (R s) xi x \<Longrightarrow> in_rel (R s) yi y \<Longrightarrow> in_rel (R s) zi z
-  \<Longrightarrow> ospec (M s (xi,yi,zi)) (\<lambda>b. (b, ifex_ite_opt x y z) \<in> R s')
-  \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
-  \<Longrightarrow> ospec (ite_impl_opt ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
+locale bdd_impl_map_pre = bdd_impl_cmp +
+  fixes M :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b option option"
+  fixes U :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b \<Rightarrow> 'a"
+begin
+  definition "pt = (lowest_tops_impl, restrict_top_impl, param_opt_impl, M, U, IFimpl)"
+  term "ite_impl_lu pt"
+end
+
+locale bdd_impl_map = bdd_impl_map_pre +
+  assumes M_rule: "I s \<Longrightarrow> ospec (M s (i, t, e)) (\<lambda>l. \<forall>x. l = Some x \<longrightarrow> Some (x,s') = ite_impl_lu p' i t e s)"
+  assumes U_rule: "\<lbrakk>I s; s' = U s (i,t,e) r; Some (r,s'') = ite_impl_lu pt i t e s\<rbrakk> \<Longrightarrow> I s'"
+begin
+
+
+
+lemma ite_impl_lu_R: "I s
+       \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+       \<Longrightarrow> ospec (ite_impl_lu pt ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite i t e) \<in> R s' \<and> I s' \<and> les s s')"
+apply(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
+apply(subst ite_impl_lu.simps)
+apply(subst pt_def)
+apply(subst Let_def)
+apply(unfold prod.simps)
 oops (* TODO *)
 
 
