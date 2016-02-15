@@ -351,14 +351,15 @@ lemma ite_impl_state_fixp:
   "I s \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r', s'). s' = s'')
        \<Longrightarrow> ospec (ite_impl ii ti ei s'') (\<lambda>(r', s'). s' = s'')"
-proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_induct)
-	case goal1 
+proof(induction i t e arbitrary: s ii ti ei s'' rule: ifex_ite.induct)
+	case goal1
+  have inR: "(ii,i) \<in> R s" using goal1 by simp
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
   have sR: "les s s''" using ite_impl_R[OF goal1(3,4,5,6)] goal1(7)
     by (auto dest!: ospecD2 simp del: ifex_ite.simps)
   have "I s''" using ite_impl_R[OF goal1(3,4,5,6)] goal1(7)
     by (auto dest!: ospecD2 simp del: ifex_ite.simps)
-  from sR la2 have la2': "list_all2 (in_rel (R s'')) [ii,ti,ei] [i,t,e]" unfolding les_def by auto
+  from sR la2 have la2': "list_all2 (in_rel (R s'')) [ii,ti,ei] [i,t,e]" using les_def by auto
 	show ?case proof(cases "lowest_tops [i,t,e]")
 		case None from goal1(3-6) show ?thesis
 	apply(subst ite_impl.simps)
@@ -372,14 +373,114 @@ proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_induct)
 	apply(rule ospec_cons)
 	apply(rule case_ifexi_rule[where I'="\<lambda>s'. s'=s''"])
 	using `I s''` apply(simp)
-	using sR unfolding les_def apply(blast)
+	using sR les_def apply(blast)
 	apply(simp)
 	apply(simp)
 	using None apply(simp)
 	using None apply(clarsimp split: prod.splits ifex.splits)
 done
 next
-oops
+	case (Some lv)
+	note mIH = goal1(1,2)[OF Some]
+  thm goal1
+	from goal1(3-6) show ?thesis
+	apply(subst ite_impl.simps)
+	apply(rule obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e] \<and> s' = s''"])
+	apply(rule ospec_cons)
+	apply(rule lowest_tops_impl_R[OF la2'])
+	using `I s''` apply(simp)
+	apply(clarsimp split: prod.splits)
+	apply(simp add: Some split: prod.splits)
+	apply(clarsimp)
+	(* take care of all those restrict_tops *) (* Yeah, i know, I'm to lazy to fix that now *)
+          apply(rule obind_rule, rule restrict_top_impl_spec)
+          using `I s''` apply(simp)
+          using sR les_def apply(blast)
+          apply(clarsimp split: prod.splits)
+          apply(rule obind_rule, rule restrict_top_impl_spec)
+          using `I s''` apply(simp)
+          using sR les_def apply(blast)
+          apply(clarsimp split: prod.splits)
+          apply(rule obind_rule, rule restrict_top_impl_spec)
+          using `I s''` apply(simp)
+          using sR les_def apply(blast)
+          apply(clarsimp split: prod.splits)
+          apply(rule obind_rule, rule restrict_top_impl_spec)
+          using `I s''` apply(simp)
+          using sR les_def apply(blast)
+          apply(clarsimp split: prod.splits)
+          apply(rule obind_rule, rule restrict_top_impl_spec)
+          using `I s''` apply(simp)
+          using sR les_def apply(blast)
+          apply(clarsimp split: prod.splits)
+          apply(rule obind_rule, rule restrict_top_impl_spec)
+          using `I s''` apply(simp)
+          using sR les_def apply(blast)
+          apply(clarsimp split: prod.splits)
+  (* took care of restrict_tops *)
+    apply(insert goal1(7)) apply(subst (asm) ite_impl.simps) 
+    apply(subst (asm) ospec_bind_simp) apply(drule ospecD2) 
+    apply(clarsimp) apply(insert lowest_tops_impl_R[OF la2]) 
+    apply(clarsimp) using Some apply(auto)[1]
+    thm ospecD2[OF restrict_top_impl_spec, of s]
+    apply(subst (asm) ospec_bind_simp) apply(frule ospecD2[OF restrict_top_impl_spec, of s ii i lv True]; clarsimp)
+    apply(subst (asm) ospec_bind_simp) apply(frule ospecD2[OF restrict_top_impl_spec, of s ti t lv True]; clarsimp)
+    apply(subst (asm) ospec_bind_simp) apply(frule ospecD2[OF restrict_top_impl_spec, of s ei e lv True]; clarsimp)
+    apply(subst (asm) ospec_bind_simp) apply(frule ospecD2[OF restrict_top_impl_spec, of s ii i lv False]; clarsimp)
+    apply(subst (asm) ospec_bind_simp) apply(frule ospecD2[OF restrict_top_impl_spec, of s ti t lv False]; clarsimp)
+    apply(subst (asm) ospec_bind_simp) apply(frule ospecD2[OF restrict_top_impl_spec, of s ei e lv False]; clarsimp)
+  apply(rule obind_rule[where Q="\<lambda>(r, s'). s' = s''"])
+  apply(rule mIH(1)[of s])
+  apply(simp)
+    apply(subgoal_tac "cmp a x1") using sR cmp_rule2 apply(auto)[1]
+      using cmp_rule1 les_def sR `I s''` apply(meson)
+    apply(subgoal_tac "cmp aa x1a") using sR cmp_rule2 apply(auto)[1]
+      using cmp_rule1 les_def sR `I s''` apply(meson) 
+    apply(subgoal_tac "cmp ab x1b") using sR cmp_rule2 apply(auto)[1]
+      using cmp_rule1 les_def sR `I s''` apply(meson)
+  thm ospecD2[OF ite_impl_R, of s x1 _ x1a _ x1b]
 
+
+
+  
+
+
+(*
+  using goal1(7) apply(simp) apply(subst (asm) ite_impl.simps) apply(simp add: ospec_bind_simp)
+   apply(drule ospecD2) apply(clarsimp) apply(insert lowest_tops_impl_R[OF la2])
+   apply(clarsimp) using Some apply(auto)[1] apply(simp add: ospec_bind_simp) apply(drule ospecD2) 
+   thm restrict_top_impl_spec[OF goal1(3) inR, of vr vl]
+   apply(insert restrict_top_impl_spec[OF goal1(3) inR, of lv "True"]) apply(clarsimp)
+   apply(subgoal_tac "cmp a x1") using cmp_rule2 apply(blast) 
+   using les_def[of s s''] cmp_rule1[of s''] sR `I s''` apply(blast)
+
+*)
+
+oops
+(*  defer
+  apply(clarsimp split: prod.split)
+  apply(rule obind_rule[where Q="\<lambda>(r, s'). s' = s''"])
+  defer
+  apply(clarsimp split: prod.split)
+
+
+
+  apply(simp; fail)+
+  apply(rule obind_rule)
+  apply(rule mIH(1))
+  apply(simp; fail)+ *)
+(*	apply(rule obind_rule)
+	apply(rule mIH(1))
+	apply(simp;fail)+
+	apply(clarsimp)
+	apply(rule obind_rule)
+	apply(rule mIH(2))
+	apply(simp add: les_def;fail)+
+	apply(simp split: prod.splits)
+	apply(rule ospec_cons)
+	apply(rule IFimpl_rule)
+	apply(simp add: les_def;fail)+
+	using les_def les_trans apply blas *)
+	done
 end
 end
