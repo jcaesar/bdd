@@ -284,8 +284,10 @@ locale bdd_impl_cmp = bdd_impl +
   assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s"
 begin
 
-lemma "(ni, Trueif) \<in> R s \<Longrightarrow> (ni', Trueif) \<in> R s \<Longrightarrow> ni = ni'"
-  
+lemma DESTRimpl_Some: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. True)"
+  apply(cases i)
+    apply(auto intro: ospec_cons dest: DESTRimpl_rules)
+done
 
 fun param_opt_impl where
   "param_opt_impl i t e s =  do {
@@ -302,38 +304,26 @@ fun param_opt_impl where
     if td = FD \<and> cmp i e then Some e else
     None), s)}"
 
+lemma param_opt_impl_les: 
+  assumes "I s" "(ii,i) \<in> R s" "(ti,t) \<in> R s" "(ei,e) \<in> R s"
+  shows "ospec (param_opt_impl ii ti ei s) 
+               (\<lambda>(r,s'). les s s')"
+  using assms apply(subst param_opt_impl.simps)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule Timpl_rule) apply(assumption) apply(clarify)
+    apply(rule obind_rule) apply(rule Fimpl_rule) apply(assumption) apply(clarify)
+    apply(subst ospec_alt) apply(clarsimp) using les_trans apply(blast)
+done
+
 lemma param_opt_impl_R: 
   assumes "I s" "(ii,i) \<in> R s" "(ti,t) \<in> R s" "(ei,e) \<in> R s"
   shows "ospec (param_opt_impl ii ti ei s) 
                (\<lambda>(r,s'). case r of None \<Rightarrow> param_opt i t e = None
-                                 | Some r \<Rightarrow> (param_opt i t e  = Some r' \<and> (r, r') \<in> R s)
-                \<and> les s s')"
-  apply(cases i; cases t; cases e)
-  using assms apply(subst param_opt_impl.simps)
-  apply(rule obind_rule)
-  apply(rule DESTRimpl_rule1)
-  apply(assumption)
-  apply(simp)
-  apply(rule obind_rule)
-  apply(rule DESTRimpl_rule1)
-  apply(assumption)
-  apply(simp)
-  apply(rule obind_rule)
-  apply(rule DESTRimpl_rule1)
-  apply(assumption)
-  apply(simp)
-  apply(rule obind_rule)
-  apply(rule Timpl_rule)
-  apply(assumption)
-  apply(simp)
-  apply(clarsimp)
-  apply(rule obind_rule)
-  apply(rule Fimpl_rule)
-  apply(assumption)
-  apply(clarsimp)
-  apply(simp add: param_opt_def)
-  using cmp_rule1 cmp_rule2 defer
-oops (* Pls ignore *)
+                                 | Some r \<Rightarrow> (\<exists>r'. param_opt i t e  = Some r' \<and> (r, r') \<in> R s))"
+  (* I need help with the proof setup here, very tedious *)
+oops (* TODO me hard *)
 
 partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s = do {

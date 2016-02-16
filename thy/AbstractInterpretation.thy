@@ -185,8 +185,10 @@ lemma True_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Trueif)\<in>Rmi s \<long
 lemma False_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Falseif)\<in>Rmi s \<longleftrightarrow> ni=0"
   using Rmi_def Rmi_g.simps(1) Rmi_sv(2) by blast
 
+term "%i x t. dcl_update (const ((dcl i)(x \<mapsto> t))) i"
 
-interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op ="
+interpretation brofix!: bdd_impl_map bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op =" 
+                        "%x i . Some ((dcl x) i)" "%i x t. dcl_update (const ((dcl i)(x \<mapsto> t))) i"
 proof  -
   note s = bdd_impl_pre.les_def[simp] Rmi_def
 
