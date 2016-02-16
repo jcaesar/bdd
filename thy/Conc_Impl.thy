@@ -246,7 +246,6 @@ lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
 
 partial_function(heap) iteci_opt where
 "iteci_opt i t e s = do {
-  s \<leftarrow> (if the_size (dcli s) \<ge> 5000 then do {l \<leftarrow> hm_new; return (dcli_update (const l) s)} else return s);
   lu \<leftarrow> ht_lookup (i,t,e) (dcli s);
   (case lu of Some b \<Rightarrow> return (b,s)
     | None \<Rightarrow> do {

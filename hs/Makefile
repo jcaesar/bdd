@@ -5,7 +5,7 @@ TARGETS=SATToBDDot BDDCal Urquhart
 all: $(TARGETS)
 
 $(TARGETS):
-	ghc -fno-warn-tabs -O2 -rtsopts $@.hs -igen
+	ghc -fno-warn-tabs -O4 $@.hs -igen
 
 clean:
 	rm -f SATToBDDot BDDCal *.hi *.o gen/*.hi gen/*.o
