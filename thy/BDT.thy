@@ -263,14 +263,7 @@ lemma rel_if: "(a, IF v t e) \<in> bf_ifex_rel \<Longrightarrow> (ta, t) \<in> b
 	unfolding fun_eq_iff const_def
 	unfolding bf_ifex_rel_def 
 	by simp_all
-lemma "as v \<Longrightarrow> (a, (IF v t e)) \<in> bf_ifex_rel \<Longrightarrow> (bf2_restrict v True a, t) \<in> bf_ifex_rel"
-unfolding in_rel_def[symmetric]
-unfolding bf_ifex_rel_def
-unfolding in_rel_Collect_split_eq
-unfolding val_ifex.simps
-unfolding ifex_ordered.simps
-unfolding bf_restrict_def
-oops
+
 	
 lemma ifex_ordered_implied: "(a, b) \<in> bf_ifex_rel \<Longrightarrow> ifex_ordered b" unfolding bf_ifex_rel_def by simp
 lemma ifex_minimal_implied: "(a, b) \<in> bf_ifex_rel \<Longrightarrow> ifex_minimal b" unfolding bf_ifex_rel_def by simp
@@ -278,8 +271,6 @@ lemma ifex_minimal_implied: "(a, b) \<in> bf_ifex_rel \<Longrightarrow> ifex_min
 lemma single_valued_rel: "single_valued (bf_ifex_rel\<inverse>)"
 	unfolding single_valued_def
 	unfolding bf_ifex_rel_def
-	unfolding converse_unfold
-	unfolding in_rel_def[symmetric]  in_rel_Collect_split_eq
 	by blast
 
 
@@ -427,10 +418,10 @@ proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
 qed (simp add: bf_ite_def bf_ifex_rel_def)+
 
 theorem ifex_ite_rel_bf: "
-	in_rel bf_ifex_rel fi i \<Longrightarrow>
-	in_rel bf_ifex_rel ft t \<Longrightarrow>
-	in_rel bf_ifex_rel fe e \<Longrightarrow>
-	in_rel bf_ifex_rel (bf_ite fi ft fe) (ifex_ite i t e)"
+	(fi,i) \<in> bf_ifex_rel \<Longrightarrow>
+	(ft,t) \<in> bf_ifex_rel \<Longrightarrow>
+	(fe,e) \<in> bf_ifex_rel \<Longrightarrow>
+	((bf_ite fi ft fe), (ifex_ite i t e)) \<in> bf_ifex_rel"
 by (auto simp add:  bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar val_ifex_ite
          simp del: ifex_ite.simps)
 
@@ -443,6 +434,14 @@ definition param_opt where "param_opt i t e =
    if t = Falseif \<and> i = e then Some Falseif else
    None)"
 
+lemma param_opt_ifex_ite_eq: "ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow>
+       param_opt i t e = Some r \<Longrightarrow> r = ifex_ite i t e"
+  apply(rule ro_ifex_unique)
+    apply(subst (asm) param_opt_def) apply(simp split: split_if_asm)
+    using order_ifex_ite_invar minimal_ifex_ite_invar apply(blast)
+    apply(subst val_ifex_ite[symmetric])
+      apply(auto split: split_if_asm simp add: bf_ite_def param_opt_def val_ifex_ite[symmetric])
+done
 
 function ifex_ite_opt :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
   "ifex_ite_opt i t e = (case param_opt i t e of Some b \<Rightarrow> b | None \<Rightarrow>
@@ -458,65 +457,39 @@ termination ifex_ite_opt
   by (relation "measure (\<lambda>(i,t,e). size i + size t + size e)", rule wf_measure, unfold in_measure) 
      (simp_all only: termlemma)
 
+lemma ifex_ite_opt_eq: "
+ 	ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow> ifex_ite_opt i t e = ifex_ite i t e"
+apply(induction i t e rule: ifex_ite_opt.induct)
+  apply(subst ifex_ite_opt.simps)
+  apply(case_tac "\<exists>r. param_opt i t e = Some r")
+    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
+    apply(rule param_opt_ifex_ite_eq)
+      apply(auto simp add: bf_ifex_rel_def)[4]
+    
+    apply(clarsimp simp del: restrict_top.simps ifex_ite.simps ifex_ite_opt.simps)
+    apply(case_tac "lowest_tops [i,t,e] = None")
+      apply(clarsimp)
+      
+      apply(clarsimp simp del: restrict_top.simps ifex_ite.simps ifex_ite_opt.simps)
+      apply(subst ifex_ite.simps)
+      apply(rename_tac i t e y)
+      apply(subgoal_tac "(ifex_ite_opt (restrict_top i y True) (restrict_top t y True) (restrict_top e y True)) =
+                     (ifex_ite (restrict_top i y True) (restrict_top t y True) (restrict_top e y True))")
+      apply(subgoal_tac "(ifex_ite_opt (restrict_top i y False) (restrict_top t y False) (restrict_top e y False)) =
+                     (ifex_ite (restrict_top i y False) (restrict_top t y False) (restrict_top e y False))")
+      apply(force)
+      using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
+      using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
+done (* TODO: Clean me *)
 
-lemma ifex_ite_cases:
-      assumes "in_rel bf_ifex_rel fi i" "in_rel bf_ifex_rel ft t" "in_rel bf_ifex_rel fe e"
-      shows "ifex_ite Trueif t e = t" "ifex_ite Falseif t e = e"  "ifex_ite i t t = t"
-            "ifex_ite i Trueif Falseif = i"
-proof -
-  show "ifex_ite Trueif t e = t"
-    proof(rule ro_ifex_unique)
-    have 0: "\<And>ass. val_ifex (ifex_ite Trueif t e) ass = (bf_ite (\<lambda>_. True) ft fe) ass"
-      apply(rule val_ifex_ite[of "(%_. True)" Trueif ft t fe e, symmetric])
-      using assms by (auto simp add: bf_ifex_rel_def)
-    show "\<And>ass. val_ifex (ifex_ite Trueif t e) ass = val_ifex t ass" apply(subst 0)
-      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
-  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
-                     simp del: ifex_ite.simps)
-next
-  show "ifex_ite Falseif t e = e"
-    proof(rule ro_ifex_unique)
-    have 0: "\<And>ass. val_ifex (ifex_ite Falseif t e) ass = (bf_ite (\<lambda>_. False) ft fe) ass"
-      apply(rule val_ifex_ite[of "(%_. False)" Falseif ft t fe e, symmetric])
-      using assms by (auto simp add: bf_ifex_rel_def)
-    show "\<And>ass. val_ifex (ifex_ite Falseif t e) ass = val_ifex e ass" apply(subst 0)
-      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
-  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
-                     simp del: ifex_ite.simps)
-next
-  show "ifex_ite i t t = t"
-    proof(rule ro_ifex_unique)
-    have 0: "\<And>ass. val_ifex (ifex_ite i t t) ass = (bf_ite fi ft ft) ass"
-      apply(rule val_ifex_ite[of fi i ft t ft t, symmetric])
-      using assms by (auto simp add: bf_ifex_rel_def)
-    show "\<And>ass. val_ifex (ifex_ite i t t) ass = val_ifex t ass" apply(subst 0)
-      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
-  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
-                     simp del: ifex_ite.simps)
-next
-  show "ifex_ite i Trueif Falseif = i"
-    proof(rule ro_ifex_unique)
-    have 0: "\<And>ass. val_ifex (ifex_ite i Trueif Falseif) ass = (bf_ite fi (\<lambda>_. True) (\<lambda>_. False)) ass"
-      apply(rule val_ifex_ite[symmetric])
-      using assms by (auto simp add: bf_ifex_rel_def)
-    show "\<And>ass. val_ifex (ifex_ite i Trueif Falseif) ass = val_ifex i ass" apply(subst 0)
-      using assms by(auto simp add: bf_ite_def bf_ifex_rel_def)
-  qed (insert assms, auto simp add: bf_ifex_rel_def order_ifex_ite_invar minimal_ifex_ite_invar
-                     simp del: ifex_ite.simps)
-qed
-
-thm ifex_ite_opt.induct
-
-lemma "
- 	in_rel bf_ifex_rel fi i \<Longrightarrow>
-	in_rel bf_ifex_rel ft t \<Longrightarrow>
-	in_rel bf_ifex_rel fe e \<Longrightarrow> ifex_ite_opt i t e = ifex_ite i t e"
-oops (* TODO *)
+definition "map_invar m = 
+   (\<forall>i ii t ti e ei r ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
+            m ii ti ei = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
 
 fun ifex_sat where
 "ifex_sat Trueif = Some (const False)" |
 "ifex_sat Falseif = None" |
-"ifex_sat (IF v t e) = 
+"ifex_sat (IF v t e) =
 	(case ifex_sat e of 
 		Some a \<Rightarrow> Some (a(v:=False)) |
 		None \<Rightarrow> (case ifex_sat t of
