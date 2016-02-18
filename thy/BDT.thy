@@ -484,7 +484,35 @@ done (* TODO: Clean me *)
 
 definition "map_invar m = 
    (\<forall>i ii t ti e ei r ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
-            m ii ti ei = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
+            m (ii,ti,ei) = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
+
+function ifex_ite_lu where
+"ifex_ite_lu m i t e =
+  (case m (i,t,e) of Some r \<Rightarrow> (m,r) | None \<Rightarrow> 
+    (case param_opt i t e of Some b \<Rightarrow> (m,b) | None \<Rightarrow>
+       (case lowest_tops [i, t, e] of Some x \<Rightarrow>
+          (let (m, l) = ifex_ite_lu m (restrict_top i x True) (restrict_top t x True) (restrict_top e x True);
+               (m, r) = ifex_ite_lu m (restrict_top i x False) (restrict_top t x False) (restrict_top e x False);
+               b = IFC x l r;
+               m = m((i,t,e) \<mapsto> b)
+            in (m , b))
+          | None \<Rightarrow> (case i of Trueif \<Rightarrow> (m,t) | Falseif \<Rightarrow> (m,e)))))"
+by pat_completeness auto
+
+termination ifex_ite_lu
+  apply (relation "measure (\<lambda>(m,i,t,e). size i + size t + size e)", rule wf_measure)
+  unfolding in_measure using termlemma by fastforce+
+
+declare restrict_top.simps[simp del] ifex_ite.simps[simp del] ifex_ite_opt.simps[simp del]
+        ifex_ite_lu.simps[simp del]
+
+lemma ifex_ite_opt_eq: "
+ 	ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow> map_invar m \<Longrightarrow> 
+  ifex_ite_lu m i t e = (m', r) \<Longrightarrow> r = ifex_ite_opt i t e \<and> map_invar m'"
+oops
+
+
+
 
 fun ifex_sat where
 "ifex_sat Trueif = Some (const False)" |
