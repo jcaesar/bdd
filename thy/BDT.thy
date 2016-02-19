@@ -131,7 +131,7 @@ lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> (
 qed (fastforce intro: roifex_Falseif_unique roifex_Trueif_unique)+
 qed (fastforce intro: roifex_Falseif_unique[symmetric] roifex_Trueif_unique[symmetric])+
 
-theorem "single_valued bf_ifex_rel" "single_valued (bf_ifex_rel\<inverse>)"
+theorem bf_ifex_rel_single: "single_valued bf_ifex_rel" "single_valued (bf_ifex_rel\<inverse>)"
   unfolding single_valued_def bf_ifex_rel_def using ro_ifex_unique by auto
 
 lemma nonempty_if_var_set: "ifex_vars (IF v t e) \<noteq> []" by auto
@@ -486,6 +486,18 @@ definition "map_invar m =
    (\<forall>i ii t ti e ei r ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
             m (ii,ti,ei) = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
 
+find_theorems single_valued
+
+lemma map_invar_update_lem: "
+  map_invar m \<Longrightarrow> (ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow>
+  (bf_ite ia ta ea, r) \<in> bf_ifex_rel \<Longrightarrow> map_invar (m((i,t,e) \<mapsto> r))"
+  unfolding map_invar_def 
+  apply(clarsimp)
+  apply(subgoal_tac "ia = ib \<and> ta = tb \<and> ea = eb")
+  apply(simp)                                       
+  using single_valuedD[OF bf_ifex_rel_single(2)] apply (blast)
+done
+
 function ifex_ite_lu where
 "ifex_ite_lu m i t e =
   (case m (i,t,e) of Some r \<Rightarrow> (m,r) | None \<Rightarrow> 
@@ -503,16 +515,29 @@ termination ifex_ite_lu
   apply (relation "measure (\<lambda>(m,i,t,e). size i + size t + size e)", rule wf_measure)
   unfolding in_measure using termlemma by fastforce+
 
-declare restrict_top.simps[simp del] ifex_ite.simps[simp del] ifex_ite_opt.simps[simp del]
-        ifex_ite_lu.simps[simp del]
 
-lemma ifex_ite_opt_eq: "
- 	ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow> map_invar m \<Longrightarrow> 
+lemma restrict_top_bf_ifex_rel: 
+"(f, i) \<in> bf_ifex_rel \<Longrightarrow> \<exists>f'. (f', restrict_top i var val) \<in> bf_ifex_rel"
+  unfolding bf_ifex_rel_def using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar
+by fast
+
+lemma ifex_ite_lu_eq: "
+ 	(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
   ifex_ite_lu m i t e = (m', r) \<Longrightarrow> r = ifex_ite_opt i t e \<and> map_invar m'"
-oops
+apply(induction i t e arbitrary: ia ta ea m m' r rule: ifex_ite_opt.induct)
+sorry (* TODO, not hard, just tedious *)
 
+lemma "(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
+       ifex_ite_lu m i t e = (m', r) \<Longrightarrow> (bf_ite ia ta ea, r) \<in> bf_ifex_rel"
+  apply(subst ifex_ite_lu_eq)
+  apply(blast)+
+  apply(subst ifex_ite_opt_eq)
+  apply(auto simp add: bf_ifex_rel_def)[3]
+  using ifex_ite_rel_bf by fast
 
-
+lemma "(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
+       ifex_ite_lu m i t e = (m', r) \<Longrightarrow> map_invar m'"
+  using ifex_ite_lu_eq by blast
 
 fun ifex_sat where
 "ifex_sat Trueif = Some (const False)" |
