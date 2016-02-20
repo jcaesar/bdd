@@ -131,7 +131,7 @@ lemma restrict_top_alt: "restrict_top n var val = (case n of
   (IF v t e) \<Rightarrow> (if v = var then (if val then t else e) else (IF v t e))
 | _ \<Rightarrow> n)"
   apply (induction n var val rule: restrict_top.induct)
-  apply simp_all
+  apply (simp_all add: restrict_top.simps)
   done
 
 lemma restrict_top_impl_spec: "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_top_impl ni vr vl s) (\<lambda>(res,s'). (res, restrict_top n vr vl) \<in> R s \<and> s'=s)"
@@ -287,8 +287,12 @@ term IFimpl
 locale bdd_impl_cmp = bdd_impl +
   fixes cmp :: "'b \<Rightarrow> 'b \<Rightarrow> bool"
   assumes cmp_rule1: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
-  assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s"
+  assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> i = i'"
 begin
+
+lemma cmp_rule_eq: "I s \<Longrightarrow>  (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> cmp ni ni' \<longleftrightarrow> i = i'"
+  using cmp_rule1 cmp_rule2 by force
+
 
 lemma DESTRimpl_Some: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. True)"
   apply(cases i)
@@ -297,39 +301,56 @@ done
 
 fun param_opt_impl where
   "param_opt_impl i t e s =  do {
-    id \<leftarrow> DESTRimpl i s;
-    td \<leftarrow> DESTRimpl t s;
-    ed \<leftarrow> DESTRimpl e s;
+    ii \<leftarrow> DESTRimpl i s;
+    ti \<leftarrow> DESTRimpl t s;
+    ei \<leftarrow> DESTRimpl e s;
     (tn,s) \<leftarrow> Timpl s;
     (fn,s) \<leftarrow> Fimpl s;
-    Some ((if id = TD then Some t else
-    if id = FD then Some e else
-    if td = TD \<and> ed = FD then Some i else
+    Some ((if ii = TD then Some t else
+    if ii = FD then Some e else
+    if ti = TD \<and> ei = FD then Some i else
     if cmp t e then Some t else
-    if ed = TD \<and> cmp i t then Some t else
-    if td = FD \<and> cmp i e then Some e else
+    if ei = TD \<and> cmp i t then Some tn else
+    if ti = FD \<and> cmp i e then Some fn else
     None), s)}"
 
-lemma param_opt_impl_les: 
+declare param_opt_impl.simps[simp del]
+
+lemma param_opt_impl_lesI: 
   assumes "I s" "(ii,i) \<in> R s" "(ti,t) \<in> R s" "(ei,e) \<in> R s"
   shows "ospec (param_opt_impl ii ti ei s) 
-               (\<lambda>(r,s'). les s s')"
+               (\<lambda>(r,s'). I s' \<and> les s s')"
   using assms apply(subst param_opt_impl.simps)
-    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
-    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
-    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
-    apply(rule obind_rule) apply(rule Timpl_rule) apply(assumption) apply(clarify)
-    apply(rule obind_rule) apply(rule Fimpl_rule) apply(assumption) apply(clarify)
-    apply(subst ospec_alt) apply(clarsimp) using les_trans apply(blast)
+    apply(auto simp add: param_opt_def les_def intro!: obind_rule 
+               dest: DESTRimpl_Some Timpl_rule Fimpl_rule)
 done
 
 lemma param_opt_impl_R: 
   assumes "I s" "(ii,i) \<in> R s" "(ti,t) \<in> R s" "(ei,e) \<in> R s"
-  shows "ospec (param_opt_impl ii ti ei s) 
+  shows "ospec (param_opt_impl ii ti ei s)
                (\<lambda>(r,s'). case r of None \<Rightarrow> param_opt i t e = None
-                                 | Some r \<Rightarrow> (\<exists>r'. param_opt i t e  = Some r' \<and> (r, r') \<in> R s))"
-  (* I need help with the proof setup here, very tedious *)
-oops (* TODO me hard *)
+                                 | Some r \<Rightarrow> (\<exists>r'. param_opt i t e  = Some r' \<and> (r, r') \<in> R s'))"
+apply(cases i)
+    using assms apply(subst param_opt_impl.simps)
+    apply(rule obind_rule) apply(rule DESTRimpl_rule1) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule Timpl_rule) apply(assumption) apply(clarify)
+    apply(rule obind_rule) apply(rule Fimpl_rule) apply(assumption)
+    apply(clarsimp simp add: param_opt_def les_def)
+  using assms apply(subst param_opt_impl.simps)
+    apply(rule obind_rule) apply(rule DESTRimpl_rule2) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule DESTRimpl_Some) apply(assumption) apply(simp)
+    apply(rule obind_rule) apply(rule Timpl_rule) apply(assumption) apply(clarify)
+    apply(rule obind_rule) apply(rule Fimpl_rule) apply(assumption)
+    apply(clarsimp simp add: param_opt_def les_def)
+  using assms apply(subst param_opt_impl.simps)
+    apply(rule obind_rule) apply(rule DESTRimpl_rule3) apply(assumption) apply(simp)
+  apply(cases t; cases e)
+    apply(auto simp add: param_opt_def les_def cmp_rule_eq intro!: obind_rule 
+               dest: DESTRimpl_rules Timpl_rule Fimpl_rule) (* takes forever *)
+done
 
 partial_function(option) ite_impl_opt where
 "ite_impl_opt i t e s = do {
@@ -352,11 +373,56 @@ partial_function(option) ite_impl_opt where
   | None \<Rightarrow> case_ifexi (\<lambda>_.(Some (t,s))) (\<lambda>_.(Some (e,s))) (\<lambda>_ _ _ _. None) i s 
 )})}"
 
+lemma ospec_and: "ospec f P \<Longrightarrow> ospec f Q \<Longrightarrow> ospec f (\<lambda>x. P x \<and> Q x)"
+  using ospecD2 by force
+
+find_theorems lowest_tops
+
 lemma ite_impl_opt_R: "
   I s
   \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
   \<Longrightarrow> ospec (ite_impl_opt ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
-oops (* TODO *)
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct)
+  note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
+	case goal1 
+	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
+ note mIH = goal1(1,2)
+	from goal1(3-6) show ?case
+apply(cases "param_opt i t e")
+  defer
+  apply(subst ite_impl_opt.simps)
+  apply(rule obind_rule)
+  apply(rule ospec_and[OF param_opt_impl_R param_opt_impl_lesI])
+  apply(auto simp add: les_def ifex_ite_opt.simps split: option.splits)[9]
+  apply(frule param_opt_lowest_tops_lem)
+  apply(clarsimp)
+	apply(subst ite_impl_opt.simps)
+  apply(rule obind_rule)
+  apply(rule ospec_and[OF param_opt_impl_R param_opt_impl_lesI])
+  apply(auto split: option.splits)[8]
+  apply(clarsimp split: option.splits)
+	apply(rule obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e]"])
+	apply(rule ospec_cons)
+	apply(rule lowest_tops_impl_R)
+  using les_def apply(fastforce)
+	apply(assumption)
+  apply(fastforce)
+	using BDT.param_opt_lowest_tops_lem apply(clarsimp split: prod.splits)
+	(* take care of all those restrict_tops *)
+	apply(rule obind_rule, rule restrict_top_impl_spec, assumption+, auto simp add: les_def split: prod.splits)+
+	apply(rule obind_rule)
+	apply(rule mIH(1))
+	apply(simp add: les_def;fail)+
+	apply(clarsimp)
+	apply(rule obind_rule)
+	apply(rule mIH(2))
+	apply(simp add: les_def;fail)+
+	apply(simp add: ifex_ite_opt.simps split: prod.splits)
+	apply(rule ospec_cons)
+	apply(rule IFimpl_rule)
+	apply(auto simp add: les_def;fail)+
+done
+qed
 
 end
 
