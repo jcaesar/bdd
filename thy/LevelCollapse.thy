@@ -87,19 +87,12 @@ lemma "
 	apply assumption
 done
 
-code_printing code_module "ArrayBlit" \<rightharpoonup> (Haskell)
-{*
-	import qualified Heap;
-	blita :: forall a. Heap.STArray Heap.RealWorld a -> Integer -> Heap.STArray Heap.RealWorld a -> Integer -> Integer -> Heap.ST Heap.RealWorld ();
-	blita _ _  _ _  0 = return ();
-	blita s si d di l = do {
-		x <- Heap.readArray s si;
-		Heap.writeArray d di x;
-		blita s (si+1) d (di+1) (l-1);
-	};
-*}
-code_printing constant blit' \<rightharpoonup>
-   (Haskell) "ArrayBlit.blita"
+(* I had some nice code_printing setup here, to implement blita/blit'. But that only did what would have been generated anyway *)
+lemma [code del]:
+    "blit src si dst di len
+      = blit' src (integer_of_nat si) dst (integer_of_nat di)
+          (integer_of_nat len)" by (simp add: blit'_def)
+declare blit_def[code]
 
 (* Todo: Verify all of these\<dots>, except graphifyci *)
 export_code open iteci_opt iteci notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
