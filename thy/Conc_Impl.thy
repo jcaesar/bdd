@@ -55,6 +55,9 @@ definition destrci :: "nat \<Rightarrow> bddi \<Rightarrow> (nat, nat) IFEXD Hea
 
 term "brofix.les"
 
+lemma emptyci_rule[sep_heap_rules]: "<emp> emptyci <is_bdd_impl emptymi>\<^sub>t"
+	by(sep_auto simp: is_bdd_impl_def emptyci_def emptymi_def)
+
 lemma [sep_heap_rules]: "tmi' bdd = Some (p,bdd') 
   \<Longrightarrow> <is_bdd_impl bdd bddi> 
         tci bddi
@@ -76,7 +79,7 @@ lemma [sep_heap_rules]: "ifmi' v t e bdd = Some (p, bdd') \<Longrightarrow>
 	  split: prod.splits if_splits Option.bind_splits)
 done
 
-lemma [sep_heap_rules]: "
+lemma destrci_rule[sep_heap_rules]: "
 	destrmi' n bdd = Some r \<Longrightarrow>
 	<is_bdd_impl bdd bddi> destrci n bddi
 	<\<lambda>r'. is_bdd_impl bdd bddi * \<up>(r' = r)>" 

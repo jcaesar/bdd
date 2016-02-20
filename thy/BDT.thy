@@ -209,8 +209,7 @@ by (induction k rule: lowest_tops.induct) simp_all
 lemma lowest_tops_in: "lowest_tops k = Some l \<Longrightarrow> l \<in> set (concat (map ifex_vars k))"
   by(induction k rule: lowest_tops.induct) (simp_all split: option.splits if_splits add: min_def)
 
-definition "IFC v t e \<equiv> (if t = e then t else IF v t e)" 
-
+definition "IFC v t e \<equiv> (if t = e then t else IF v t e)"
 
 function ifex_ite :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
   "ifex_ite i t e = (case lowest_tops [i, t, e] of Some x \<Rightarrow> 
@@ -664,5 +663,30 @@ proof(rule ccontr)
 	from goal1(3) obtain as where "ifex_sat i = Some as" by blast
 	from ifex_sat_SomeD[OF goal1(1) this] show False using goal1(2) by simp
 qed
+
+lemma bf_ifex_rel_consts[simp,intro!]:
+	"(bf_True, Trueif) \<in> bf_ifex_rel"
+	"(bf_False, Falseif) \<in> bf_ifex_rel"
+by(fastforce simp add: bf_ifex_rel_def bf_True_def bf_False_def)+
+lemma bf_ifex_rel_lit[simp,intro!]:
+	"(bf_lit v, IFC v Trueif Falseif) \<in> bf_ifex_rel"
+by(simp add: bf_ifex_rel_def IFC_def bf_lit_def)
+
+lemma bf_ifex_rel_consts_ensured[simp]: 
+	"(bf_True,x) \<in> bf_ifex_rel \<longleftrightarrow> (x = Trueif)"
+	"(bf_False,x) \<in> bf_ifex_rel \<longleftrightarrow> (x = Falseif)"
+	apply(rule)
+	apply(rule roifex_Trueif_unique; (simp add: bf_ifex_rel_def bf_True_def; fail))
+	apply(clarify)
+	apply(rule)
+	apply(rule roifex_Falseif_unique; (simp add: bf_ifex_rel_def bf_False_def; fail))
+	apply(clarify)
+done
+
+(* obviously, we need the reverse, too *sigh* *)
+lemma bf_ifex_rel_consts_ensured_rev[simp]: 
+	"(x,Trueif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_True)"
+	"(x,Falseif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_False)"
+	by(simp_all add: bf_True_def bf_False_def bf_ifex_rel_def fun_eq_iff)
 
 end

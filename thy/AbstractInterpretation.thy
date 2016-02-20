@@ -7,6 +7,8 @@ record bdd =
 	dpm :: "(nat \<times> nat \<times> nat) pointermap"
 	dcl :: "((nat \<times> nat \<times> nat),nat) map"
 
+definition "emptymi \<equiv> \<lparr>dpm = empty_pointermap, dcl = Map.empty\<rparr>"
+
 fun destrmi :: "nat \<Rightarrow> bdd \<Rightarrow> (nat, nat) IFEXD" where
 "destrmi 0 bdd = FD" |
 "destrmi (Suc 0) bdd = TD" |
@@ -38,6 +40,10 @@ lemma [simp]:
 
 definition "ifexd_valid bdd e \<equiv> (case e of IFD _ t e \<Rightarrow> bdd_node_valid bdd t \<and> bdd_node_valid bdd e | _ \<Rightarrow> True)"
 definition "bdd_sane bdd \<equiv> pointermap_sane (dpm bdd)"
+
+lemma [simp,intro!]: "bdd_sane emptymi" 
+	unfolding emptymi_def bdd_sane_def bdd.simps 
+by simp
 
 lemma prod_split3: "P (case prod of (x, xa, xaa) \<Rightarrow> f x xa xaa) = (\<forall>x1 x2 x3. prod = (x1, x2, x3) \<longrightarrow> P (f x1 x2 x3))"
 by(simp split: prod.splits)

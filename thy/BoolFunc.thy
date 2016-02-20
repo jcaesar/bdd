@@ -3,7 +3,7 @@ theory BoolFunc
 imports Main
 begin
 text{*
-	General thoughts on infinite arity boolean functions…
+	The end result of our implementation is verified against these functions:
 *}
 type_synonym 'a boolfunc = "('a \<Rightarrow> bool) \<Rightarrow> bool"
 
@@ -16,7 +16,23 @@ text{* A quick demonstration: *}
 definition "bf_and a b \<equiv> bf_ite a b bf_False"
 lemma "(bf_and a b) as \<longleftrightarrow> a as \<and> b as" unfolding bf_and_def  bf_ite_def bf_False_def bf_True_def by meson 
 definition "bf_not b \<equiv> bf_ite b bf_False bf_True"
-lemma "bf_not a as \<longleftrightarrow> \<not>a as" unfolding bf_not_def bf_ite_def bf_False_def bf_True_def by meson
+lemma bf_not_alt: "bf_not a as \<longleftrightarrow> \<not>a as" unfolding bf_not_def bf_ite_def bf_False_def bf_True_def by meson
+text{* For convenience, we want a few functions more: *}
+definition "bf_or a b \<equiv> bf_ite a bf_True b"
+definition "bf_lit v \<equiv> (\<lambda>l. l v)"
+definition "bf_if v t e \<equiv> bf_ite (bf_lit v) t e"
+lemma bf_if_alt: "bf_if v t e = (\<lambda>l. if l v then t l else e l)" unfolding bf_if_def bf_ite_def bf_lit_def ..
+definition "bf_nand a b = bf_not (bf_and a b)"
+definition "bf_nor a b = bf_not (bf_or a b)"
+definition "bf_biimp a b = (bf_ite a b (bf_not b))"
+lemma bf_biimp_alt: "bf_biimp a b = (\<lambda>l. a l \<longleftrightarrow> b l)" unfolding bf_biimp_def bf_not_def bf_ite_def bf_False_def bf_True_def by(simp add: fun_eq_iff)
+definition "bf_xor a b = bf_not (bf_biimp a b)"
+lemma bf_xor_alt: "bf_xor a b = (bf_ite a (bf_not b) b)" (* two application version *) 
+	unfolding bf_xor_def bf_biimp_def bf_not_def
+	unfolding bf_False_def bf_True_def
+	unfolding bf_ite_def
+	by simp
+text{* All of these are implemented and had their implementation verified. *}
 
 
 subsection{* Shannon decomposition *}
