@@ -521,23 +521,77 @@ lemma restrict_top_bf_ifex_rel:
   unfolding bf_ifex_rel_def using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar
 by fast
 
+declare ifex_ite.simps[simp del] ifex_ite_opt.simps[simp del] ifex_ite_lu.simps[simp del]
+        restrict_top.simps[simp del] lowest_tops.simps[simp del]
+
+thm ifex.distinct
+
+lemma param_opt_lowest_tops_lem: "param_opt i t e = None \<Longrightarrow> \<exists>y. lowest_tops [i,t,e] = Some y"
+  apply(subgoal_tac "i \<noteq> Trueif \<and> i \<noteq> Falseif")
+  apply(subgoal_tac "\<exists>x l r. i = IF x l r")
+  apply(clarsimp simp add: lowest_tops.simps)
+  using ifex.exhaust apply(metis)
+by (auto simp add: param_opt_def)
+  
+
+
 lemma ifex_ite_lu_eq: "
  	(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
-  ifex_ite_lu m i t e = (m', r) \<Longrightarrow> r = ifex_ite_opt i t e \<and> map_invar m'"
+  \<exists>m'. ifex_ite_lu m i t e = (m', ifex_ite_opt i t e) \<and> map_invar m'"
 apply(induction i t e arbitrary: ia ta ea m m' r rule: ifex_ite_opt.induct)
-sorry (* TODO, not hard, just tedious *)
+  apply(case_tac "\<exists>b. m (i,t,e) = Some b")
+    apply(subst ifex_ite_lu.simps)
+    apply(clarsimp)
+    apply(rule single_valuedD[OF bf_ifex_rel_single(1)])
+    apply(fastforce simp add: map_invar_def)
+    apply(subst ifex_ite_opt_eq) apply(auto simp add: bf_ifex_rel_def)[3]
+    using ifex_ite_rel_bf apply(metis)
+  apply(case_tac "\<exists>c. param_opt i t e = Some c")
+    apply(subst  ifex_ite_lu.simps)
+    apply(clarsimp simp add: ifex_ite_opt.simps)
+  apply(clarsimp)
+  apply(frule param_opt_lowest_tops_lem)
+  apply(clarsimp)
+  apply(subgoal_tac "(\<exists>ml. ifex_ite_lu m (restrict_top i y True) (restrict_top t y True) 
+                                   (restrict_top e y True) = (ml, ifex_ite_opt (restrict_top i y True) (restrict_top t y True) 
+                                   (restrict_top e y True)) \<and> map_invar ml)")
+  apply(clarsimp)
+    apply(subgoal_tac "(\<exists>mr. ifex_ite_lu ml (restrict_top i y False) (restrict_top t y False) 
+                                   (restrict_top e y False) = (mr, ifex_ite_opt (restrict_top i y False) (restrict_top t y False) 
+                                      (restrict_top e y False)) \<and> map_invar mr)")
+  apply(clarsimp)
+  apply(subst ifex_ite_lu.simps)
+  apply(clarsimp)
+  apply(subgoal_tac "IFC y (ifex_ite_opt (restrict_top i y True) (restrict_top t y True) (restrict_top e y True))
+          (ifex_ite_opt (restrict_top i y False) (restrict_top t y False) (restrict_top e y False)) =
+          ifex_ite_opt i t e")
+  apply(clarsimp)
+  apply(rule map_invar_update_lem)
+  apply(assumption)
+  apply(fastforce)
+  apply(subst ifex_ite_opt_eq) apply(auto simp add: bf_ifex_rel_def)[3]
+   using ifex_ite_rel_bf apply(metis)
+  apply(clarsimp simp add: ifex_ite_opt.simps)
+  using restrict_top_bf_ifex_rel apply(metis)
+  using restrict_top_bf_ifex_rel apply(metis)
+done
 
-lemma "(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
-       ifex_ite_lu m i t e = (m', r) \<Longrightarrow> (bf_ite ia ta ea, r) \<in> bf_ifex_rel"
-  apply(subst ifex_ite_lu_eq)
-  apply(blast)+
+lemma bf_ifex_rel_ifex_ite_lu:
+    "(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
+     ifex_ite_lu m i t e = (m', r) \<Longrightarrow> (bf_ite ia ta ea, r) \<in> bf_ifex_rel"
+  apply(frule ifex_ite_lu_eq)
+  apply(simp)
+  apply(clarsimp)
   apply(subst ifex_ite_opt_eq)
   apply(auto simp add: bf_ifex_rel_def)[3]
   using ifex_ite_rel_bf by fast
 
 lemma "(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
        ifex_ite_lu m i t e = (m', r) \<Longrightarrow> map_invar m'"
-  using ifex_ite_lu_eq by blast
+  using ifex_ite_lu_eq by fastforce
+
+declare ifex_ite.simps[simp] ifex_ite_opt.simps[simp] ifex_ite_lu.simps[simp]
+        restrict_top.simps[simp] lowest_tops.simps[simp]
 
 fun ifex_sat where
 "ifex_sat Trueif = Some (const False)" |

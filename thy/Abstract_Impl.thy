@@ -214,6 +214,8 @@ next
 qed
 qed
 
+
+
 lemma case_ifexi_mono[partial_function_mono]:
   assumes [partial_function_mono]: 
     "mono_option (\<lambda>F. fti F s)"
@@ -223,6 +225,10 @@ lemma case_ifexi_mono[partial_function_mono]:
   unfolding case_ifexi_def
   apply (tactic \<open>Partial_Function.mono_tac @{context} 1\<close>)
   done
+
+definition "map_invar_impl m s = 
+   (\<forall>i ii t ti e ei r ri. (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s \<and> 
+            m (ii,ti,ei) = Some ri \<and> ifex_ite i t e = r \<longrightarrow> (ri,r) \<in> R s)"
 
 partial_function(option) val_impl :: "'ni \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> (bool\<times>'s) option"
 where
