@@ -290,15 +290,15 @@ declare iteci_rule[THEN mp, sep_heap_rules]
 definition "notci e s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
 	(t,s) \<leftarrow> tci s;
-	iteci_opt e f t s
+	iteci e f t s
 }"
 definition "orci e1 e2 s \<equiv> do {
 	(t,s) \<leftarrow> tci s;
-	iteci_opt e1 t e2 s
+	iteci e1 t e2 s
 }"
 definition "andci e1 e2 s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
-	iteci_opt e1 e2 f s
+	iteci e1 e2 f s
 }"
 definition "norci e1 e2 s \<equiv> do {
 	(r,s) \<leftarrow> orci e1 e2 s;
@@ -310,11 +310,11 @@ definition "nandci e1 e2 s \<equiv> do {
 }"
 definition "biimpci a b s \<equiv> do {
 	(nb,s) \<leftarrow> notci b s;
-	iteci_opt a b nb s
+	iteci a b nb s
 }"
 definition "xorci a b s \<equiv> do {
 	(nb,s) \<leftarrow> notci b s;
-	iteci_opt a nb b s
+	iteci a nb b s
 }"
 definition "litci v bdd \<equiv> do {
 	(t,bdd) \<leftarrow> tci bdd;
