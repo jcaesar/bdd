@@ -485,6 +485,11 @@ definition "map_invar m =
    (\<forall>i ii t ti e ei r ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
             m (ii,ti,ei) = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
 
+definition "map_invar' m = 
+   (\<forall>i ii t ti e ei ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
+            m (ii,ti,ei) = Some ri \<longrightarrow> (\<exists>r. bf_ite i t e = r \<and> (r,ri) \<in> bf_ifex_rel))"
+
+
 find_theorems single_valued
 
 lemma map_invar_update_lem: "
