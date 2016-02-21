@@ -8,4 +8,4 @@ $(TARGETS):
 	ghc -fno-warn-tabs -O2 -rtsopts $@.hs -igen
 
 clean:
-	rm -f SATToBDDot BDDCal *.hi *.o gen/*.hi gen/*.o
+	rm -f $(TARGETS) *.hi *.o gen/*.hi gen/*.o
