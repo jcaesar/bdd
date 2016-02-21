@@ -34,6 +34,8 @@ lemma bf_xor_alt: "bf_xor a b = (bf_ite a (bf_not b) b)" (* two application vers
 	by simp
 text{* All of these are implemented and had their implementation verified. *}
 
+lemma [dest!]: "bf_False = bf_True \<Longrightarrow> False" unfolding bf_True_def bf_False_def fun_eq_iff by simp (* This has annoyed me once too often *)
+
 
 subsection{* Shannon decomposition *}
 text{*

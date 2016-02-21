@@ -234,10 +234,8 @@ lemma tautci_rule[sep_heap_rules]:
 	apply(drule (1) rev_subsetD)
 	apply(clarsimp)
 	apply(rename_tac sm ti)
-	apply(case_tac ti; clarify; frule (1) brofix.DESTRimpl_rules; drule ospecD2; clarify)
-	  apply(sep_auto; fail)
-	 apply(sep_auto; simp add: bf_False_def bf_True_def fun_eq_iff; fail)
-	apply(sep_auto)
+	apply(frule (1) brofix.DESTRimpl_rule; drule ospecD2; clarify)
+	apply(sep_auto split: ifex.splits)
 done
 
 lemma emptyci_rule[sep_heap_rules]:

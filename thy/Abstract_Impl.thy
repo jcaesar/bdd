@@ -38,6 +38,19 @@ lemma les_refl[simp,intro!]:"les s s" by (auto simp add: les_def)
 lemma les_trans[trans]:"les s1 s2 \<Longrightarrow> les s2 s3 \<Longrightarrow> les s1 s3" by (auto simp add: les_def)
 lemmas DESTRimpl_rules = DESTRimpl_rule1 DESTRimpl_rule2 DESTRimpl_rule3
 
+lemma DESTRimpl_rule_useless: 
+	"I s \<Longrightarrow> (ni, n) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. (case r of
+		TD \<Rightarrow> (ni, Trueif) \<in> R s |
+		FD \<Rightarrow> (ni, Falseif) \<in> R s |
+		IFD v nt ne \<Rightarrow> (\<exists>t e. n = IF v t e \<and> (ni, IF v t e) \<in> R s)))"
+by(cases n; clarify; drule (1) DESTRimpl_rules; drule ospecD2; clarsimp)
+lemma DESTRimpl_rule: 
+	"I s \<Longrightarrow> (ni, n) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. (case n of
+		Trueif \<Rightarrow> r = TD |
+		Falseif \<Rightarrow> r = FD |
+		IF v t e \<Rightarrow> (\<exists>tn en. r = IFD v tn en \<and> (tn,t) \<in> R s \<and> (en,e) \<in> R s)))"
+by(cases n; clarify; drule (1) DESTRimpl_rules; drule ospecD2; clarsimp)
+
 definition "case_ifexi fti ffi fii ni s \<equiv> do {
   dest \<leftarrow> DESTRimpl ni s;
   case dest of
@@ -347,9 +360,16 @@ apply(cases i)
     apply(clarsimp simp add: param_opt_def les_def)
   using assms apply(subst param_opt_impl.simps)
     apply(rule obind_rule) apply(rule DESTRimpl_rule3) apply(assumption) apply(simp)
-  apply(cases t; cases e)
-    apply(auto simp add: param_opt_def les_def cmp_rule_eq intro!: obind_rule 
-               dest: DESTRimpl_rules Timpl_rule Fimpl_rule) (* takes forever *)
+  apply(rule obind_rule)
+   apply(rule DESTRimpl_rule; assumption)
+  apply(rule obind_rule)
+   apply(rule DESTRimpl_rule; assumption)
+  apply(rule obind_rule)
+   apply(rule Timpl_rule; assumption)
+  apply(safe)
+  apply(rule obind_rule)
+   apply(rule Fimpl_rule; assumption)
+  apply(auto simp add: param_opt_def les_def cmp_rule_eq split: ifex.splits)
 done
 
 partial_function(option) ite_impl_opt where
