@@ -30,6 +30,8 @@ fun Rmi_g :: "nat \<Rightarrow> nat ifex \<Rightarrow> bdd \<Rightarrow> bool" w
 
 definition "Rmi s \<equiv> {(a,b)|a b. Rmi_g a b s}"
 
+interpretation mi!: bdd_impl_cmp_pre Rmi by -
+
 definition "bdd_node_valid bdd n \<equiv> n \<in> Domain (Rmi bdd)"
 lemma [simp]:
   "bdd_node_valid bdd 0"
@@ -40,11 +42,11 @@ lemma [simp]:
 
 definition "ifexd_valid bdd e \<equiv> (case e of IFD _ t e \<Rightarrow> bdd_node_valid bdd t \<and> bdd_node_valid bdd e | _ \<Rightarrow> True)"
 
-definition "bdd_sane bdd \<equiv> pointermap_sane (dpm bdd) \<and> map_invar_impl Rmi (dcl bdd) bdd"
+definition "bdd_sane bdd \<equiv> pointermap_sane (dpm bdd) \<and> mi.map_invar_impl (dcl bdd) bdd"
 
 lemma [simp,intro!]: "bdd_sane emptymi" 
 	unfolding emptymi_def bdd_sane_def bdd.simps 
-by(simp add: map_invar_impl_def)
+by(simp add: mi.map_invar_impl_def)
 
 lemma prod_split3: "P (case prod of (x, xa, xaa) \<Rightarrow> f x xa xaa) = (\<forall>x1 x2 x3. prod = (x1, x2, x3) \<longrightarrow> P (f x1 x2 x3))"
 by(simp split: prod.splits)
@@ -116,9 +118,9 @@ qed simp_all
 lemma ifmi_les:
     assumes "bdd_sane s"
     assumes "ifmi v ni1 ni2 s = (ni, s')"
-    shows "bdd_impl_pre.les Rmi s s'"
+    shows "mi.les s s'"
 using assms
-by(clarsimp simp: bdd_sane_def comp_def apfst_def map_prod_def bdd_impl_pre.les_def Rmi_def ifmi_les_hlp const_def split: if_splits prod.splits)
+by(clarsimp simp: bdd_sane_def comp_def apfst_def map_prod_def mi.les_def Rmi_def ifmi_les_hlp const_def split: if_splits prod.splits)
 
 lemma ifmi_notouch_dcl: "ifmi v ni1 ni2 s = (ni, s') \<Longrightarrow> dcl s' = dcl s"
 	by(clarsimp split: if_splits prod.splits)
@@ -131,7 +133,7 @@ lemma ifmi_saneI: "bdd_sane s \<Longrightarrow> ifmi v ni1 ni2 s = (ni, s') \<Lo
 	  apply(simp_all)[2]
 	apply(frule (1) ifmi_les)
 	apply(unfold bdd_sane_def, clarify)
-	apply(rule map_invar_impl_les[rotated])
+	apply(rule mi.map_invar_impl_les[rotated])
 	 apply assumption
 	apply(drule ifmi_notouch_dcl)
 	apply(simp)
@@ -146,11 +148,11 @@ lemma rmigif: "Rmi_g ni (IF v n1 n2) s \<Longrightarrow> \<exists>n. ni = Suc (S
 done
 
 lemma in_lesI:
-	assumes "bdd_impl_pre.les Rmi s s'"
+	assumes "mi.les s s'"
     assumes "(ni1, n1) \<in> Rmi s"
     assumes "(ni2, n2) \<in> Rmi s"
     shows "(ni1, n1) \<in> Rmi s'" "(ni2, n2) \<in> Rmi s'"
-by (meson assms bdd_impl_pre.les_def)+
+by (meson assms mi.les_def)+
 
 
 lemma ifmi_modification_validI:
@@ -203,13 +205,13 @@ lemma False_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Falseif)\<in>Rmi s \<lo
   using Rmi_def Rmi_g.simps(1) Rmi_sv(2) by blast
 
 
-interpretation brofix!: bdd_impl_lu bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op ="
+interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op ="
 proof  -
-  note s = bdd_impl_pre.les_def[simp] Rmi_def
+  note s = mi.les_def[simp] Rmi_def
 
   note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
-	show "bdd_impl_lu bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =)"
+	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =)"
 	proof(unfold_locales)
 		case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal2 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
