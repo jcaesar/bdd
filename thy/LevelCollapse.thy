@@ -285,65 +285,8 @@ lemma "<emp> do {
 	(t,s) \<leftarrow> biimpci t1 t2 s;
 	tautci t s
 } <\<up>>\<^sub>t"
-apply(rule bind_rule)
-apply sep_auto
-apply(rule bind_rule)
-apply sep_auto
-apply(clarify)
-apply(rule bind_rule)
-apply sep_auto
-apply(clarify)
-apply(rule bind_rule)
-apply sep_auto
-apply(clarify)
-apply(rule bind_rule)
-apply(rule cons_pre_rule[rotated])
-apply(rule cirules1)
-prefer 3
-apply sep_auto
-apply(simp; blast)
-apply(simp; blast)
-apply(clarify)
-apply(rule bind_rule)
-apply(rule cons_pre_rule[rotated])
-apply(rule cirules1)
-prefer 3
-apply sep_auto
-apply(simp; blast)
-apply(simp; blast)
-apply(clarify)
-apply(rule bind_rule)
-apply(rule cons_pre_rule[rotated])
-apply(rule cirules1)
-prefer 3
-apply sep_auto
-apply(simp; blast)
-apply(simp; blast)
-apply(clarify)
-apply(rule bind_rule)
-apply(rule cons_pre_rule[rotated])
-apply(rule cirules1)
-prefer 3
-apply sep_auto
-apply(simp; blast)
-apply(simp; blast)
-apply(clarify)
-apply(rule bind_rule)
-apply(rule cons_pre_rule[rotated])
-apply(rule cirules1)
-prefer 3
-apply sep_auto
-apply(simp; blast)
-apply(simp; blast)
-apply(clarify)
-apply(rule bind_rule)
-apply(rule cons_pre_rule[rotated])
-apply(rule cirules1)
-prefer 3
-apply sep_auto
-apply(simp; blast)
-apply(simp; blast)
-apply(clarify)
+apply(rule bind_rule, (sep_auto; fail), (clarify | -))+
+apply(rule bind_rule, (rule cirules1;blast), clarify)+
 apply(rule cons_post_rule)
 apply(rule tautci_rule[of bf_True])
 apply(simp)
