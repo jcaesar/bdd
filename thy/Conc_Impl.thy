@@ -283,9 +283,17 @@ lemma iteci_opt_rule: "
   <is_bdd_impl bdd bddi> 
     iteci_opt i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_opt.fixp_induct)
+  defer
+  apply simp
+  apply clarify
+  apply (clarsimp split: option.splits Option.bind_splits prod.splits)
+  apply (subst iteci_opt.simps)
+  apply (sep_auto )
 oops
 
 
+subsection{*A standard library of functions*}
 
 declare iteci_rule[THEN mp, sep_heap_rules]
 
@@ -328,6 +336,8 @@ definition "tautci v bdd \<equiv> do {
 	d \<leftarrow> destrci v bdd;
 	return (d = TD)
 }"
+
+subsection{* Printing *}
 
 partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
 "serializeci p s = do {
