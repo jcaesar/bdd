@@ -227,8 +227,6 @@ next
 qed
 qed
 
-
-
 lemma case_ifexi_mono[partial_function_mono]:
   assumes [partial_function_mono]: 
     "mono_option (\<lambda>F. fti F s)"
@@ -238,10 +236,6 @@ lemma case_ifexi_mono[partial_function_mono]:
   unfolding case_ifexi_def
   apply (tactic \<open>Partial_Function.mono_tac @{context} 1\<close>)
   done
-
-definition "map_invar_impl m s = 
-   (\<forall>i ii t ti e ei r ri. (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s \<and> 
-            m (ii,ti,ei) = Some ri \<and> ifex_ite i t e = r \<longrightarrow> (ri,r) \<in> R s)"
 
 partial_function(option) val_impl :: "'ni \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> (bool\<times>'s) option"
 where
@@ -433,16 +427,16 @@ qed
 
 end
 
-locale bdd_impl_map_pre = bdd_impl_cmp +
-  fixes M :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b option option"
-  fixes U :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b \<Rightarrow> 'a"
+locale bdd_impl_lu = bdd_impl_cmp +
+  assumes "single_valued (R s)"
+  assumes "single_valued ((R s)\<inverse>)"
 begin
+
 partial_function(option) ite_impl_lu where
-"ite_impl_lu i t e s = do {
-  lu \<leftarrow> M s (i,t,e);
-  (case lu of Some b \<Rightarrow> Some (b,s) | None \<Rightarrow> do {
+"ite_impl_lu m i t e s = do {
+  (case m (i,t,e) of Some b \<Rightarrow> Some (b,s, m) | None \<Rightarrow> do {
   (ld, s) \<leftarrow>  param_opt_impl i t e s;
-  (case ld of Some b \<Rightarrow> Some (b, s) |
+  (case ld of Some b \<Rightarrow> Some (b, s, m) |
   None \<Rightarrow>
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
@@ -454,31 +448,35 @@ partial_function(option) ite_impl_lu where
 			(fi,_) \<leftarrow> restrict_top_impl i a False s;
 			(ft,_) \<leftarrow> restrict_top_impl t a False s;
 			(fe,_) \<leftarrow> restrict_top_impl e a False s;
-			(tb,s) \<leftarrow> ite_impl_lu ti tt te s;
-			(fb,s) \<leftarrow> ite_impl_lu fi ft fe s;
+			(tb,s,m) \<leftarrow> ite_impl_lu m ti tt te s;
+			(fb,s,m) \<leftarrow> ite_impl_lu m fi ft fe s;
 			(r,s) \<leftarrow> IFimpl a tb fb s;
-			let s = U s (i,t,e) r;
-			Some (r,s)
+      let m = m((i,t,e) \<mapsto> r);
+			Some (r,s,m)
 			} |
 		None \<Rightarrow> None
 )})})}"
-end
 
-locale bdd_impl_map = bdd_impl_map_pre +
-  assumes M_rule: "I s \<Longrightarrow> ospec (M s (i, t, e)) (\<lambda>l. \<forall>x. l = Some x \<longrightarrow> Some (x,s') = ite_impl_lu i t e s)"
-  assumes U_rule: "\<lbrakk>I s; s' = U s (i,t,e) r; Some (r,s'') = ite_impl_lu i t e s\<rbrakk> \<Longrightarrow> I s'"
-begin
+definition "map_invar_impl m s = 
+   (\<forall>i ii t ti e ei ri. (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s \<and>
+           m (ii,ti,ei) = Some ri \<longrightarrow> (ri,ifex_ite_opt i t e) \<in> R s)"
 
+lemma "map_invar_impl m s \<Longrightarrow>
+       (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow> (ri,ifex_ite_opt i t e) \<in> R s \<Longrightarrow>
+       map_invar_impl (m((ii,ti,ei) \<mapsto> ri)) s"
+oops
 
+lemma "map_invar_impl m s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl m s'"
+  unfolding map_invar_impl_def les_def apply(auto simp del: ifex_ite_opt.simps)
+oops
 
-lemma ite_impl_lu_R: "I s
+lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl m s
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
-       \<Longrightarrow> ospec (ite_impl_lu ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite i t e) \<in> R s' \<and> I s' \<and> les s s')"
+       \<Longrightarrow> ospec (ite_impl_lu m ii ti ei s) 
+                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl m' s')"
 apply(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
 apply(subst ite_impl_lu.simps)
-
-oops (* TODO *)
-
+oops
 
 end
 end

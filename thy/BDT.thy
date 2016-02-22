@@ -481,16 +481,11 @@ apply(induction i t e rule: ifex_ite_opt.induct)
       using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
 done (* TODO: Clean me *)
 
+
 definition "map_invar m = 
-   (\<forall>i ii t ti e ei r ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
-            m (ii,ti,ei) = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
-
-definition "map_invar' m = 
    (\<forall>i ii t ti e ei ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
-            m (ii,ti,ei) = Some ri \<longrightarrow> (\<exists>r. bf_ite i t e = r \<and> (r,ri) \<in> bf_ifex_rel))"
+            m (ii,ti,ei) = Some ri \<longrightarrow> (bf_ite i t e,ri) \<in> bf_ifex_rel)"
 
-
-find_theorems single_valued
 
 lemma map_invar_update_lem: "
   map_invar m \<Longrightarrow> (ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow>
