@@ -427,6 +427,47 @@ apply(cases "param_opt i t e")
 done
 qed
 
+<<<<<<< acde53696c4a326928c994a88628c875d19d9840
+=======
+end
+
+definition "map_invar_impl R m s = 
+   (\<forall>ii ti ei ri. m (ii,ti,ei) = Some ri \<longrightarrow> (\<exists>i t e. ((ri,ifex_ite_opt i t e) \<in> R s) \<and> (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s))"
+
+
+lemma map_invar_impl_update: "map_invar_impl R m s \<Longrightarrow>
+       (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow> (ri,ifex_ite_opt i t e) \<in> R s \<Longrightarrow>
+       map_invar_impl R (m((ii,ti,ei) \<mapsto> ri)) s"
+apply(subst map_invar_impl_def)
+apply(clarify)
+apply(rename_tac iia tia eia ria)
+apply(case_tac "iia = ii \<and> tia = ti \<and> eia = ei")
+apply(clarsimp simp del: ifex_ite_opt.simps)
+apply blast
+apply(clarsimp simp del: ifex_ite_opt.simps)
+apply(subst(asm) map_invar_impl_def)
+apply(clarsimp simp del: ifex_ite_opt.simps)
+done
+
+lemma map_invar_impl_les: "map_invar_impl R m s \<Longrightarrow> bdd_impl_pre.les R s s' \<Longrightarrow> map_invar_impl R m s'"
+apply(subst map_invar_impl_def)
+apply(clarsimp simp del: ifex_ite_opt.simps) 
+proof -
+	case goal1
+	note goal1(1)[unfolded map_invar_impl_def, THEN spec, THEN spec, THEN spec, THEN spec, THEN mp, OF goal1(3)]
+	then guess i ..
+	then guess t ..
+	then guess e ..
+	then have "(ri, ifex_ite_opt i t e) \<in> R s' \<and> (ii, i) \<in> R s' \<and> (ti, t) \<in> R s' \<and> (ei, e) \<in> R s'" using goal1(2)[unfolded bdd_impl_pre.les_def] by blast
+	thus ?case by blast 
+qed
+
+locale bdd_impl_lu = bdd_impl_cmp
+(*  assumes sv_rule: "single_valued (R s)"
+  assumes svr_rule: "single_valued ((R s)\<inverse>)"*)
+begin
+
+>>>>>>> map_invar_impl into bdd_sane
 partial_function(option) ite_impl_lu where
 "ite_impl_lu m i t e s = do {
   (case m (i,t,e) of Some b \<Rightarrow> Some (b,s, m) | None \<Rightarrow> do {
@@ -452,6 +493,7 @@ partial_function(option) ite_impl_lu where
 		None \<Rightarrow> None
 )})})}"
 
+<<<<<<< acde53696c4a326928c994a88628c875d19d9840
 declare ifex_ite_lu.simps[simp del] ifex_ite_opt.simps[simp del]
 
 lemma map_invar_impl_les: "map_invar_impl m R s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl m R s'"
@@ -464,6 +506,10 @@ unfolding map_invar_impl_def by auto
 
 lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl m R s
        \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
+=======
+lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl R m s
+       \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+>>>>>>> map_invar_impl into bdd_sane
        \<Longrightarrow> ospec (ite_impl_lu m ii ti ei s) 
                  (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl m' R s')"
 proof(induction i t e arbitrary: m s ii ti ei rule: ifex_ite_opt.induct)
