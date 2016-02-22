@@ -461,7 +461,7 @@ lemma ifex_ite_opt_eq: "
 apply(induction i t e rule: ifex_ite_opt.induct)
   apply(subst ifex_ite_opt.simps)
   apply(case_tac "\<exists>r. param_opt i t e = Some r")
-    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
+    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps add: ifex_ite_opt.simps)
     apply(rule param_opt_ifex_ite_eq)
       apply(auto simp add: bf_ifex_rel_def)[4]
     
@@ -688,5 +688,8 @@ lemma bf_ifex_rel_consts_ensured_rev[simp]:
 	"(x,Trueif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_True)"
 	"(x,Falseif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_False)"
 	by(simp_all add: bf_True_def bf_False_def bf_ifex_rel_def fun_eq_iff)
+
+declare ifex_ite_opt.simps restrict_top.simps lowest_tops.simps[simp del]
+
 
 end

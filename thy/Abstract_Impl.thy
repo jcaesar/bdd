@@ -113,7 +113,7 @@ fun lowest_tops_alt where
 	)"
 
 lemma lowest_tops_alt: "lowest_tops l = lowest_tops_alt l" 
-  by (induction l rule: lowest_tops.induct) (auto split: option.splits)
+  by (induction l rule: lowest_tops.induct) (auto split: option.splits simp: lowest_tops.simps)
 
 lemma lowest_tops_impl_R: 
   assumes "list_all2 (in_rel (R s)) li l" "I s"
@@ -194,8 +194,8 @@ proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
 	apply(assumption)+
 	apply(simp)
 	apply(simp)
-	using None apply(simp)
-	using None apply(clarsimp split: prod.splits ifex.splits)
+	using None apply(simp add: lowest_tops.simps)
+	using None apply(clarsimp split: prod.splits ifex.splits simp: lowest_tops.simps)
 done
 next
 	case (Some lv)
@@ -427,9 +427,12 @@ qed
 
 end
 
-locale bdd_impl_lu = bdd_impl_cmp +
-  assumes "single_valued (R s)"
-  assumes "single_valued ((R s)\<inverse>)"
+definition "map_invar_impl R m s = 
+   (\<forall>ii ti ei ri. m (ii,ti,ei) = Some ri \<longrightarrow> (\<exists>i t e. ((ri,ifex_ite_opt i t e) \<in> R s) \<and> (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s))"
+
+locale bdd_impl_lu = bdd_impl_cmp
+(*  assumes sv_rule: "single_valued (R s)"
+  assumes svr_rule: "single_valued ((R s)\<inverse>)"*)
 begin
 
 partial_function(option) ite_impl_lu where
@@ -457,25 +460,49 @@ partial_function(option) ite_impl_lu where
 		None \<Rightarrow> None
 )})})}"
 
-definition "map_invar_impl m s = 
-   (\<forall>i ii t ti e ei ri. (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s \<and>
-           m (ii,ti,ei) = Some ri \<longrightarrow> (ri,ifex_ite_opt i t e) \<in> R s)"
-
-lemma "map_invar_impl m s \<Longrightarrow>
+lemma "map_invar_impl R m s \<Longrightarrow>
        (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow> (ri,ifex_ite_opt i t e) \<in> R s \<Longrightarrow>
-       map_invar_impl (m((ii,ti,ei) \<mapsto> ri)) s"
+       map_invar_impl R (m((ii,ti,ei) \<mapsto> ri)) s"
+apply(subst map_invar_impl_def)
+apply(clarify)
+apply(rename_tac iia tia eia ria)
+apply(case_tac "iia = ii \<and> tia = ti \<and> eia = ei")
+apply(clarsimp simp del: ifex_ite_opt.simps)
+apply blast
+apply(clarsimp simp del: ifex_ite_opt.simps)
+apply(subst(asm) map_invar_impl_def)
+apply(clarsimp simp del: ifex_ite_opt.simps)
+done
+
+lemma "map_invar_impl R m s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl R m s'"
+apply(subst map_invar_impl_def)
+apply(clarsimp simp del: ifex_ite_opt.simps)
+proof -
+	case goal1
+	note goal1(1)[unfolded map_invar_impl_def, THEN spec, THEN spec, THEN spec, THEN spec, THEN mp, OF goal1(3)]
+	then guess i ..
+	then guess t ..
+	then guess e ..
+	then have "(ri, ifex_ite_opt i t e) \<in> R s' \<and> (ii, i) \<in> R s' \<and> (ti, t) \<in> R s' \<and> (ei, e) \<in> R s'" using goal1(2)[unfolded les_def] by blast
+	thus ?case by blast 
 oops
 
-lemma "map_invar_impl m s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl m s'"
-  unfolding map_invar_impl_def les_def apply(auto simp del: ifex_ite_opt.simps)
-oops
-
-lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl m s
+lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl R m s
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> ospec (ite_impl_lu m ii ti ei s) 
-                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl m' s')"
+                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl R m' s')"
 apply(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
 apply(subst ite_impl_lu.simps)
+apply(case_tac "m (ii, ti, ei)")
+defer
+apply(simp only: option.simps ospec.simps prod.simps simp_thms les_refl)
+apply(subst(asm)(5) map_invar_impl_def)
+apply(erule_tac x = ii in allE)
+apply(erule_tac x = ti in allE)
+apply(erule_tac x = ei in allE)
+apply(erule_tac x = a in allE)
+apply(clarify)
+apply(metis (no_types, lifting) cmp_rule1 cmp_rule2 in_rel_def)
 oops
 
 end
