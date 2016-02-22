@@ -287,8 +287,13 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl 
   apply simp
   done  
 
-term IFimpl
   end
+
+
+definition "map_invar_impl m R s = 
+  (\<forall>ii ti ei ri. m (ii,ti,ei) = Some ri \<longrightarrow> 
+  (\<exists>i t e. ((ri,ifex_ite_opt i t e) \<in> R s) \<and> (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s))"
+
 
 (* How do I get 'ni in here? *)
 locale bdd_impl_cmp = bdd_impl +
@@ -299,7 +304,6 @@ begin
 
 lemma cmp_rule_eq: "I s \<Longrightarrow>  (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> cmp ni ni' \<longleftrightarrow> i = i'"
   using cmp_rule1 cmp_rule2 by force
-
 
 lemma DESTRimpl_Some: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. True)"
   apply(cases i)
@@ -377,8 +381,6 @@ partial_function(option) ite_impl_opt where
 lemma ospec_and: "ospec f P \<Longrightarrow> ospec f Q \<Longrightarrow> ospec f (\<lambda>x. P x \<and> Q x)"
   using ospecD2 by force
 
-find_theorems lowest_tops
-
 lemma ite_impl_opt_R: "
   I s
   \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
@@ -425,16 +427,6 @@ apply(cases "param_opt i t e")
 done
 qed
 
-end
-
-definition "map_invar_impl R m s = 
-   (\<forall>ii ti ei ri. m (ii,ti,ei) = Some ri \<longrightarrow> (\<exists>i t e. ((ri,ifex_ite_opt i t e) \<in> R s) \<and> (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s))"
-
-locale bdd_impl_lu = bdd_impl_cmp
-(*  assumes sv_rule: "single_valued (R s)"
-  assumes svr_rule: "single_valued ((R s)\<inverse>)"*)
-begin
-
 partial_function(option) ite_impl_lu where
 "ite_impl_lu m i t e s = do {
   (case m (i,t,e) of Some b \<Rightarrow> Some (b,s, m) | None \<Rightarrow> do {
@@ -460,50 +452,77 @@ partial_function(option) ite_impl_lu where
 		None \<Rightarrow> None
 )})})}"
 
-lemma "map_invar_impl R m s \<Longrightarrow>
-       (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow> (ri,ifex_ite_opt i t e) \<in> R s \<Longrightarrow>
-       map_invar_impl R (m((ii,ti,ei) \<mapsto> ri)) s"
-apply(subst map_invar_impl_def)
-apply(clarify)
-apply(rename_tac iia tia eia ria)
-apply(case_tac "iia = ii \<and> tia = ti \<and> eia = ei")
-apply(clarsimp simp del: ifex_ite_opt.simps)
-apply blast
-apply(clarsimp simp del: ifex_ite_opt.simps)
-apply(subst(asm) map_invar_impl_def)
-apply(clarsimp simp del: ifex_ite_opt.simps)
-done
+declare ifex_ite_lu.simps[simp del] ifex_ite_opt.simps[simp del]
 
-lemma "map_invar_impl R m s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl R m s'"
-apply(subst map_invar_impl_def)
-apply(clarsimp simp del: ifex_ite_opt.simps)
-proof -
-	case goal1
-	note goal1(1)[unfolded map_invar_impl_def, THEN spec, THEN spec, THEN spec, THEN spec, THEN mp, OF goal1(3)]
-	then guess i ..
-	then guess t ..
-	then guess e ..
-	then have "(ri, ifex_ite_opt i t e) \<in> R s' \<and> (ii, i) \<in> R s' \<and> (ti, t) \<in> R s' \<and> (ei, e) \<in> R s'" using goal1(2)[unfolded les_def] by blast
-	thus ?case by blast 
-oops
+lemma map_invar_impl_les: "map_invar_impl m R s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl m R s'"
+  unfolding map_invar_impl_def les_def by blast
 
-lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl R m s
-       \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
+lemma map_invar_impl_update: "map_invar_impl m R s \<Longrightarrow> 
+       (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow>
+       (ri, ifex_ite_opt i t e) \<in> R s \<Longrightarrow> map_invar_impl (m((ii,ti,ei) \<mapsto> ri)) R s"
+unfolding map_invar_impl_def by auto
+
+lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl m R s
+       \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
        \<Longrightarrow> ospec (ite_impl_lu m ii ti ei s) 
-                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl R m' s')"
-apply(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
+                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl m' R s')"
+proof(induction i t e arbitrary: m s ii ti ei rule: ifex_ite_opt.induct)
+  note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
+	case goal1 
+	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(5-7) by simp
+ note mIH = goal1(1,2)
+	from goal1(3-7) show ?case
 apply(subst ite_impl_lu.simps)
 apply(case_tac "m (ii, ti, ei)")
 defer
 apply(simp only: option.simps ospec.simps prod.simps simp_thms les_refl)
-apply(subst(asm)(5) map_invar_impl_def)
+apply(subst (asm) map_invar_impl_def)
 apply(erule_tac x = ii in allE)
 apply(erule_tac x = ti in allE)
 apply(erule_tac x = ei in allE)
 apply(erule_tac x = a in allE)
-apply(clarify)
-apply(metis (no_types, lifting) cmp_rule1 cmp_rule2 in_rel_def)
-oops
+apply(metis cmp_rule_eq)
+
+apply(clarsimp simp del: ifex_ite_lu.simps ifex_ite_opt.simps)
+apply(case_tac "param_opt i t e")
+  defer
+  apply(rule obind_rule)
+  apply(rule ospec_and[OF param_opt_impl_R param_opt_impl_lesI])
+  apply(auto simp add: map_invar_impl_les ifex_ite_opt.simps  split: option.splits)[9]
+  apply(frule param_opt_lowest_tops_lem)
+  apply(clarsimp)
+  apply(rule obind_rule)
+  apply(rule ospec_and[OF param_opt_impl_R param_opt_impl_lesI])
+  apply(auto split: option.splits)[8]
+  apply(clarsimp split: option.splits)
+	apply(rule_tac obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e]"])
+	apply(rule ospec_cons)
+	apply(rule lowest_tops_impl_R)
+  using les_def apply(fastforce)
+  apply(assumption)
+  apply(fastforce)
+	using BDT.param_opt_lowest_tops_lem apply(clarsimp split: prod.splits)
+	apply(rule obind_rule, rule restrict_top_impl_spec, assumption+, auto simp add: les_def split: prod.splits)+
+	apply(rule obind_rule)
+	apply(rule mIH(1))
+	apply(simp add: map_invar_impl_les les_def;fail)+
+	apply(clarsimp)
+	apply(rule obind_rule)
+	apply(rule mIH(2))
+	apply(simp add: map_invar_impl_les les_def;fail)+
+	apply(simp add: ifex_ite_opt.simps split: prod.splits)
+	apply(rule obind_rule)
+	apply(rule IFimpl_rule)
+  apply(simp) apply(auto simp add: les_def)[2]
+  apply(clarsimp simp add: les_def)
+  apply(rule map_invar_impl_update)
+  apply(simp add: map_invar_impl_les les_def)
+  apply(blast)
+  apply(blast)
+  apply(blast)
+  apply(auto intro: map_invar_impl_update simp add: ifex_ite_opt.simps)
+done
+qed
 
 end
 end
