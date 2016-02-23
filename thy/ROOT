@@ -1,5 +1,8 @@
 session "BDDs" = Datastructs +
 	options [document = pdf, document_output = "output"]
+	theories[document=false]
+		"Boolean_Expression_Checkers"
+		"$AFP/Automatic_Refinement/Lib/Refine_Lib"
 	theories
 		BoolFunc
 		BDT
