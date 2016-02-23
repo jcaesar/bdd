@@ -477,7 +477,7 @@ lemma ite_impl_lu_R: "I s
        \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
        \<Longrightarrow> ospec (ite_impl_lu ii ti ei s) 
                  (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
-proof(induction i t e arbitrary: m s ii ti ei rule: ifex_ite_opt.induct)
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct)
   note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
 	case goal1 
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp

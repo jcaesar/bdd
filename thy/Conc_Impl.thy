@@ -259,6 +259,12 @@ lemma bdd_hm_lookup_rule: "
   <\<lambda>(pi). is_bdd_impl bdd bddi * \<up>(pi = p)>\<^sub>t"
 unfolding is_bdd_impl_def by (sep_auto)
 
+lemma bdd_hm_update_rule'[sep_heap_rules]:
+  "<is_bdd_impl bdd bddi> 
+    hm_update k v (dcli bddi)
+  <\<lambda>r. is_bdd_impl (updS bdd k v) (dcli_update (const r) bddi) * true>"
+unfolding is_bdd_impl_def updS_def by (sep_auto)
+
 partial_function(heap) iteci_lu where
 "iteci_lu i t e s = do {
   lu \<leftarrow> ht_lookup (i,t,e) (dcli s);
@@ -295,9 +301,62 @@ lemma iteci_lu_rule: "
     iteci_lu i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
   apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_lu.fixp_induct)
-oops
+  defer
+  apply(simp)
+  apply clarify
+  apply (clarsimp split: option.splits Option.bind_splits prod.splits)
+  
+  prefer 3
+  apply(subst iteci_lu.simps)
+  apply(sep_auto)
+  using bdd_hm_lookup_rule apply(blast)
+  apply(sep_auto)
+  
+  prefer 2
+  apply(subst iteci_lu.simps)
+  apply(sep_auto)
+  using bdd_hm_lookup_rule apply(blast)
+  apply(sep_auto)
+  apply(rule fi_rule)
+  apply(rule param_optci_rule)
+  apply(sep_auto)
+  apply(sep_auto)
+  apply(sep_auto)
+  
+  unfolding updS_def
+  apply (subst iteci_lu.simps)
+  apply (sep_auto )
+  using bdd_hm_lookup_rule apply(blast)
+  apply(sep_auto)
+  apply(rule fi_rule)
+  apply(rule param_optci_rule)
+  apply(sep_auto)
+  apply(sep_auto)
+  apply(sep_auto)
+  unfolding imp_to_meta
+  apply(rule fi_rule)
+  apply(rprems)
+  apply(simp)
+  apply(sep_auto)
+  apply(sep_auto)
+  apply(rule fi_rule)
+  apply(rprems)
+  apply(simp)
+  apply(sep_auto)
+  apply(sep_auto)
+  unfolding updS_def apply(sep_auto)
 
-
+  apply simp  (* Warning: Dragons ahead! *)
+  using option_admissible[where P=
+    "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi. 
+      <is_bdd_impl x4 bddi> 
+        iteci_lu x1 x2 x3 bddi  
+      <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
+  apply auto[1]
+  apply (fo_rule subst[rotated])
+  apply (assumption)
+  apply auto[1]
+done
 
 
 subsection{*A standard library of functions*}

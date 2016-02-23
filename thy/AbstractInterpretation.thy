@@ -267,6 +267,8 @@ proof  -
        apply(clarsimp simp add: updS_Rmi simp del: ifex_ite_opt.simps)
        apply(clarsimp simp add: updS_def simp del: ifex_ite_opt.simps)
        by blast (* TODO: clean me *)
+  next
+    case goal11 thus ?case using updS_Rmi by auto
 qed
 qed
 
