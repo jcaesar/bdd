@@ -245,22 +245,28 @@ definition param_optci where
   }"
 
 lemma param_optci_rule: "
-  ( brofix.param_opt_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  ( brofix.param_opt_impl i t e bdd = Some (p,bdd'))  \<Longrightarrow>
   <is_bdd_impl bdd bddi> 
     param_optci i t e bddi 
-  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p)>\<^sub>t"
 by (sep_auto simp add: brofix.param_opt_impl.simps param_optci_def tmi'_def fmi'_def
              split: Option.bind_splits)
 
-partial_function(heap) iteci_opt where
-"iteci_opt i t e s = do {
+lemma bdd_hm_lookup_rule: "
+  (dcl bdd (i,t,e) = p) \<Longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    hm_lookup (i, t, e) (dcli bddi)
+  <\<lambda>(pi). is_bdd_impl bdd bddi * \<up>(pi = p)>\<^sub>t"
+unfolding is_bdd_impl_def by (sep_auto)
+
+partial_function(heap) iteci_lu where
+"iteci_lu i t e s = do {
   lu \<leftarrow> ht_lookup (i,t,e) (dcli s);
   (case lu of Some b \<Rightarrow> return (b,s)
     | None \<Rightarrow> do {
-      (po,s) \<leftarrow> param_opt_ci i t e s;
+      (po,s) \<leftarrow> param_optci i t e s;
       (case po of Some b \<Rightarrow> do {
-        cl \<leftarrow> hm_update (i,t,e) b (dcli s);
-        return (b,dcli_update (const cl) s)}
+        return (b,s)}
       | None \<Rightarrow> do {
         (lt) \<leftarrow> lowest_topsci [i, t, e] s;
         (case lt of Some a \<Rightarrow> do {
@@ -270,8 +276,8 @@ partial_function(heap) iteci_opt where
 			  fi \<leftarrow> restrict_topci i a False s;
 			  ft \<leftarrow> restrict_topci t a False s;
 			  fe \<leftarrow> restrict_topci e a False s;
-			  (tb,s) \<leftarrow> iteci_opt ti tt te s;
-			  (fb,s) \<leftarrow> iteci_opt fi ft fe s;
+			  (tb,s) \<leftarrow> iteci_lu ti tt te s;
+			  (fb,s) \<leftarrow> iteci_lu fi ft fe s;
 			  (r,s) \<leftarrow> ifci a tb fb s;
 			  cl \<leftarrow> hm_update (i,t,e) r (dcli s);
 			  return (r,dcli_update (const cl) s)
@@ -280,22 +286,18 @@ partial_function(heap) iteci_opt where
   })}"
 
 term ht_lookup
-declare iteci_opt.simps[code]
+declare iteci_lu.simps[code]
 
 (* Proof by copy-paste *)
-lemma iteci_opt_rule: "
-  ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
+lemma iteci_lu_rule: "
+  ( brofix.ite_impl_lu i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
-    iteci_opt i t e bddi 
+    iteci_lu i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_opt.fixp_induct)
-  defer
-  apply simp
-  apply clarify
-  apply (clarsimp split: option.splits Option.bind_splits prod.splits)
-  apply (subst iteci_opt.simps)
-  apply (sep_auto )
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_lu.fixp_induct)
 oops
+
+
 
 
 subsection{*A standard library of functions*}
