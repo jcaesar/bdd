@@ -227,8 +227,8 @@ declare  iteci_rule[THEN mp, sep_heap_rules]
 
 (* ITE VERSION WITH TURBO :) *)
 
-definition param_opt_ci where
-  "param_opt_ci i t e bdd = do {
+definition param_optci where
+  "param_optci i t e bdd = do {
   	(tr, bdd) \<leftarrow> tci bdd;
   	(fl, bdd) \<leftarrow> fci bdd;
   	id \<leftarrow> destrci i bdd;
@@ -244,8 +244,13 @@ definition param_opt_ci where
                         None, bdd)
   }"
 
-lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
-  oops
+lemma param_optci_rule: "
+  ( brofix.param_opt_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    param_optci i t e bddi 
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
+by (sep_auto simp add: brofix.param_opt_impl.simps param_optci_def tmi'_def fmi'_def
+             split: Option.bind_splits)
 
 partial_function(heap) iteci_opt where
 "iteci_opt i t e s = do {
