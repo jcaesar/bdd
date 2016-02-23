@@ -309,9 +309,16 @@ end
 
 (* How do I get 'ni in here? *)
 locale bdd_impl_cmp = bdd_impl + bdd_impl_cmp_pre +
+  fixes M :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b option"
+  fixes U :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b \<Rightarrow> 'a"
   fixes cmp :: "'b \<Rightarrow> 'b \<Rightarrow> bool"
   assumes cmp_rule1: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
   assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> i = i'"
+  assumes map_invar_rule1: "I s \<Longrightarrow> map_invar_impl (M s) s"
+  assumes map_invar_rule2: "I s \<Longrightarrow> (ii,it) \<in> R s \<Longrightarrow> (ti,tt) \<in> R s \<Longrightarrow> (ei,et) \<in> R s \<Longrightarrow>
+                            (ri, ifex_ite_opt it tt et) \<in> R s \<Longrightarrow> U s (ii,ti,ei) ri = s' \<Longrightarrow>
+                            I s'"
+  assumes map_invar_rule3: "I s \<Longrightarrow> R (U s (ii, ti, ei) ri) = R s"
 begin
 
 lemma cmp_rule_eq: "I s \<Longrightarrow>  (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> cmp ni ni' \<longleftrightarrow> i = i'"
@@ -440,10 +447,10 @@ done
 qed
 
 partial_function(option) ite_impl_lu where
-"ite_impl_lu m i t e s = do {
-  (case m (i,t,e) of Some b \<Rightarrow> Some (b,s, m) | None \<Rightarrow> do {
+"ite_impl_lu i t e s = do {
+  (case M s (i,t,e) of Some b \<Rightarrow> Some (b,s) | None \<Rightarrow> do {
   (ld, s) \<leftarrow>  param_opt_impl i t e s;
-  (case ld of Some b \<Rightarrow> Some (b, s, m) |
+  (case ld of Some b \<Rightarrow> Some (b, s) |
   None \<Rightarrow>
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
@@ -455,30 +462,31 @@ partial_function(option) ite_impl_lu where
 			(fi,_) \<leftarrow> restrict_top_impl i a False s;
 			(ft,_) \<leftarrow> restrict_top_impl t a False s;
 			(fe,_) \<leftarrow> restrict_top_impl e a False s;
-			(tb,s,m) \<leftarrow> ite_impl_lu m ti tt te s;
-			(fb,s,m) \<leftarrow> ite_impl_lu m fi ft fe s;
+			(tb,s) \<leftarrow> ite_impl_lu ti tt te s;
+			(fb,s) \<leftarrow> ite_impl_lu fi ft fe s;
 			(r,s) \<leftarrow> IFimpl a tb fb s;
-      let m = m((i,t,e) \<mapsto> r);
-			Some (r,s,m)
+      let s = U s (i,t,e) r;
+			Some (r,s)
 			} |
 		None \<Rightarrow> None
 )})})}"
 
 declare ifex_ite_lu.simps[simp del] ifex_ite_opt.simps[simp del]
 
-lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl m s
+lemma ite_impl_lu_R: "I s
        \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
-       \<Longrightarrow> ospec (ite_impl_lu m ii ti ei s) 
-                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl m' s')"
+       \<Longrightarrow> ospec (ite_impl_lu ii ti ei s) 
+                 (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
 proof(induction i t e arbitrary: m s ii ti ei rule: ifex_ite_opt.induct)
   note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
 	case goal1 
-	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(5-7) by simp
+	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
  note mIH = goal1(1,2)
-	from goal1(3-7) show ?case
+	from goal1(3-6) show ?case
 apply(subst ite_impl_lu.simps)
-apply(case_tac "m (ii, ti, ei)")
+apply(case_tac "M s (ii, ti, ei)")
 defer
+apply(frule map_invar_rule1)
 apply(simp only: option.simps ospec.simps prod.simps simp_thms les_refl)
 apply(subst (asm) map_invar_impl_def)
 apply(erule_tac x = ii in allE)
@@ -519,13 +527,12 @@ apply(case_tac "param_opt i t e")
 	apply(rule IFimpl_rule)
   apply(simp) apply(auto simp add: les_def)[2]
   apply(clarsimp simp add: les_def)
-  apply(rule map_invar_impl_update)
-  apply(simp add: map_invar_impl_les les_def)
-  apply(blast)
-  apply(blast)
-  apply(blast)
-  apply(auto intro: map_invar_impl_update simp add: ifex_ite_opt.simps)
-done
+  apply(safe)
+  using map_invar_rule3 apply(presburger) (* One presburger with cheese, please *)
+  apply(rule map_invar_rule2)
+  prefer 6 apply(blast) apply(blast) apply(blast) apply(blast) apply(blast)
+  apply(clarsimp simp add: ifex_ite_opt.simps)
+  using map_invar_rule3 by presburger
 qed
 
 end

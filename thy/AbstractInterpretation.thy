@@ -204,14 +204,29 @@ lemma True_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Trueif)\<in>Rmi s \<long
 lemma False_rep[simp]: "bdd_sane s \<Longrightarrow> (ni,Falseif)\<in>Rmi s \<longleftrightarrow> ni=0"
   using Rmi_def Rmi_g.simps(1) Rmi_sv(2) by blast
 
+definition "updS s x r = dcl_update (\<lambda>m. m(x \<mapsto> r)) s"
+thm Rmi_g.induct
 
-interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' "op ="
+lemma updS_dpm: "dpm (updS s x r) = dpm s"
+  unfolding updS_def by simp
+
+lemma updS_Rmi_g: "Rmi_g n i (updS s x r) = Rmi_g n i s"
+  apply(induction n i s rule: Rmi_g.induct)
+  apply(simp_all) unfolding updS_dpm by auto
+
+lemma updS_Rmi: "Rmi (updS s x r) = Rmi s"
+  unfolding Rmi_def updS_Rmi_g by blast
+
+
+find_theorems dcl_update
+
+interpretation brofix!: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' dcl updS "op ="
 proof  -
   note s = mi.les_def[simp] Rmi_def
 
   note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
-	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' (op =)"
+	show "bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' dcl updS (op =)"
 	proof(unfold_locales)
 		case goal1 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
 	next case goal2 thus ?case by(clarsimp split: if_splits simp: Rmi_def)
@@ -245,9 +260,15 @@ proof  -
     case goal7 thus ?case using Rmi_sv by blast
 	next
     case goal8 thus ?case using Rmi_sv by blast
-  qed
+  next
+    case goal9 thus ?case unfolding bdd_sane_def by simp
+  next
+    case goal10 thus ?case unfolding bdd_sane_def mi.map_invar_impl_def
+       apply(clarsimp simp add: updS_Rmi simp del: ifex_ite_opt.simps)
+       apply(clarsimp simp add: updS_def simp del: ifex_ite_opt.simps)
+       by blast (* TODO: clean me *)
 qed
-
+qed
 
 lemma p_valid_RmiI: "(Suc (Suc na), b) \<in> Rmi bdd \<Longrightarrow> pointermap_p_valid na (dpm bdd)"
 	unfolding Rmi_def by(cases b) (auto)
