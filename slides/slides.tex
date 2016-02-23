@@ -1,9 +1,16 @@
 \documentclass{beamer}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.12}
+\usepackage{tikz}
+\usepackage{pgfplotstable}
+
 \title{An executable specification of BDDs in Isabelle}
 \author{Max Haslbeck, Julius Michaelis}
+
 \begin{document}
 \frame{\titlepage}
-\maketitleframe{}
+
 \section{Introduction - BDDs}
 \begin{frame}
 \end{frame}
@@ -15,7 +22,35 @@
 \subsection{Collapsed Result}
 \begin{frame}
 \end{frame}
+
 \section{Evaluation}
 \begin{frame}{Benchmarks}
+	\centering
+	Urquhart benchmark:
+	Check whether 
+	\begin{align*}
+	x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow (x_n \longleftrightarrow (x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow x_n))))))
+	\end{align*}
+	is a tautology. 
+
+	\begin{tikzpicture}
+		\begin{axis}[ylabel=time in s, xlabel=n]
+			\addplot table [col sep=comma] {urquhart2000.csv};
+		\end{axis}
+	\end{tikzpicture}
+\end{frame}
+\begin{frame}{Conclusion}
+	\begin{block}{Limitations}
+		\begin{itemize}
+			\item No garbage collection
+			\item No variable reordering
+		\end{itemize}
+	\end{block}
+	\begin{block}{Achievements}
+		\begin{itemize}
+			\item About a factor of 10 faster than previous work on BDDs in Isabelle
+			\item Haskell tool for tautology checking available
+		\end{itemize}
+	\end{block}
 \end{frame}
 \end{document}
