@@ -295,7 +295,7 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl 
 
   end
 
-locale bdd_impl_cmp_pre = bdd_impl_pre
+locale bdd_impl_cmp_pre = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set"
 begin
 
 definition "map_invar_impl s = 
@@ -309,7 +309,7 @@ lemma map_invar_impl_les: "M s' = M s \<Longrightarrow> map_invar_impl s \<Longr
 end
 
 (* How do I get 'ni in here? *)
-locale bdd_impl_cmp = bdd_impl + bdd_impl_cmp_pre +
+locale bdd_impl_cmp = bdd_impl + bdd_impl_cmp_pre + 
   fixes cmp :: "'b \<Rightarrow> 'b \<Rightarrow> bool"
   assumes cmp_rule1: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
   assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> i = i'"
@@ -527,7 +527,7 @@ apply(case_tac "param_opt i t e")
   apply(rule ospec_and[OF param_opt_impl_no_touch_M ospec_and[OF param_opt_impl_R param_opt_impl_lesI]])
   apply(auto split: option.splits)[12]
   apply(clarsimp split: option.splits)
-	apply(rule_tac obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e] \<and> M s' = M s"])
+	apply(rule_tac obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e] \<and> M s' = M s \<and> les s s'"])
 	apply(rule ospec_cons)
 	apply(rule lowest_tops_impl_R)
   using les_def apply(fastforce)
@@ -554,7 +554,7 @@ apply(case_tac "param_opt i t e")
   apply(rule conjI)
   using M_update_rule apply presburger
   apply(rule conjI)
-  apply(subst les_def[symmetric]) (* this proof is sooo broken *)
+  apply(unfold les_def[symmetric]) (* this proof is sooo broken *)
   apply(rename_tac ab bc)
   apply(subgoal_tac "les bc (M_update (ii, ti, ei) ab bc)")
   prefer 2
@@ -562,8 +562,18 @@ apply(case_tac "param_opt i t e")
   apply(rule refl)
   apply assumption
   apply(rule les_trans[rotated], assumption)+
-  oops
+  apply(rule les_refl)
   apply(rule map_invar_impl_update)
+  prefer 7
+  apply(rule refl)
+  apply assumption
+  apply(rule map_invar_impl_les)
+  prefer 3
+  apply(assumption)
+  apply simp
+  apply(assumption)
+  using les_def les_trans
+  oops
   apply(simp add: map_invar_impl_les les_def)
   apply(blast)
   apply(blast)
