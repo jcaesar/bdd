@@ -41,27 +41,6 @@ lemma join_hlp: "is_bdd_impl a s * is_bdd_impl b s = is_bdd_impl b s * is_bdd_im
 	apply(simp)
 done
 
-lemma add_true_asm:
-	assumes "<b * true> p <a>\<^sub>t"
-	shows "<b> p <a>\<^sub>t"
-	apply(rule cons_pre_rule)
-	prefer 2
-	apply(rule assms)
-	apply(simp add: ent_true_drop)
-done
-
-lemma add_anything:
-	assumes "<b> p <a>"
-	shows "<b * x> p <\<lambda>r. a r * x>\<^sub>t"
-proof -
-	note [sep_heap_rules] = assms
-	show ?thesis by sep_auto
-qed
-
-lemma add_true:
-	assumes "<b> p <a>\<^sub>t"
-	shows "<b * true> p <a>\<^sub>t"
-	using assms add_anything[where x=true] by force
 
 text{*
 This is the general form one wants to work with:

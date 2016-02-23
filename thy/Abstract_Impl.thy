@@ -11,6 +11,7 @@ datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni
 locale bdd_impl_pre =
   fixes R :: "'s \<Rightarrow> ('ni \<times> ('a :: linorder) ifex) set"
   fixes I :: "'s \<Rightarrow> bool"
+  fixes M :: "'s \<Rightarrow> (('ni\<times>'ni\<times>'ni) \<Rightarrow> 'ni option)"
 begin
   definition les:: "'s \<Rightarrow> 's \<Rightarrow> bool" where
   "les s s' == \<forall>ni n. (ni, n) \<in> R s \<longrightarrow> (ni, n) \<in> R s'"
@@ -21,17 +22,22 @@ locale bdd_impl = bdd_impl_pre R for R :: "'s \<Rightarrow> ('ni \<times> ('a ::
   fixes Fimpl :: "'s \<rightharpoonup> ('ni \<times> 's)"
   fixes IFimpl :: "'a \<Rightarrow> 'ni \<Rightarrow> 'ni \<Rightarrow> 's \<rightharpoonup> ('ni \<times> 's)"
   fixes DESTRimpl :: "'ni  \<Rightarrow> 's \<rightharpoonup> ('a, 'ni) IFEXD"
+  fixes M_get :: "('ni\<times>'ni\<times>'ni) \<Rightarrow> 's \<Rightarrow> 'ni option"
+  fixes M_update :: "('ni\<times>'ni\<times>'ni) \<Rightarrow> 'ni \<Rightarrow> 's \<Rightarrow> 's"
 
-  assumes Timpl_rule: "I s \<Longrightarrow> ospec (Timpl s) (\<lambda>(ni, s'). (ni, Trueif) \<in> R s' \<and> I s' \<and> les s s')"
-  assumes Fimpl_rule: "I s \<Longrightarrow> ospec (Fimpl s) (\<lambda>(ni, s'). (ni, Falseif) \<in> R s' \<and> I s' \<and> les s s')"
+  assumes Timpl_rule: "I s \<Longrightarrow> ospec (Timpl s) (\<lambda>(ni, s'). (ni, Trueif) \<in> R s' \<and> I s' \<and> les s s' \<and> M s = M s')"
+  assumes Fimpl_rule: "I s \<Longrightarrow> ospec (Fimpl s) (\<lambda>(ni, s'). (ni, Falseif) \<in> R s' \<and> I s' \<and> les s s' \<and> M s = M s')"
   assumes IFimpl_rule: "\<lbrakk>I s; (ni1,n1) \<in> R s;(ni2,n2) \<in> R s\<rbrakk>
-                       \<Longrightarrow> ospec (IFimpl v ni1 ni2 s) (\<lambda>(ni, s'). (ni, IFC v n1 n2) \<in> R s' \<and> I s' \<and> les s s')"
+                       \<Longrightarrow> ospec (IFimpl v ni1 ni2 s) (\<lambda>(ni, s'). (ni, IFC v n1 n2) \<in> R s' \<and> I s' \<and> les s s' \<and> M s = M s')"
 
   assumes DESTRimpl_rule1: "I s \<Longrightarrow> (ni, Trueif) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. r = TD)"
   assumes DESTRimpl_rule2: "I s \<Longrightarrow> (ni, Falseif) \<in> R s \<Longrightarrow> ospec (DESTRimpl ni s) (\<lambda>r. r = FD)"
   assumes DESTRimpl_rule3: "I s \<Longrightarrow> (ni, IF v n1 n2) \<in> R s \<Longrightarrow> 
-    ospec (DESTRimpl ni s) (\<lambda>r. \<exists>ni1 ni2. 
+    ospec (DESTRimpl ni s) (\<lambda>r. \<exists>ni1 ni2.
       r = (IFD v ni1 ni2) \<and> (ni1, n1) \<in> R s \<and> (ni2, n2) \<in> R s)"
+      
+  assumes M_update_rule: "I s \<Longrightarrow> s' = M_update t r s \<Longrightarrow> I s' \<and> les s s' \<and> M s' = (M s)(t \<mapsto> r)"
+  assumes M_get_rule : "I s \<Longrightarrow> M_get t s = M s t"
 begin
 
 lemma les_refl[simp,intro!]:"les s s" by (auto simp add: les_def)
@@ -292,18 +298,13 @@ lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl 
 locale bdd_impl_cmp_pre = bdd_impl_pre
 begin
 
-definition "map_invar_impl m s = 
-  (\<forall>ii ti ei ri. m (ii,ti,ei) = Some ri \<longrightarrow> 
+definition "map_invar_impl s = 
+  (\<forall>ii ti ei ri. M s (ii,ti,ei) = Some ri \<longrightarrow> 
   (\<exists>i t e. ((ri,ifex_ite_opt i t e) \<in> R s) \<and> (ii,i) \<in> R s \<and> (ti,t) \<in> R s \<and> (ei,e) \<in> R s))"
 
   
-lemma map_invar_impl_les: "map_invar_impl m s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl m s'"
-  unfolding map_invar_impl_def bdd_impl_pre.les_def by blast
-
-lemma map_invar_impl_update: "map_invar_impl m s \<Longrightarrow> 
-       (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow>
-       (ri, ifex_ite_opt i t e) \<in> R s \<Longrightarrow> map_invar_impl (m((ii,ti,ei) \<mapsto> ri)) s"
-unfolding map_invar_impl_def by auto
+lemma map_invar_impl_les: "M s' = M s \<Longrightarrow> map_invar_impl s \<Longrightarrow> les s s' \<Longrightarrow> map_invar_impl s'"
+  unfolding map_invar_impl_def bdd_impl_pre.les_def by simp blast
 
 end
 
@@ -313,6 +314,16 @@ locale bdd_impl_cmp = bdd_impl + bdd_impl_cmp_pre +
   assumes cmp_rule1: "I s \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i) \<in> R s \<Longrightarrow> cmp ni ni'"
   assumes cmp_rule2: "I s \<Longrightarrow> cmp ni ni' \<Longrightarrow> (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> i = i'"
 begin
+
+
+lemma map_invar_impl_update: "I s \<Longrightarrow> map_invar_impl s \<Longrightarrow> 
+       (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s \<Longrightarrow>
+       (ri, ifex_ite_opt i t e) \<in> R s  \<Longrightarrow>
+       s' = M_update (ii,ti,ei) ri s \<Longrightarrow> map_invar_impl s'"
+	apply(drule (1) M_update_rule) 
+	apply(clarsimp simp del: ifex_ite_opt.simps simp add: les_def map_invar_impl_def) 
+	apply meson
+done
 
 lemma cmp_rule_eq: "I s \<Longrightarrow>  (ni, i) \<in> R s \<Longrightarrow> (ni', i') \<in> R s \<Longrightarrow> cmp ni ni' \<longleftrightarrow> i = i'"
   using cmp_rule1 cmp_rule2 by force
@@ -336,7 +347,6 @@ fun param_opt_impl where
     if ei = TD \<and> cmp i t then Some tn else
     if ti = FD \<and> cmp i e then Some fn else
     None), s)}"
-
 declare param_opt_impl.simps[simp del]
 
 lemma param_opt_impl_lesI: 
@@ -440,10 +450,10 @@ done
 qed
 
 partial_function(option) ite_impl_lu where
-"ite_impl_lu m i t e s = do {
-  (case m (i,t,e) of Some b \<Rightarrow> Some (b,s, m) | None \<Rightarrow> do {
+"ite_impl_lu i t e s = do {
+  (case (M_get (i,t,e) s) of Some b \<Rightarrow> Some (b,s) | None \<Rightarrow> do {
   (ld, s) \<leftarrow>  param_opt_impl i t e s;
-  (case ld of Some b \<Rightarrow> Some (b, s, m) |
+  (case ld of Some b \<Rightarrow> Some (b, s) |
   None \<Rightarrow>
   do {
 	(lt,_) \<leftarrow> lowest_tops_impl [i, t, e] s;
@@ -455,29 +465,45 @@ partial_function(option) ite_impl_lu where
 			(fi,_) \<leftarrow> restrict_top_impl i a False s;
 			(ft,_) \<leftarrow> restrict_top_impl t a False s;
 			(fe,_) \<leftarrow> restrict_top_impl e a False s;
-			(tb,s,m) \<leftarrow> ite_impl_lu m ti tt te s;
-			(fb,s,m) \<leftarrow> ite_impl_lu m fi ft fe s;
+			(tb,s) \<leftarrow> ite_impl_lu ti tt te s;
+			(fb,s) \<leftarrow> ite_impl_lu fi ft fe s;
 			(r,s) \<leftarrow> IFimpl a tb fb s;
-      let m = m((i,t,e) \<mapsto> r);
-			Some (r,s,m)
+			let s = M_update (i,t,e) r s;
+			Some (r,s)
 			} |
 		None \<Rightarrow> None
 )})})}"
 
 declare ifex_ite_lu.simps[simp del] ifex_ite_opt.simps[simp del]
 
-lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl m s
+lemma param_opt_impl_no_touch_M: 
+  assumes "I s" "(ii,i) \<in> R s" "(ti,t) \<in> R s" "(ei,e) \<in> R s"
+  shows "ospec (param_opt_impl ii ti ei s) 
+               (\<lambda>(r,s'). M s' = M s)"
+  using assms apply(subst param_opt_impl.simps)
+    apply(auto simp add: param_opt_def les_def intro!: obind_rule 
+               dest: DESTRimpl_Some Timpl_rule Fimpl_rule)
+done
+
+lemma update_in_R: "I s \<Longrightarrow> (a,b) \<in> R s \<Longrightarrow> (a,b) \<in> R (M_update t r s)"
+	apply(drule M_update_rule)
+	apply simp
+	apply(clarsimp simp: les_def) 
+	apply blast
+done
+
+lemma ite_impl_lu_R: "I s \<Longrightarrow> map_invar_impl s
        \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
-       \<Longrightarrow> ospec (ite_impl_lu m ii ti ei s) 
-                 (\<lambda>(r, s',m'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl m' s')"
-proof(induction i t e arbitrary: m s ii ti ei rule: ifex_ite_opt.induct)
+       \<Longrightarrow> ospec (ite_impl_lu ii ti ei s) 
+                 (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s' \<and> map_invar_impl  s')"
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct)
   note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
 	case goal1 
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(5-7) by simp
  note mIH = goal1(1,2)
 	from goal1(3-7) show ?case
 apply(subst ite_impl_lu.simps)
-apply(case_tac "m (ii, ti, ei)")
+apply(case_tac "M_get (ii, ti, ei) s")
 defer
 apply(simp only: option.simps ospec.simps prod.simps simp_thms les_refl)
 apply(subst (asm) map_invar_impl_def)
@@ -485,21 +511,23 @@ apply(erule_tac x = ii in allE)
 apply(erule_tac x = ti in allE)
 apply(erule_tac x = ei in allE)
 apply(erule_tac x = a in allE)
-apply(metis cmp_rule_eq)
+apply(metis cmp_rule_eq M_get_rule)
 
 apply(clarsimp simp del: ifex_ite_lu.simps ifex_ite_opt.simps)
 apply(case_tac "param_opt i t e")
   defer
   apply(rule obind_rule)
-  apply(rule ospec_and[OF param_opt_impl_R param_opt_impl_lesI])
-  apply(auto simp add: map_invar_impl_les ifex_ite_opt.simps  split: option.splits)[9]
+  apply(rule ospec_and[OF param_opt_impl_no_touch_M ospec_and[OF param_opt_impl_R param_opt_impl_lesI]])
+  apply(auto split: option.splits)[13]
+  apply (simp add: ifex_ite_opt.simps)
+  apply(erule (2) map_invar_impl_les)
   apply(frule param_opt_lowest_tops_lem)
   apply(clarsimp)
   apply(rule obind_rule)
-  apply(rule ospec_and[OF param_opt_impl_R param_opt_impl_lesI])
-  apply(auto split: option.splits)[8]
+  apply(rule ospec_and[OF param_opt_impl_no_touch_M ospec_and[OF param_opt_impl_R param_opt_impl_lesI]])
+  apply(auto split: option.splits)[12]
   apply(clarsimp split: option.splits)
-	apply(rule_tac obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e]"])
+	apply(rule_tac obind_rule[where Q="\<lambda>(r, s'). r = lowest_tops [i,t,e] \<and> M s' = M s"])
 	apply(rule ospec_cons)
 	apply(rule lowest_tops_impl_R)
   using les_def apply(fastforce)
@@ -514,11 +542,27 @@ apply(case_tac "param_opt i t e")
 	apply(rule obind_rule)
 	apply(rule mIH(2))
 	apply(simp add: map_invar_impl_les les_def;fail)+
-	apply(simp add: ifex_ite_opt.simps split: prod.splits)
+	apply(clarify)
 	apply(rule obind_rule)
-	apply(rule IFimpl_rule)
-  apply(simp) apply(auto simp add: les_def)[2]
-  apply(clarsimp simp add: les_def)
+	apply(rule IFimpl_rule) 
+  apply(auto simp add: les_def)[3]
+  apply(clarsimp)
+  apply(rule conjI)
+  apply(rule update_in_R)
+  apply simp
+  apply(simp add: ifex_ite_opt.simps)
+  apply(rule conjI)
+  using M_update_rule apply presburger
+  apply(rule conjI)
+  apply(subst les_def[symmetric]) (* this proof is sooo broken *)
+  apply(rename_tac ab bc)
+  apply(subgoal_tac "les bc (M_update (ii, ti, ei) ab bc)")
+  prefer 2
+  apply(rule M_update_rule[THEN conjunct2, THEN conjunct1,rotated])
+  apply(rule refl)
+  apply assumption
+  apply(rule les_trans[rotated], assumption)+
+  oops
   apply(rule map_invar_impl_update)
   apply(simp add: map_invar_impl_les les_def)
   apply(blast)

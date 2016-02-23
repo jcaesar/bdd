@@ -271,4 +271,31 @@ proof -
 	thus ?thesis unfolding bdd_node_valid_def by blast
 qed
 
+partial_function(option) brofix_ite_impl_lu where
+"brofix_ite_impl_lu i t e s = do {
+  (case (dcl s)(i,t,e) of Some b \<Rightarrow> Some (b,s) | None \<Rightarrow> do {
+  (ld, s) \<leftarrow>  brofix.param_opt_impl i t e s;
+  (case ld of Some b \<Rightarrow> Some (b, s) |
+  None \<Rightarrow>
+  do {
+	(lt,_) \<leftarrow> brofix.lowest_tops_impl [i, t, e] s;
+	(case lt of
+		Some a \<Rightarrow>  do {
+			(ti,_) \<leftarrow> brofix.restrict_top_impl i a True s;
+			(tt,_) \<leftarrow> brofix.restrict_top_impl t a True s;
+			(te,_) \<leftarrow> brofix.restrict_top_impl e a True s;
+			(fi,_) \<leftarrow> brofix.restrict_top_impl i a False s;
+			(ft,_) \<leftarrow> brofix.restrict_top_impl t a False s;
+			(fe,_) \<leftarrow> brofix.restrict_top_impl e a False s;
+			(tb,s) \<leftarrow> brofix_ite_impl_lu ti tt te s;
+			(fb,s) \<leftarrow> brofix_ite_impl_lu fi ft fe s;
+			(r,s) \<leftarrow> ifmi' a tb fb s;
+			let s = dcl_update (\<lambda>m. m((i,t,e) \<mapsto> r)) s;
+			Some (r,s)
+			} |
+		None \<Rightarrow> None
+)})})}"
+
+lemma "brofix_ite_impl_lu i t e s = (let (r,b,c) = brofix.ite_impl_lu (dcl s) i t e s in (r,\<lparr>dpm=b,dcl=c\<rparr>))"
+
 end

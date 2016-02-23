@@ -244,8 +244,8 @@ definition param_opt_ci where
                         None, bdd)
   }"
 
-lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
-  oops
+lemma param_opt_ci_eq[sep_heap_rules]: "brofix.param_opt_impl i t e bdd = Some (r,bdd') \<Longrightarrow> <is_bdd_impl bdd bddi> param_opt_ci i t e bddi <\<lambda>(ri,bddi'). is_bdd_impl bdd' bddi' * \<up>(ri = r)>"
+  sorry
 
 partial_function(heap) iteci_opt where
 "iteci_opt i t e s = do {
@@ -277,19 +277,51 @@ partial_function(heap) iteci_opt where
 term ht_lookup
 declare iteci_opt.simps[code]
 
+lemma dcl_lookup_rule[sep_heap_rules]:
+"<is_bdd_impl bdd bddi> hm_lookup (i, t, e) (dcli bddi) <\<lambda>r. is_bdd_impl bdd bddi *	\<up>(r = (dcl bdd)(i, t, e))>\<^sub>t"
+by(sep_auto simp: is_bdd_impl_def)
+
+lemma add_true_asm:
+	assumes "<b * true> p <a>\<^sub>t"
+	shows "<b> p <a>\<^sub>t"
+	apply(rule cons_pre_rule)
+	prefer 2
+	apply(rule assms)
+	apply(simp add: ent_true_drop)
+done
+
+lemma add_anything:
+	assumes "<b> p <a>"
+	shows "<b * x> p <\<lambda>r. a r * x>\<^sub>t"
+proof -
+	note [sep_heap_rules] = assms
+	show ?thesis by sep_auto
+qed
+
+lemma add_true:
+	assumes "<b> p <a>\<^sub>t"
+	shows "<b * true> p <a>\<^sub>t"
+	using assms add_anything[where x=true] by force
+
 (* Proof by copy-paste *)
 lemma iteci_opt_rule: "
-  ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  ( m = dcl bdd \<and> brofix.ite_impl_lu m i t e bdd = Some (p,(bdd's,m'))) \<and> bdd' = \<lparr>dpm=dpm bdd's,dcl = m'\<rparr>  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
-    iteci_opt i t e bddi 
-  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_opt.fixp_induct)
+    iteci_opt i t e bddi
+  <\<lambda>(pi,bddi'). is_bdd_impl \<lparr>dpm = (dpm bdd's), dcl = dclr\<rparr> bddi' * \<up>(pi=p )>\<^sub>t"
+  apply (induction arbitrary: i t e bddi bdd p bdd's m m' rule: brofix.ite_impl_lu.fixp_induct)
   defer
   apply simp
   apply clarify
   apply (clarsimp split: option.splits Option.bind_splits prod.splits)
   apply (subst iteci_opt.simps)
   apply (sep_auto )
+  unfolding imp_to_meta
+  apply(rule add_true)
+  apply rprems
+  apply(rule conjI)
+  apply simp
+  apply(rule conjI)
 oops
 
 
