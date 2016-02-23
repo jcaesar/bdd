@@ -461,7 +461,7 @@ lemma ifex_ite_opt_eq: "
 apply(induction i t e rule: ifex_ite_opt.induct)
   apply(subst ifex_ite_opt.simps)
   apply(case_tac "\<exists>r. param_opt i t e = Some r")
-    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
+    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps add: ifex_ite_opt.simps)
     apply(rule param_opt_ifex_ite_eq)
       apply(auto simp add: bf_ifex_rel_def)[4]
     
@@ -481,16 +481,21 @@ apply(induction i t e rule: ifex_ite_opt.induct)
       using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
 done (* TODO: Clean me *)
 
+lemma ro_ifexI: "(a,b) \<in> bf_ifex_rel \<Longrightarrow> ro_ifex b" by (simp add: ifex_minimal_implied ifex_ordered_implied)
+
+theorem ifex_ite_opt_rel_bf: "
+	(fi,i) \<in> bf_ifex_rel \<Longrightarrow>
+	(ft,t) \<in> bf_ifex_rel \<Longrightarrow>
+	(fe,e) \<in> bf_ifex_rel \<Longrightarrow>
+	((bf_ite fi ft fe), (ifex_ite_opt i t e)) \<in> bf_ifex_rel"
+using ifex_ite_rel_bf ifex_ite_opt_eq ro_ifexI by metis
+
+
+
 definition "map_invar m = 
-   (\<forall>i ii t ti e ei r ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
-            m (ii,ti,ei) = Some ri \<and> bf_ite i t e = r \<longrightarrow> (r,ri) \<in> bf_ifex_rel)"
-
-definition "map_invar' m = 
    (\<forall>i ii t ti e ei ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
-            m (ii,ti,ei) = Some ri \<longrightarrow> (\<exists>r. bf_ite i t e = r \<and> (r,ri) \<in> bf_ifex_rel))"
+            m (ii,ti,ei) = Some ri \<longrightarrow> (bf_ite i t e,ri) \<in> bf_ifex_rel)"
 
-
-find_theorems single_valued
 
 lemma map_invar_update_lem: "
   map_invar m \<Longrightarrow> (ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow>
@@ -693,5 +698,8 @@ lemma bf_ifex_rel_consts_ensured_rev[simp]:
 	"(x,Trueif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_True)"
 	"(x,Falseif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_False)"
 	by(simp_all add: bf_True_def bf_False_def bf_ifex_rel_def fun_eq_iff)
+
+declare ifex_ite_opt.simps restrict_top.simps lowest_tops.simps[simp del]
+
 
 end

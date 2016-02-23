@@ -227,8 +227,8 @@ declare  iteci_rule[THEN mp, sep_heap_rules]
 
 (* ITE VERSION WITH TURBO :) *)
 
-definition param_opt_ci where
-  "param_opt_ci i t e bdd = do {
+definition param_optci where
+  "param_optci i t e bdd = do {
   	(tr, bdd) \<leftarrow> tci bdd;
   	(fl, bdd) \<leftarrow> fci bdd;
   	id \<leftarrow> destrci i bdd;
@@ -244,18 +244,35 @@ definition param_opt_ci where
                         None, bdd)
   }"
 
-lemma param_opt_ci_eq: "param_opt_ci i t e = brofix.param_opt i t e"
-  oops
+lemma param_optci_rule: "
+  ( brofix.param_opt_impl i t e bdd = Some (p,bdd'))  \<Longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    param_optci i t e bddi 
+  <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p)>\<^sub>t"
+by (sep_auto simp add: brofix.param_opt_impl.simps param_optci_def tmi'_def fmi'_def
+             split: Option.bind_splits)
 
-partial_function(heap) iteci_opt where
-"iteci_opt i t e s = do {
+lemma bdd_hm_lookup_rule: "
+  (dcl bdd (i,t,e) = p) \<Longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    hm_lookup (i, t, e) (dcli bddi)
+  <\<lambda>(pi). is_bdd_impl bdd bddi * \<up>(pi = p)>\<^sub>t"
+unfolding is_bdd_impl_def by (sep_auto)
+
+lemma bdd_hm_update_rule'[sep_heap_rules]:
+  "<is_bdd_impl bdd bddi> 
+    hm_update k v (dcli bddi)
+  <\<lambda>r. is_bdd_impl (updS bdd k v) (dcli_update (const r) bddi) * true>"
+unfolding is_bdd_impl_def updS_def by (sep_auto)
+
+partial_function(heap) iteci_lu where
+"iteci_lu i t e s = do {
   lu \<leftarrow> ht_lookup (i,t,e) (dcli s);
   (case lu of Some b \<Rightarrow> return (b,s)
     | None \<Rightarrow> do {
-      (po,s) \<leftarrow> param_opt_ci i t e s;
+      (po,s) \<leftarrow> param_optci i t e s;
       (case po of Some b \<Rightarrow> do {
-        cl \<leftarrow> hm_update (i,t,e) b (dcli s);
-        return (b,dcli_update (const cl) s)}
+        return (b,s)}
       | None \<Rightarrow> do {
         (lt) \<leftarrow> lowest_topsci [i, t, e] s;
         (case lt of Some a \<Rightarrow> do {
@@ -265,8 +282,8 @@ partial_function(heap) iteci_opt where
 			  fi \<leftarrow> restrict_topci i a False s;
 			  ft \<leftarrow> restrict_topci t a False s;
 			  fe \<leftarrow> restrict_topci e a False s;
-			  (tb,s) \<leftarrow> iteci_opt ti tt te s;
-			  (fb,s) \<leftarrow> iteci_opt fi ft fe s;
+			  (tb,s) \<leftarrow> iteci_lu ti tt te s;
+			  (fb,s) \<leftarrow> iteci_lu fi ft fe s;
 			  (r,s) \<leftarrow> ifci a tb fb s;
 			  cl \<leftarrow> hm_update (i,t,e) r (dcli s);
 			  return (r,dcli_update (const cl) s)
@@ -275,17 +292,74 @@ partial_function(heap) iteci_opt where
   })}"
 
 term ht_lookup
-declare iteci_opt.simps[code]
+declare iteci_lu.simps[code]
 
 (* Proof by copy-paste *)
-lemma iteci_opt_rule: "
-  ( brofix.ite_impl_opt i t e bdd = Some (p,bdd'))  \<longrightarrow>
+lemma iteci_lu_rule: "
+  ( brofix.ite_impl_lu i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
-    iteci_opt i t e bddi 
+    iteci_lu i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-oops
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_lu.fixp_induct)
+  defer
+  apply(simp)
+  apply clarify
+  apply (clarsimp split: option.splits Option.bind_splits prod.splits)
+  
+  prefer 3
+  apply(subst iteci_lu.simps)
+  apply(sep_auto)
+  using bdd_hm_lookup_rule apply(blast)
+  apply(sep_auto)
+  
+  prefer 2
+  apply(subst iteci_lu.simps)
+  apply(sep_auto)
+  using bdd_hm_lookup_rule apply(blast)
+  apply(sep_auto)
+  apply(rule fi_rule)
+  apply(rule param_optci_rule)
+  apply(sep_auto)
+  apply(sep_auto)
+  apply(sep_auto)
+  
+  unfolding updS_def
+  apply (subst iteci_lu.simps)
+  apply (sep_auto )
+  using bdd_hm_lookup_rule apply(blast)
+  apply(sep_auto)
+  apply(rule fi_rule)
+  apply(rule param_optci_rule)
+  apply(sep_auto)
+  apply(sep_auto)
+  apply(sep_auto)
+  unfolding imp_to_meta
+  apply(rule fi_rule)
+  apply(rprems)
+  apply(simp)
+  apply(sep_auto)
+  apply(sep_auto)
+  apply(rule fi_rule)
+  apply(rprems)
+  apply(simp)
+  apply(sep_auto)
+  apply(sep_auto)
+  unfolding updS_def apply(sep_auto)
+
+  apply simp  (* Warning: Dragons ahead! *)
+  using option_admissible[where P=
+    "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi. 
+      <is_bdd_impl x4 bddi> 
+        iteci_lu x1 x2 x3 bddi  
+      <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
+  apply auto[1]
+  apply (fo_rule subst[rotated])
+  apply (assumption)
+  apply auto[1]
+done
 
 
+subsection{*A standard library of functions*}
 
 declare iteci_rule[THEN mp, sep_heap_rules]
 
@@ -293,15 +367,15 @@ declare iteci_rule[THEN mp, sep_heap_rules]
 definition "notci e s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
 	(t,s) \<leftarrow> tci s;
-	iteci e f t s
+	iteci_lu e f t s
 }"
 definition "orci e1 e2 s \<equiv> do {
 	(t,s) \<leftarrow> tci s;
-	iteci e1 t e2 s
+	iteci_lu e1 t e2 s
 }"
 definition "andci e1 e2 s \<equiv> do {
 	(f,s) \<leftarrow> fci s;
-	iteci e1 e2 f s
+	iteci_lu e1 e2 f s
 }"
 definition "norci e1 e2 s \<equiv> do {
 	(r,s) \<leftarrow> orci e1 e2 s;
@@ -313,11 +387,11 @@ definition "nandci e1 e2 s \<equiv> do {
 }"
 definition "biimpci a b s \<equiv> do {
 	(nb,s) \<leftarrow> notci b s;
-	iteci a b nb s
+	iteci_lu a b nb s
 }"
 definition "xorci a b s \<equiv> do {
 	(nb,s) \<leftarrow> notci b s;
-	iteci a nb b s
+	iteci_lu a nb b s
 }"
 definition "litci v bdd \<equiv> do {
 	(t,bdd) \<leftarrow> tci bdd;
@@ -328,6 +402,8 @@ definition "tautci v bdd \<equiv> do {
 	d \<leftarrow> destrci v bdd;
 	return (d = TD)
 }"
+
+subsection{* Printing *}
 
 partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
 "serializeci p s = do {
