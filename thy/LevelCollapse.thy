@@ -72,7 +72,7 @@ thm iteci_rule[THEN mp] brofix.ite_impl_R ifex_ite_rel_bf
 lemma iteci_rule[sep_heap_rules]: "
 \<lbrakk>(ib, ic) \<in> rp; (tb, tc) \<in> rp; (eb, ec) \<in> rp\<rbrakk> \<Longrightarrow>
 <bdd_relator rp s> 
-	iteci ic tc ec s
+	iteci_lu ic tc ec s
 <\<lambda>(r,s'). bdd_relator (insert (bf_ite ib tb eb,r) rp) s'>"
 	apply(unfold bdd_relator_def)
 	apply(intro norm_pre_ex_rule)
@@ -80,13 +80,12 @@ lemma iteci_rule[sep_heap_rules]: "
 	apply(unfold bddmi_rel_def)
 	apply(drule (1) rev_subsetD)+
 	apply(clarsimp)
-	apply(drule (3) brofix.ite_impl_R[where ii=ic and ti=tc and ei=ec, unfolded in_rel_def])
+	apply(drule (3) brofix.ite_impl_lu_R[where ii=ic and ti=tc and ei=ec, unfolded in_rel_def])
 	apply(drule ospecD2)
 	apply(clarsimp simp del: ifex_ite.simps)
 	apply(rule cons_post_rule)
-	 apply(rule cons_pre_rule)
-	  prefer 2
-	  apply(rule iteci_rule[THEN mp, THEN add_true])
+	 apply(rule cons_pre_rule[rotated])
+	  apply(rule iteci_lu_rule[THEN mp, THEN add_true])
 	  apply(assumption)
 	 apply(sep_auto; fail)
 	apply(clarsimp simp del: ifex_ite.simps)
@@ -99,7 +98,7 @@ lemma iteci_rule[sep_heap_rules]: "
 	 apply(force simp add: brofix.les_def)
 	apply(rule exI)
 	apply(rule conjI)
-	 apply(erule (2) ifex_ite_rel_bf[unfolded in_rel_def])
+	 apply(erule (2) ifex_ite_opt_rel_bf[unfolded in_rel_def]) 
 	apply assumption
 done
 
@@ -258,7 +257,7 @@ lemma [code del]:
 declare blit_def[code]
 
 (* Todo: verify iteci_opt *)
-export_code open iteci_opt iteci notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
+export_code open iteci_lu notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
 
 subsection{*Tests and examples*}
 
@@ -266,7 +265,7 @@ lemma "<emp> do {
 	s \<leftarrow> emptyci;
 	(t,s) \<leftarrow> tci s;
 	tautci t s
-} <\<up>>\<^sub>t"
+} <\<lambda>r. \<up>(r = True)>\<^sub>t"
 by sep_auto
 
 lemma "a \<Longrightarrow>\<^sub>A b \<Longrightarrow> a * true \<Longrightarrow>\<^sub>A b" oops

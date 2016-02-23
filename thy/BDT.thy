@@ -481,6 +481,16 @@ apply(induction i t e rule: ifex_ite_opt.induct)
       using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
 done (* TODO: Clean me *)
 
+lemma ro_ifexI: "(a,b) \<in> bf_ifex_rel \<Longrightarrow> ro_ifex b" by (simp add: ifex_minimal_implied ifex_ordered_implied)
+
+theorem ifex_ite_opt_rel_bf: "
+	(fi,i) \<in> bf_ifex_rel \<Longrightarrow>
+	(ft,t) \<in> bf_ifex_rel \<Longrightarrow>
+	(fe,e) \<in> bf_ifex_rel \<Longrightarrow>
+	((bf_ite fi ft fe), (ifex_ite_opt i t e)) \<in> bf_ifex_rel"
+using ifex_ite_rel_bf ifex_ite_opt_eq ro_ifexI by metis
+
+
 
 definition "map_invar m = 
    (\<forall>i ii t ti e ei ri. (i,ii) \<in> bf_ifex_rel \<and> (t,ti) \<in> bf_ifex_rel \<and> (e,ei) \<in> bf_ifex_rel \<and> 
