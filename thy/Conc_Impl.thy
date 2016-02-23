@@ -290,9 +290,41 @@ partial_function(heap) iteci_lu where
        } 
          | None \<Rightarrow> raise ''Cannot happen'' )})
   })}"
-
+  
 term ht_lookup
 declare iteci_lu.simps[code]
+thm iteci_lu.simps[unfolded restrict_topci_def case_ifexici_def  param_optci_def lowest_topsci.simps]
+partial_function(heap) iteci_lu_code where "iteci_lu_code i t e s = do {
+  lu \<leftarrow> hm_lookup (i, t, e) (dcli s);
+  case lu of None \<Rightarrow> let po = if i = 1 then Some t
+                              else if i = 0 then Some e else if t = 1 \<and> e = 0 then Some i else if t = e then Some t else if e = 1 \<and> i = t then Some 1 else if t = 0 \<and> i = e then Some 0 else None
+                     in case po of None \<Rightarrow> do {
+                                       id \<leftarrow> destrci i s;
+                                       td \<leftarrow> destrci t s;
+                                       ed \<leftarrow> destrci e s;
+                                       let a = (case id of IFD v t e \<Rightarrow> v);
+                                       let a = (case td of IFD v t e \<Rightarrow> min a v | _ \<Rightarrow> a);
+                                       let a = (case ed of IFD v t e \<Rightarrow> min a v | _ \<Rightarrow> a);
+                                       let ti = (case id of IFD v ti ei \<Rightarrow> if v = a then ti else i | _ \<Rightarrow> i);
+                                       let tt = (case td of IFD v ti ei \<Rightarrow> if v = a then ti else t | _ \<Rightarrow> t);
+                                       let te = (case ed of IFD v ti ei \<Rightarrow> if v = a then ti else e | _ \<Rightarrow> e);
+                                       let fi = (case id of IFD v ti ei \<Rightarrow> if v = a then ei else i | _ \<Rightarrow> i);
+                                       let ft = (case td of IFD v ti ei \<Rightarrow> if v = a then ei else t | _ \<Rightarrow> t);
+                                       let fe = (case ed of IFD v ti ei \<Rightarrow> if v = a then ei else e | _ \<Rightarrow> e);
+                                       (tb, s) \<leftarrow> iteci_lu_code ti tt te s;
+                                       (fb, s) \<leftarrow> iteci_lu_code fi ft fe s;
+                                       (r, s) \<leftarrow> ifci a tb fb s;
+                                       cl \<leftarrow> hm_update (i, t, e) r (dcli s);
+                                       return (r, dcli_update (const cl) s)
+                                     }
+                        | Some b \<Rightarrow> return (b, s)
+  | Some b \<Rightarrow> return (b, s)
+}"
+
+declare iteci_lu_code.simps[code]
+(* reduced the time by around 30%. But I guess this is annoying to show. *)
+lemma iteci_lu_code[code_unfold]: "iteci_lu i t e s = iteci_lu_code i t e s"
+oops
 
 (* Proof by copy-paste *)
 lemma iteci_lu_rule: "
