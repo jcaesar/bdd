@@ -60,7 +60,6 @@
 \maketitle
 
 
-\section{Introduction - BDDs}
 \begin{frame}{Introduction - BDDs}
   \begin{center}
 \begin{figure}[htbp]
@@ -75,10 +74,7 @@
 \end{frame}
 
 
-\section{Formalization in Levels}
-
 \begin{frame}{Boolean functions}
-
 \begingroup
 \addtolength{\jot}{-1mm}
 {\footnotesize
@@ -142,6 +138,7 @@
 \vspace*{-10mm}
 \end{frame}
 
+
 \begin{frame}{Binary Decision Trees} % Maybe not necessary
 \begin{figure}[htbp]
   \centering
@@ -164,22 +161,60 @@
              $(\textit{bdt-ite}\ ib\ tb\ eb, \textit{bdd-ite}\ ibd\ tbd\ ebd) 
              \in \textit{bdt-bdd-rel} $
     \end{itemize}
-  \item instantiation of locale with abstract datatype \textit{pointer-map}
+  \item instantiation of locale with abstract datatype \textit{pointermap}
 \end{itemize}
 
 \end{frame}
 
-\subsection{A concrete datatype: Pointermap}
-\subsection{Towards fast execution}
-\subsection{Collapsed Result}
-\begin{frame}
+
+\begin{frame}{Pointermap}
+\begin{itemize}
+  \item given an element, it constructs a pointer (or small representation) to 
+        that element. For equal elements it supplies an equal pointer
+        %TODO: better formulation
+  \item given a pointer, we can retrieve an element
+\end{itemize}
+\begingroup
+\addtolength{\jot}{-1mm}
+{\footnotesize
+\begin{flalign*}
+  %TODO: Fugly hack to move to the right
+  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap} =& \\
+  %TODO: Im to stupid for correct alignment, whitespace FTW
+  &\hskip12mm \textit{entries}\ \ \ ::\ \tau\ \textit{list}& \\
+  &\hskip12mm \textit{getentry}\ ::\ \tau\ \Rightarrow \textit{nat}\
+  \textit{option}&
+\end{flalign*}
+}
+\endgroup
+\vspace*{-10mm}
 \end{frame}
-\section{Evaluation}
+
+
+\begin{frame}{Implementation}
+\begingroup
+\addtolength{\jot}{-1mm}
+{\footnotesize
+\begin{flalign*}
+  %TODO: Fugly hack to move to the right
+  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =& \\
+  %TODO: Im to stupid for correct alignment, whitespace FTW
+  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}& \\
+  &\hskip12mm \textit{getentryi}\ ::\ (\tau, nat)\ \textit{hashtable}&
+\end{flalign*}
+}
+\endgroup
+\vspace*{-10mm}
+Verification via separation logic
+\end{frame}
+
+
 \begin{frame}{Benchmarks}
+  Using Isabelle's code export to Haskell \\
+  We're fast \dots not \\
+  Add memoziation \\
+  Related work: isabelle 2011 is too old school \\
 \end{frame}
-
-
-
 
 
 \end{document}
