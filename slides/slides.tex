@@ -1,15 +1,114 @@
-\documentclass{beamer}
-\title{An executable specification of BDDs in Isabelle}
-\author{Max Haslbeck, Julius Michaelis}
+\documentclass[%handout,
+	sans,
+	12pt,
+	%slidescentered,% center text on slide
+	%draft,			% compile as draft version
+	%notes,			% include nodes in slides
+	%compress		% compress navigation bar
+]{beamer}
+
+\beamertemplatenavigationsymbolsempty
+
+\setbeamertemplate{frametitle}
+{
+    \vspace*{1.5em}\insertframetitle\vspace*{-1.5em}
+}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8x]{inputenc}
+
+\usepackage{mathpazo}
+\usepackage[british]{babel}
+\usepackage{csquotes}
+
+\newcommand{\high}[1]{{\usebeamercolor[fg]{structure} #1}}
+\newcommand{\bad}[1]{\textcolor{red}{#1}}
+\newcommand{\gray}[1]{\textcolor{darkgray}{#1}}
+\newcommand{\black}[1]{\textcolor{black}{#1}}
+
+\usepackage{amsmath,amssymb}
+\usepackage{upgreek}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{default}
+\usepackage{graphicx}
+\usepackage{colortbl}
+\usepackage{url}
+\usepackage{setspace}
+\usepackage{wrapfig}
+\usepackage{tabularx}
+
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\NN}{\mathbb{N}}
+\def\braces#1{[#1]}
+
+%\definecolor{mybg}{rgb}{0.9,0.9,0.9}
+\definecolor{mybg}{rgb}{1,1,1}
+\setbeamercolor{background canvas}{bg=mybg}
+
+\title{An executables specification of BDDs in Isabelle\vspace*{-0.5em}}
+\author{\normalsize Max Haslbeck and Julius Michaelis}
+\institute[]{\footnotesize Fakultät für Informatik\\TU München}
+\date{\footnotesize 26 February 2016}
+
 \begin{document}
-\frame{\titlepage}
-\maketitleframe{}
+
+\maketitle
+
+
 \section{Introduction - BDDs}
 \begin{frame}
+  What is a BDD, really?
 \end{frame}
+
+
 \section{Formalization in Levels}
-\subsection{Binary Decision Trees}
-\subsection{BDDs on abstract datatypes}
+
+\begin{frame}{Boolean functions}
+
+\begingroup
+\addtolength{\jot}{-1mm}
+{\footnotesize
+\begin{flalign*}
+  &\textbf{type\_synonym}\ \tau\ bf\ \textbf{=}\ (\tau \Rightarrow bool)
+   \Rightarrow bool& \\[1\baselineskip]
+ &    \textbf{definition}\ \textit{bf-ite}\ ::\ \tau\ bf \Rightarrow
+ \tau\ bf \Rightarrow \tau\ bf \Rightarrow \tau\ bf\ \textbf{where}&  \\
+ &\hskip4mm   \textit{bf-ite}\ i\ t\ e\ =\ (\lambda x.\ \text{if}\ i\ x\ \text{then}\ t\ x\
+\text{else}\ e\ x)& \\[1\baselineskip]
+ &    \textbf{definition}\ \textit{bf-restrict}\ ::\ \tau\ bf \Rightarrow
+\tau \Rightarrow bool \Rightarrow \tau\ bf\ \textbf{where}&  \\
+&\hskip4mm \textit{bf-restrict}\ f\ v\ b\ =\ (\lambda a.\ f\ (a(v := b))&
+\\[1\baselineskip]
+ & \textbf{lemma:}\ \textit{bf-ite}\ I\ T\ E\ =&\\
+ &\phantom{\textbf{lemma:}}\ \textit{bf-ite}\ (\lambda l.\ l\ v)& \\
+ &\phantom{\textbf{lemma:}\ \textit{bf-ite}}\
+ (\textit{bf-ite}\ (\textit{bf-restrict}\ I\ v\ \textit{True})\
+ (\textit{bf-restrict}\ T\ v\ \textit{True})& \\
+ &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
+ (\textit{bf-restrict}\ E\ v\ \textit{True}))& \\
+ &\phantom{\textbf{lemma:}\ \textit{bf-ite}}\
+ (\textit{bf-ite}\ (\textit{bf-restrict}\ I\ v\ \textit{False})\
+ (\textit{bf-restrict}\ T\ v\ \textit{False})& \\
+ &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
+ (\textit{bf-restrict}\ E\ v\ \textit{False}))&
+\end{flalign*}
+}
+\endgroup
+\vspace*{-10mm}
+\end{frame}
+
+
+\begin{frame}{Binary Decision Trees}
+  I like this tree.
+\end{frame}
+
+
+
+\begin{frame}{BDDs on abstract datatypes}
+  Picasso.
+\end{frame}
+
 \subsection{A concrete datatype: Pointermap}
 \subsection{Towards fast execution}
 \subsection{Collapsed Result}
@@ -18,4 +117,25 @@
 \section{Evaluation}
 \begin{frame}{Benchmarks}
 \end{frame}
+
+
+\begin{frame}{Problem}
+Time consumption comes from:\pause
+\begin{itemize}
+\item constant-time base cases for small $n$\pause
+\item in the recursive case: $a$ recursive calls, each of size $n/b$\pause
+\item combining the $a$ results from recursion into a result takes some time $g(n)$\pause
+\end{itemize}
+\vspace{2mm}
+
+We get a recurrence relation:\\[-3mm]
+\[T(n) = a\cdot T(n/b) + g(n)\]
+
+How do we get $\Theta(T)$? \high{Master Theorem}\\\pause
+Great, let's verify the Master Theorem!
+
+\end{frame}
+
+
+
 \end{document}
