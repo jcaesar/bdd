@@ -21,6 +21,8 @@
 \usepackage[british]{babel}
 \usepackage{csquotes}
 
+\usepackage{svg}
+
 \newcommand{\high}[1]{{\usebeamercolor[fg]{structure} #1}}
 \newcommand{\bad}[1]{\textcolor{red}{#1}}
 \newcommand{\gray}[1]{\textcolor{darkgray}{#1}}
@@ -38,6 +40,8 @@
 \usepackage{wrapfig}
 \usepackage{tabularx}
 
+\setbeamertemplate{caption}[numbered]
+
 \newcommand{\RR}{\mathbb{R}}
 \newcommand{\NN}{\mathbb{N}}
 \def\braces#1{[#1]}
@@ -46,7 +50,7 @@
 \definecolor{mybg}{rgb}{1,1,1}
 \setbeamercolor{background canvas}{bg=mybg}
 
-\title{An executables specification of BDDs in Isabelle\vspace*{-0.5em}}
+\title{An executables specification of BDDs in Isabelle}
 \author{\normalsize Max Haslbeck and Julius Michaelis}
 \institute[]{\footnotesize Fakultät für Informatik\\TU München}
 \date{\footnotesize 26 February 2016}
@@ -57,8 +61,17 @@
 
 
 \section{Introduction - BDDs}
-\begin{frame}
-  What is a BDD, really?
+\begin{frame}{Introduction - BDDs}
+  \begin{center}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[height=5cm]{img/BDD_simple.png}
+  \caption{BDD $(\overline{x_1} \land \overline{x_2} \land \overline{x_3}) \lor
+  (x_1 \land x_2) \lor (x_2 \land x_3) $}
+\end{figure}
+  BDD = Binary Decision Diagram \\
+  ROBDD = Reduced Ordered Binary Decision Diagram
+  \end{center}
 \end{frame}
 
 
@@ -100,9 +113,37 @@
 
 
 \begin{frame}{Binary Decision Trees}
-  I like this tree.
+\begingroup
+\addtolength{\jot}{-1mm}
+{\footnotesize
+\begin{flalign*}
+  &\textbf{datatype}\ (\tau :: \textit{linorder})\ \textit{bdt}\ \textbf{=}\ \textit{Trueif}\ |\ 
+  \textit{Falseif}\ |\ IF\ \tau\ (\tau\ \textit{bdt})\ (\tau\ \textit{bdt})
+  & \\[\baselineskip]
+   & \textbf{definition}\ \textit{bf-bdt-rel}\ =
+      \{(bf, bd).\ \textit{ro-bdt}\ bd\ \land\ \forall a.\ bf\ a =
+      \textit{val-bdt}\ bd\ a\} & \\[\baselineskip]
+      & \textbf{lemma:}\ (bf,bd) \in \textit{bf-bdt-rel} \Longrightarrow
+                    (bf',bd') \in \textit{bf-bdt-rel}& \\
+     & \phantom{lemma:}\
+       \Longrightarrow  (bf = bf') \leftrightarrow (bd = bd')
+ &
+\end{flalign*}
+}
+
+
+\endgroup
+\vspace*{-10mm}
 \end{frame}
 
+\begin{frame}{Binary Decision Trees}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[height=5cm]{img/BDT.png}
+  \caption{BDT $(\overline{x_1} \land \overline{x_2} \land \overline{x_3}) \lor
+  (x_1 \land x_2) \lor (x_2 \land x_3) $}
+\end{figure}
+\end{frame}
 
 
 \begin{frame}{BDDs on abstract datatypes}
@@ -119,22 +160,6 @@
 \end{frame}
 
 
-\begin{frame}{Problem}
-Time consumption comes from:\pause
-\begin{itemize}
-\item constant-time base cases for small $n$\pause
-\item in the recursive case: $a$ recursive calls, each of size $n/b$\pause
-\item combining the $a$ results from recursion into a result takes some time $g(n)$\pause
-\end{itemize}
-\vspace{2mm}
-
-We get a recurrence relation:\\[-3mm]
-\[T(n) = a\cdot T(n/b) + g(n)\]
-
-How do we get $\Theta(T)$? \high{Master Theorem}\\\pause
-Great, let's verify the Master Theorem!
-
-\end{frame}
 
 
 
