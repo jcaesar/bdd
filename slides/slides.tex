@@ -39,6 +39,10 @@
 \usepackage{setspace}
 \usepackage{wrapfig}
 \usepackage{tabularx}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.9}
+\usepackage{tikz}
+\usepackage{pgfplotstable}
 
 \setbeamertemplate{caption}[numbered]
 
@@ -60,8 +64,8 @@
 \maketitle
 
 
+\section{Introduction - BDDs}
 \begin{frame}{Introduction - BDDs}
-  \begin{center}
 \begin{figure}[htbp]
   \centering
   \includegraphics[height=5cm]{img/BDD_simple.png}
@@ -70,7 +74,6 @@
 \end{figure}
   BDD = Binary Decision Diagram \\
   ROBDD = Reduced Ordered Binary Decision Diagram
-  \end{center}
 \end{frame}
 
 
@@ -132,8 +135,6 @@
      \textit{bf-bdt-rel}  &
 \end{flalign*}
 }
-
-
 \endgroup
 \vspace*{-10mm}
 \end{frame}
@@ -163,7 +164,24 @@
     \end{itemize}
   \item instantiation of locale with abstract datatype \textit{pointermap}
 \end{itemize}
+\end{frame}
 
+
+\begin{frame}{Implementation}
+\begingroup
+\addtolength{\jot}{-1mm}
+{\footnotesize
+\begin{flalign*}
+  %TODO: Fugly hack to move to the right
+  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =& \\
+  %TODO: Im to stupid for correct alignment, whitespace FTW
+  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}& \\
+  &\hskip12mm \textit{getentryi}\ ::\ (\tau, nat)\ \textit{hashtable}&
+\end{flalign*}
+}
+\endgroup
+\vspace*{-10mm}
+Verification via separation logic
 \end{frame}
 
 
@@ -191,30 +209,34 @@
 \end{frame}
 
 
-\begin{frame}{Implementation}
-\begingroup
-\addtolength{\jot}{-1mm}
-{\footnotesize
-\begin{flalign*}
-  %TODO: Fugly hack to move to the right
-  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =& \\
-  %TODO: Im to stupid for correct alignment, whitespace FTW
-  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}& \\
-  &\hskip12mm \textit{getentryi}\ ::\ (\tau, nat)\ \textit{hashtable}&
-\end{flalign*}
-}
-\endgroup
-\vspace*{-10mm}
-Verification via separation logic
+\begin{frame}{Urquhart benchmark}
+	\centering
+	\begin{align*}
+	x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow (x_n \longleftrightarrow \\
+	(x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow x_n))))))
+	\end{align*}
+
+	\begin{tikzpicture}[scale=.9]
+		\begin{axis}[ylabel=time in s, xlabel=n]
+			\addplot table [col sep=comma] {urquhart2000.csv};
+		\end{axis}
+	\end{tikzpicture}
 \end{frame}
 
 
-\begin{frame}{Benchmarks}
-  Using Isabelle's code export to Haskell \\
-  We're fast \dots not \\
-  Add memoziation \\
-  Related work: isabelle 2011 is too old school \\
+\begin{frame}{Conclusion}
+	\begin{block}{Limitations}
+		\begin{itemize}
+			\item No garbage collection
+			\item No variable reordering
+		\end{itemize}
+	\end{block}
+	\begin{block}{Achievements}
+		\begin{itemize}
+			\item About a factor of 10 faster than previous work on BDDs in Isabelle
+			\item Haskell tool for tautology checking available
+		\end{itemize}
+	\end{block}
 \end{frame}
-
 
 \end{document}
