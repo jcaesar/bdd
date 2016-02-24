@@ -126,8 +126,14 @@
       & \textbf{lemma:}\ (bf,bd) \in \textit{bf-bdt-rel} \Longrightarrow
                     (bf',bd') \in \textit{bf-bdt-rel}& \\
      & \phantom{lemma:}\
-       \Longrightarrow  (bf = bf') \leftrightarrow (bd = bd')
- &
+       \Longrightarrow  (bf = bf') \leftrightarrow (bd = bd') &
+       \\[\baselineskip]
+      & \textbf{lemma:}\ (i,ibd) \in \textit{bf-bdt-rel} \Longrightarrow
+                    (t,tbd) \in \textit{bf-bdt-rel} \\
+    & \phantom{lemma:}\Longrightarrow (e,ebd) \in \textit{bf-bdt-rel} & \\
+    & \phantom{lemma:}\Longrightarrow 
+    (\textit{bf-ite}\ i\ t\ e, \textit{bdt-ite}\ ibd\ tbd\ ebd) \in
+     \textit{bf-bdt-rel}  &
 \end{flalign*}
 }
 
@@ -136,7 +142,7 @@
 \vspace*{-10mm}
 \end{frame}
 
-\begin{frame}{Binary Decision Trees}
+\begin{frame}{Binary Decision Trees} % Maybe not necessary
 \begin{figure}[htbp]
   \centering
   \includegraphics[height=5cm]{img/BDT.png}
@@ -147,7 +153,20 @@
 
 
 \begin{frame}{BDDs on abstract datatypes}
-  Picasso.
+\begin{itemize}
+  \item usage of Isabelle's locale feature
+    \begin{itemize}
+      \item define basic operations and respective assumptions
+      \item Relation \textit{bdt-bdd-rel}
+      \item $ (ib, ibd) \in \textit{bdt-bdd-rel}  \Longrightarrow $ \\
+             $(tb, tbd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
+             $(eb, ebd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
+             $(\textit{bdt-ite}\ ib\ tb\ eb, \textit{bdd-ite}\ ibd\ tbd\ ebd) 
+             \in \textit{bdt-bdd-rel} $
+    \end{itemize}
+  \item instantiation of locale with abstract datatype \textit{pointer-map}
+\end{itemize}
+
 \end{frame}
 
 \subsection{A concrete datatype: Pointermap}
