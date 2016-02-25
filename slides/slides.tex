@@ -1,3 +1,5 @@
+%TODO: Reorder, entzerren
+
 \documentclass[%handout,
 	sans,
 	12pt,
@@ -69,14 +71,68 @@
 
 \section{Introduction - BDDs}
 \begin{frame}{Introduction - BDDs}
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[height=5cm]{img/BDD_simple.png}
-  \caption{BDD $(\overline{x_1} \land \overline{x_2} \land \overline{x_3}) \lor
-           (x_1 \land x_2) \lor (x_2 \land x_3) $}
+\begin{center}
+\begin{figure}
+\begin{tikzpicture}[>=latex,line join=bevel,scale=0.5]
+  \pgfsetlinewidth{1bp}
+%%
+\pgfsetcolor{black}
+  % Edge: 10 -> 9
+  \draw [->] (77.636bp,216.41bp) .. controls (80.913bp,208.22bp) and (84.944bp,198.14bp)  .. (92.412bp,179.47bp);
+  % Edge: 9 -> 3
+  \draw [->,dotted] (87.066bp,145.81bp) .. controls (79.786bp,136.55bp) and (70.337bp,124.52bp)  .. (55.911bp,106.16bp);
+  % Edge: 9 -> 0
+  \draw [->] (99bp,143.87bp) .. controls (99bp,119.67bp) and (99bp,75.211bp)  .. (99bp,36.189bp);
+  % Edge: 3 -> 0
+  \draw [->] (55.934bp,73.811bp) .. controls (62.747bp,65.141bp) and (71.459bp,54.052bp)  .. (85.543bp,36.127bp);
+  % Edge: 10 -> 3
+  \draw [->,dotted] (67.743bp,215.87bp) .. controls (63.142bp,191.67bp) and (54.688bp,147.21bp)  .. (47.268bp,108.19bp);
+  % Edge: 3 -> 1
+  \draw [->,dotted] (39.885bp,72.055bp) .. controls (37.992bp,64.261bp) and (35.7bp,54.822bp)  .. (31.195bp,36.275bp);
+  % Node: 9
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (99bp,162bp) ellipse (27bp and 18bp);
+  \draw (99bp,162bp) node {$x_2$};
+\end{scope}
+  % Node: 10
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (71bp,234bp) ellipse (27bp and 18bp);
+  \draw (71bp,234bp) node {$x_1$};
+\end{scope}
+  % Node: 3
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (44bp,90bp) ellipse (27bp and 18bp);
+  \draw (44bp,90bp) node {$x_3$};
+\end{scope}
+  % Node: 1
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (54bp,36bp) -- (0bp,36bp) -- (0bp,0bp) -- (54bp,0bp) -- cycle;
+  \draw (27bp,18bp) node {T};
+\end{scope}
+  % Node: 0
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (126bp,36bp) -- (72bp,36bp) -- (72bp,0bp) -- (126bp,0bp) -- cycle;
+  \draw (99bp,18bp) node {F};
+\end{scope}
+%
+\end{tikzpicture}
+\caption{$(\overline{x_1} \land \overline{x_3}) \lor (\overline{x_2} \land 
+          \overline{x_3})$}
 \end{figure}
-  BDD = Binary Decision Diagram \\
-  ROBDD = Reduced Ordered Binary Decision Diagram
+
+  \textbf{BDD} = Binary Decision Diagram \\
+  \textbf{ROBDD} = Reduced Ordered Binary Decision Diagram
+\end{center}
 \end{frame}
 
 
@@ -156,6 +212,7 @@
 
 \begin{frame}{Binary Decision Trees}
 \begin{center}
+\begin{figure}
 \begin{tikzpicture}[>=latex,line join=bevel,scale=0.6]
   \pgfsetlinewidth{1bp}
 %%
@@ -165,7 +222,7 @@
   \pgfsetstrokecolor{strokecol}
   \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
   \pgfsetfillcolor{fillcol}
-  \filldraw (0bp,0bp) -- (0bp,252bp) -- (414bp,252bp) -- (414bp,0bp) -- cycle;
+  \filldraw (0bp,0bp) -- (0bp,252bp) -- (342bp,252bp) -- (342bp,0bp) -- cycle;
 \end{scope}
 \begin{scope}
   \pgfsetstrokecolor{black}
@@ -173,57 +230,45 @@
   \pgfsetstrokecolor{strokecol}
   \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
   \pgfsetfillcolor{fillcol}
-  \filldraw (0bp,0bp) -- (0bp,252bp) -- (414bp,252bp) -- (414bp,0bp) -- cycle;
-\end{scope}
-\begin{scope}
-  \pgfsetstrokecolor{black}
-  \definecolor{strokecol}{rgb}{1.0,1.0,1.0};
-  \pgfsetstrokecolor{strokecol}
-  \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
-  \pgfsetfillcolor{fillcol}
-  \filldraw (0bp,0bp) -- (0bp,252bp) -- (414bp,252bp) -- (414bp,0bp) -- cycle;
+  \filldraw (0bp,0bp) -- (0bp,252bp) -- (342bp,252bp) -- (342bp,0bp) -- cycle;
 \end{scope}
   \pgfsetcolor{black}
-  % Edge: x22 -> x31
-  \draw [->] (207bp,143.7bp) .. controls (207bp,135.98bp) and (207bp,126.71bp)  .. (207bp,108.1bp);
-  % Edge: x21 -> 0
-  \draw [->,dotted] (315bp,143.87bp) .. controls (315bp,119.67bp) and (315bp,75.211bp)  .. (315bp,36.189bp);
-  % Edge: x21 -> 1
-  \draw [->] (323.26bp,144.71bp) .. controls (335.54bp,120.49bp) and (358.74bp,74.731bp)  .. (378.16bp,36.425bp);
-  % Edge: x31 -> 11
+  % Edge: x32 -> 10
   \draw [->] (215.35bp,72.765bp) .. controls (219.54bp,64.611bp) and (224.73bp,54.529bp)  .. (234.19bp,36.124bp);
-  % Edge: x22 -> x32
-  \draw [->,dotted] (188.19bp,148.81bp) .. controls (171bp,137.67bp) and (145.38bp,121.06bp)  .. (117.6bp,103.05bp);
-  % Edge: x31 -> 10
+  % Edge: x32 -> 11
   \draw [->,dotted] (198.65bp,72.765bp) .. controls (194.46bp,64.611bp) and (189.27bp,54.529bp)  .. (179.81bp,36.124bp);
-  % Edge: x32 -> 21
-  \draw [->,dotted] (84.43bp,74.834bp) .. controls (75.082bp,65.746bp) and (62.702bp,53.71bp)  .. (44.602bp,36.113bp);
-  % Edge: x32 -> 20
+  % Edge: x1 -> x2
+  \draw [->] (182.58bp,216.41bp) .. controls (186.37bp,208.13bp) and (191.03bp,197.92bp)  .. (199.47bp,179.47bp);
+  % Edge: x2 -> 30
+  \draw [->] (218.76bp,145.53bp) .. controls (237.27bp,121.2bp) and (273.39bp,73.714bp)  .. (301.91bp,36.21bp);
+  % Edge: x2 -> x32
+  \draw [->,dotted] (207bp,143.7bp) .. controls (207bp,135.98bp) and (207bp,126.71bp)  .. (207bp,108.1bp);
+  % Edge: x31 -> 20
   \draw [->] (99bp,71.697bp) .. controls (99bp,63.983bp) and (99bp,54.712bp)  .. (99bp,36.104bp);
-  % Edge: x1 -> x22
-  \draw [->,dotted] (264.43bp,218.83bp) .. controls (254.25bp,208.94bp) and (240.48bp,195.55bp)  .. (221.8bp,177.38bp);
-  % Edge: x1 -> x21
-  \draw [->] (287.35bp,216.76bp) .. controls (291.71bp,208.28bp) and (297.15bp,197.71bp)  .. (306.7bp,179.15bp);
-  % Node: 11
-\begin{scope}
-  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
-  \pgfsetstrokecolor{strokecol}
-  \draw (270bp,36bp) -- (216bp,36bp) -- (216bp,0bp) -- (270bp,0bp) -- cycle;
-  \draw (243bp,18bp) node {T};
-\end{scope}
-  % Node: 10
-\begin{scope}
-  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
-  \pgfsetstrokecolor{strokecol}
-  \draw (198bp,36bp) -- (144bp,36bp) -- (144bp,0bp) -- (198bp,0bp) -- cycle;
-  \draw (171bp,18bp) node {F};
-\end{scope}
-  % Node: x31
+  % Edge: x1 -> x31
+  \draw [->,dotted] (166.28bp,216.71bp) .. controls (153.11bp,192.1bp) and (128.03bp,145.24bp)  .. (107.62bp,107.1bp);
+  % Edge: x31 -> 21
+  \draw [->,dotted] (84.43bp,74.834bp) .. controls (75.082bp,65.746bp) and (62.702bp,53.71bp)  .. (44.602bp,36.113bp);
+  % Node: x32
 \begin{scope}
   \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
   \pgfsetstrokecolor{strokecol}
   \draw (207bp,90bp) ellipse (27bp and 18bp);
   \draw (207bp,90bp) node {$x_3$};
+\end{scope}
+  % Node: 11
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (198bp,36bp) -- (144bp,36bp) -- (144bp,0bp) -- (198bp,0bp) -- cycle;
+  \draw (171bp,18bp) node {T};
+\end{scope}
+  % Node: x31
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (99bp,90bp) ellipse (27bp and 18bp);
+  \draw (99bp,90bp) node {$x_3$};
 \end{scope}
   % Node: 20
 \begin{scope}
@@ -239,50 +284,39 @@
   \draw (54bp,36bp) -- (0bp,36bp) -- (0bp,0bp) -- (54bp,0bp) -- cycle;
   \draw (27bp,18bp) node {T};
 \end{scope}
-  % Node: 1
+  % Node: 10
 \begin{scope}
   \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
   \pgfsetstrokecolor{strokecol}
-  \draw (414bp,36bp) -- (360bp,36bp) -- (360bp,0bp) -- (414bp,0bp) -- cycle;
-  \draw (387bp,18bp) node {T};
+  \draw (270bp,36bp) -- (216bp,36bp) -- (216bp,0bp) -- (270bp,0bp) -- cycle;
+  \draw (243bp,18bp) node {F};
 \end{scope}
-  % Node: 0
+  % Node: 30
 \begin{scope}
   \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
   \pgfsetstrokecolor{strokecol}
   \draw (342bp,36bp) -- (288bp,36bp) -- (288bp,0bp) -- (342bp,0bp) -- cycle;
   \draw (315bp,18bp) node {F};
 \end{scope}
-  % Node: x1
-\begin{scope}
-  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
-  \pgfsetstrokecolor{strokecol}
-  \draw (279bp,234bp) ellipse (27bp and 18bp);
-  \draw (279bp,234bp) node {$x_1$};
-\end{scope}
-  % Node: x21
-\begin{scope}
-  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
-  \pgfsetstrokecolor{strokecol}
-  \draw (315bp,162bp) ellipse (27bp and 18bp);
-  \draw (315bp,162bp) node {$x_2$};
-\end{scope}
-  % Node: x32
-\begin{scope}
-  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
-  \pgfsetstrokecolor{strokecol}
-  \draw (99bp,90bp) ellipse (27bp and 18bp);
-  \draw (99bp,90bp) node {$x_3$};
-\end{scope}
-  % Node: x22
+  % Node: x2
 \begin{scope}
   \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
   \pgfsetstrokecolor{strokecol}
   \draw (207bp,162bp) ellipse (27bp and 18bp);
   \draw (207bp,162bp) node {$x_2$};
 \end{scope}
+  % Node: x1
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (175bp,234bp) ellipse (27bp and 18bp);
+  \draw (175bp,234bp) node {$x_1$};
+\end{scope}
 %
 \end{tikzpicture}
+\caption{BDT $(\overline{x_1} \land \overline{x_3}) \lor (\overline{x_2} \land 
+              \overline{x_3})$}
+\end{figure}
 \end{center}
 \end{frame}
 
@@ -308,9 +342,7 @@
 \begin{itemize}
   \item given an element, it constructs a pointer (or small representation) to
         that element; it provides equal pointers for equal elements
-        %TODO: better formulation
   \item given a pointer, we can retrieve an element
-  \item TODO: add relevant operations of pointermap
 \end{itemize}
 \begingroup
 \addtolength{\jot}{-1mm}
@@ -322,6 +354,12 @@
   &\hskip12mm \textit{entries}\ \ \ ::\ \tau\ \textit{list}& \\
   &\hskip12mm \textit{getentry}\ ::\ \tau\ \Rightarrow \textit{nat}\
   \textit{option}&
+  \\[\baselineskip]
+  &\hskip12mm \textbf{fun}\ \textit{pm\_pth} :: \tau\ \textit{pointermap} \Rightarrow 
+  \textit{nat} \Rightarrow \tau&
+  \\
+  &\hskip12mm \textbf{fun}\ \textit{pm\_getmk}\ :: \tau \Rightarrow \tau\ \textit{pointermap}
+  \Rightarrow (\textit{nat} \times  \textit{pointermap})&
 \end{flalign*}
 }
 \endgroup
@@ -376,8 +414,32 @@ Verification via separation logic
               on abstract level for proving correctness
         \item using hashmap on concrete implementation
       \end{itemize}
-    \item TODO: add minimal example for memoization
   \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Optimization example}
+    %\item bf-ite F $x_1$ G = bf-ite (x1) (bf-ite F True G) (bf-ite F False G)
+    %\item bf-ite F $x_2$ G = bf-ite (x2) (bf-ite F True G) (bf-ite F False G)
+\begin{flalign*}
+    &\hskip4mm   \textit{bf-ite}\ F\ (\lambda l.\ l\ x_1)\ G\ =\
+    \textit{bf-ite}\ (\lambda l.\ l\ x_1)\ 
+    \\
+    %TODO: to lazy for proper align
+    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ True)\ G)
+    \\
+    %TODO: to lazy for proper align
+    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ False)\ G)
+    \\
+    &\hskip4mm   \textit{bf-ite}\ F\ (\lambda l.\ l\ x_2)\ G\ =\
+    \textit{bf-ite}\ (\lambda l.\ l\ x_2)\ 
+    \\
+    %TODO: to lazy for proper align
+    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ True)\ G)
+    \\
+    %TODO: to lazy for proper align
+    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ False)\ G)
+\end{flalign*}
 \end{frame}
 
 
@@ -420,8 +482,9 @@ Verification via separation logic
 
 
 \begin{frame}[c]
-\centering
+\begin{center}
 Thank you
+\end{center}
 \end{frame}
 
 
