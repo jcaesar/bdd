@@ -14,6 +14,7 @@
     \vspace*{1.5em}\insertframetitle\vspace*{-1.5em}
 }
 
+
 \usepackage[T1]{fontenc}
 \usepackage[utf8x]{inputenc}
 
@@ -43,6 +44,8 @@
 \pgfplotsset{compat=1.9}
 \usepackage{tikz}
 \usepackage{pgfplotstable}
+
+\usetikzlibrary{snakes,arrows,shapes}
 
 \setbeamertemplate{caption}[numbered]
 
@@ -151,10 +154,136 @@
 \end{frame}
 
 
-\begin{frame}{Binary Decision Trees} % Maybe not necessary
-\begin{figure}[htbp]
-  TODO: Add image of our Binary decision tree
-\end{figure}
+\begin{frame}{Binary Decision Trees}
+\begin{center}
+\begin{tikzpicture}[>=latex,line join=bevel,scale=0.6]
+  \pgfsetlinewidth{1bp}
+%%
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{1.0,1.0,1.0};
+  \pgfsetstrokecolor{strokecol}
+  \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
+  \pgfsetfillcolor{fillcol}
+  \filldraw (0bp,0bp) -- (0bp,252bp) -- (414bp,252bp) -- (414bp,0bp) -- cycle;
+\end{scope}
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{1.0,1.0,1.0};
+  \pgfsetstrokecolor{strokecol}
+  \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
+  \pgfsetfillcolor{fillcol}
+  \filldraw (0bp,0bp) -- (0bp,252bp) -- (414bp,252bp) -- (414bp,0bp) -- cycle;
+\end{scope}
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{1.0,1.0,1.0};
+  \pgfsetstrokecolor{strokecol}
+  \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
+  \pgfsetfillcolor{fillcol}
+  \filldraw (0bp,0bp) -- (0bp,252bp) -- (414bp,252bp) -- (414bp,0bp) -- cycle;
+\end{scope}
+  \pgfsetcolor{black}
+  % Edge: x22 -> x31
+  \draw [->] (207bp,143.7bp) .. controls (207bp,135.98bp) and (207bp,126.71bp)  .. (207bp,108.1bp);
+  % Edge: x21 -> 0
+  \draw [->,dotted] (315bp,143.87bp) .. controls (315bp,119.67bp) and (315bp,75.211bp)  .. (315bp,36.189bp);
+  % Edge: x21 -> 1
+  \draw [->] (323.26bp,144.71bp) .. controls (335.54bp,120.49bp) and (358.74bp,74.731bp)  .. (378.16bp,36.425bp);
+  % Edge: x31 -> 11
+  \draw [->] (215.35bp,72.765bp) .. controls (219.54bp,64.611bp) and (224.73bp,54.529bp)  .. (234.19bp,36.124bp);
+  % Edge: x22 -> x32
+  \draw [->,dotted] (188.19bp,148.81bp) .. controls (171bp,137.67bp) and (145.38bp,121.06bp)  .. (117.6bp,103.05bp);
+  % Edge: x31 -> 10
+  \draw [->,dotted] (198.65bp,72.765bp) .. controls (194.46bp,64.611bp) and (189.27bp,54.529bp)  .. (179.81bp,36.124bp);
+  % Edge: x32 -> 21
+  \draw [->,dotted] (84.43bp,74.834bp) .. controls (75.082bp,65.746bp) and (62.702bp,53.71bp)  .. (44.602bp,36.113bp);
+  % Edge: x32 -> 20
+  \draw [->] (99bp,71.697bp) .. controls (99bp,63.983bp) and (99bp,54.712bp)  .. (99bp,36.104bp);
+  % Edge: x1 -> x22
+  \draw [->,dotted] (264.43bp,218.83bp) .. controls (254.25bp,208.94bp) and (240.48bp,195.55bp)  .. (221.8bp,177.38bp);
+  % Edge: x1 -> x21
+  \draw [->] (287.35bp,216.76bp) .. controls (291.71bp,208.28bp) and (297.15bp,197.71bp)  .. (306.7bp,179.15bp);
+  % Node: 11
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (270bp,36bp) -- (216bp,36bp) -- (216bp,0bp) -- (270bp,0bp) -- cycle;
+  \draw (243bp,18bp) node {T};
+\end{scope}
+  % Node: 10
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (198bp,36bp) -- (144bp,36bp) -- (144bp,0bp) -- (198bp,0bp) -- cycle;
+  \draw (171bp,18bp) node {F};
+\end{scope}
+  % Node: x31
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (207bp,90bp) ellipse (27bp and 18bp);
+  \draw (207bp,90bp) node {$x_3$};
+\end{scope}
+  % Node: 20
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (126bp,36bp) -- (72bp,36bp) -- (72bp,0bp) -- (126bp,0bp) -- cycle;
+  \draw (99bp,18bp) node {F};
+\end{scope}
+  % Node: 21
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (54bp,36bp) -- (0bp,36bp) -- (0bp,0bp) -- (54bp,0bp) -- cycle;
+  \draw (27bp,18bp) node {T};
+\end{scope}
+  % Node: 1
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (414bp,36bp) -- (360bp,36bp) -- (360bp,0bp) -- (414bp,0bp) -- cycle;
+  \draw (387bp,18bp) node {T};
+\end{scope}
+  % Node: 0
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (342bp,36bp) -- (288bp,36bp) -- (288bp,0bp) -- (342bp,0bp) -- cycle;
+  \draw (315bp,18bp) node {F};
+\end{scope}
+  % Node: x1
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (279bp,234bp) ellipse (27bp and 18bp);
+  \draw (279bp,234bp) node {$x_1$};
+\end{scope}
+  % Node: x21
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (315bp,162bp) ellipse (27bp and 18bp);
+  \draw (315bp,162bp) node {$x_2$};
+\end{scope}
+  % Node: x32
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (99bp,90bp) ellipse (27bp and 18bp);
+  \draw (99bp,90bp) node {$x_3$};
+\end{scope}
+  % Node: x22
+\begin{scope}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (207bp,162bp) ellipse (27bp and 18bp);
+  \draw (207bp,162bp) node {$x_2$};
+\end{scope}
+%
+\end{tikzpicture}
+\end{center}
 \end{frame}
 
 
@@ -288,5 +417,12 @@ Verification via separation logic
 		\end{itemize}
 	\end{block}
 \end{frame}
+
+
+\begin{frame}[c]
+\centering
+Thank you
+\end{frame}
+
 
 \end{document}
