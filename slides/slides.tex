@@ -70,7 +70,7 @@
   \centering
   \includegraphics[height=5cm]{img/BDD_simple.png}
   \caption{BDD $(\overline{x_1} \land \overline{x_2} \land \overline{x_3}) \lor
-  (x_1 \land x_2) \lor (x_2 \land x_3) $}
+           (x_1 \land x_2) \lor (x_2 \land x_3) $}
 \end{figure}
   BDD = Binary Decision Diagram \\
   ROBDD = Reduced Ordered Binary Decision Diagram
@@ -82,28 +82,37 @@
 \addtolength{\jot}{-1mm}
 {\footnotesize
 \begin{flalign*}
-  &\textbf{type\_synonym}\ \tau\ bf\ \textbf{=}\ (\tau \Rightarrow bool)
-   \Rightarrow bool& \\[1\baselineskip]
- &    \textbf{definition}\ \textit{bf-ite}\ ::\ \tau\ bf \Rightarrow
- \tau\ bf \Rightarrow \tau\ bf \Rightarrow \tau\ bf\ \textbf{where}&  \\
- &\hskip4mm   \textit{bf-ite}\ i\ t\ e\ =\ (\lambda x.\ \text{if}\ i\ x\ \text{then}\ t\ x\
-\text{else}\ e\ x)& \\[1\baselineskip]
- &    \textbf{definition}\ \textit{bf-restrict}\ ::\ \tau\ bf \Rightarrow
-\tau \Rightarrow bool \Rightarrow \tau\ bf\ \textbf{where}&  \\
-&\hskip4mm \textit{bf-restrict}\ f\ v\ b\ =\ (\lambda a.\ f\ (a(v := b))&
-\\[1\baselineskip]
- & \textbf{lemma:}\ \textit{bf-ite}\ I\ T\ E\ =&\\
- &\phantom{\textbf{lemma:}}\ \textit{bf-ite}\ (\lambda l.\ l\ v)& \\
- &\phantom{\textbf{lemma:}\ \textit{bf-ite}}\
- (\textit{bf-ite}\ (\textit{bf-restrict}\ I\ v\ \textit{True})\
- (\textit{bf-restrict}\ T\ v\ \textit{True})& \\
- &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
- (\textit{bf-restrict}\ E\ v\ \textit{True}))& \\
- &\phantom{\textbf{lemma:}\ \textit{bf-ite}}\
- (\textit{bf-ite}\ (\textit{bf-restrict}\ I\ v\ \textit{False})\
- (\textit{bf-restrict}\ T\ v\ \textit{False})& \\
- &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
- (\textit{bf-restrict}\ E\ v\ \textit{False}))&
+    &\textbf{type\_synonym}\ \tau\ bf\ \textbf{=}\ (\tau \Rightarrow bool)
+    \Rightarrow bool &
+  \\[1\baselineskip]
+    & \textbf{definition}\ \textit{bf-ite}\ ::\ \tau\ bf \Rightarrow
+    \tau\ bf \Rightarrow \tau\ bf \Rightarrow \tau\ bf\ \textbf{where} &
+  \\
+    &\hskip4mm   \textit{bf-ite}\ i\ t\ e\ =\ (\lambda x.\ \text{if}\ i\ x\
+    \text{then}\ t\ x\ \text{else}\ e\ x)&
+  \\[1\baselineskip]
+    &\textbf{definition}\ \textit{bf-restrict}\ ::\ \tau\ bf \Rightarrow \tau
+    \Rightarrow bool \Rightarrow \tau\ bf\ \textbf{where}&
+  \\
+    &\hskip4mm \textit{bf-restrict}\ f\ v\ b\ =\ (\lambda a.\ f\ (a(v := b))&
+  \\[1\baselineskip]
+    & \textbf{lemma:}\ \textit{bf-ite}\ I\ T\ E\ =&
+  \\
+    &\phantom{\textbf{lemma:}}\ \textit{bf-ite}\ (\lambda l.\ l\ v)&
+  \\
+    &\phantom{\textbf{lemma:}\ \textit{bf-ite}}\
+    (\textit{bf-ite}\ (\textit{bf-restrict}\ I\ v\ \textit{True})\
+    (\textit{bf-restrict}\ T\ v\ \textit{True})&
+  \\
+    &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
+    (\textit{bf-restrict}\ E\ v\ \textit{True}))&
+  \\
+    &\phantom{\textbf{lemma:}\ \textit{bf-ite}}\
+    (\textit{bf-ite}\ (\textit{bf-restrict}\ I\ v\ \textit{False})\
+    (\textit{bf-restrict}\ T\ v\ \textit{False})&
+  \\
+    &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
+    (\textit{bf-restrict}\ E\ v\ \textit{False}))&
 \end{flalign*}
 }
 \endgroup
@@ -116,23 +125,25 @@
 \addtolength{\jot}{-1mm}
 {\footnotesize
 \begin{flalign*}
-  &\textbf{datatype}\ (\tau :: \textit{linorder})\ \textit{bdt}\ \textbf{=}\ \textit{Trueif}\ |\ 
-  \textit{Falseif}\ |\ IF\ \tau\ (\tau\ \textit{bdt})\ (\tau\ \textit{bdt})
-  & \\[\baselineskip]
-   & \textbf{definition}\ \textit{bf-bdt-rel}\ =
-      \{(bf, bd).\ \textit{ro-bdt}\ bd\ \land\ \forall a.\ bf\ a =
-      \textit{val-bdt}\ bd\ a\} & \\[\baselineskip]
-      & \textbf{lemma:}\ (bf,bd) \in \textit{bf-bdt-rel} \Longrightarrow
-                    (bf',bd') \in \textit{bf-bdt-rel}& \\
-     & \phantom{lemma:}\
-       \Longrightarrow  (bf = bf') \leftrightarrow (bd = bd') &
-       \\[\baselineskip]
-      & \textbf{lemma:}\ (i,ibd) \in \textit{bf-bdt-rel} \Longrightarrow
-                    (t,tbd) \in \textit{bf-bdt-rel} \\
-    & \phantom{lemma:}\Longrightarrow (e,ebd) \in \textit{bf-bdt-rel} & \\
-    & \phantom{lemma:}\Longrightarrow 
-    (\textit{bf-ite}\ i\ t\ e, \textit{bdt-ite}\ ibd\ tbd\ ebd) \in
-     \textit{bf-bdt-rel}  &
+    &\textbf{datatype}\ (\tau :: \textit{linorder})\ \textit{bdt}\ \textbf{=}\
+    \textit{Trueif}\ |\ \textit{Falseif}\ |\ IF\ \tau\ (\tau\ \textit{bdt})\
+    (\tau\ \textit{bdt}) &
+  \\[\baselineskip]
+  &\textbf{definition}\
+    \textit{bf-bdt-rel}\ = \{(bf, bd).\ \textit{ro-bdt}\ bd\ \land\ \forall a.\
+    bf\ a = \textit{val-bdt}\ bd\ a\} &
+  \\[\baselineskip]
+    & \textbf{lemma:}\
+    (bf,bd) \in \textit{bf-bdt-rel} \Longrightarrow (bf',bd') \in
+    \textit{bf-bdt-rel}& \\ & \phantom{lemma:}\ \Longrightarrow  (bf = bf')
+    \leftrightarrow (bd = bd') &
+  \\[\baselineskip]
+    &\textbf{lemma:}\ (i,ibd) \in
+    \textit{bf-bdt-rel} \Longrightarrow (t,tbd) \in \textit{bf-bdt-rel}&
+  \\
+    &\phantom{lemma:}\Longrightarrow (e,ebd) \in \textit{bf-bdt-rel} & \\ &
+    \phantom{lemma:}\Longrightarrow (\textit{bf-ite}\ i\ t\ e, \textit{bdt-ite}\
+    ibd\ tbd\ ebd) \in \textit{bf-bdt-rel}&
 \end{flalign*}
 }
 \endgroup
@@ -142,10 +153,7 @@
 
 \begin{frame}{Binary Decision Trees} % Maybe not necessary
 \begin{figure}[htbp]
-  \centering
-  \includegraphics[height=5cm]{img/BDT.png}
-  \caption{BDT $(\overline{x_1} \land \overline{x_2} \land \overline{x_3}) \lor
-  (x_1 \land x_2) \lor (x_2 \land x_3) $}
+  TODO: Add image of our Binary decision tree
 \end{figure}
 \end{frame}
 
@@ -157,9 +165,9 @@
       \item define basic operations and respective assumptions
       \item Relation \textit{bdt-bdd-rel}
       \item $ (ib, ibd) \in \textit{bdt-bdd-rel}  \Longrightarrow $ \\
-             $(tb, tbd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
-             $(eb, ebd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
-             $(\textit{bdt-ite}\ ib\ tb\ eb, \textit{bdd-ite}\ ibd\ tbd\ ebd) 
+            $(tb, tbd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
+            $(eb, ebd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
+            $(\textit{bdt-ite}\ ib\ tb\ eb, \textit{bdd-ite}\ ibd\ tbd\ ebd)
              \in \textit{bdt-bdd-rel} $
     \end{itemize}
   \item instantiation of locale with abstract datatype \textit{pointermap}
@@ -173,9 +181,11 @@
 {\footnotesize
 \begin{flalign*}
   %TODO: Fugly hack to move to the right
-  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =& \\
+  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =&
+  \\
   %TODO: Im to stupid for correct alignment, whitespace FTW
-  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}& \\
+  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}&
+  \\
   &\hskip12mm \textit{getentryi}\ ::\ (\tau, nat)\ \textit{hashtable}&
 \end{flalign*}
 }
@@ -210,7 +220,7 @@ Verification via separation logic
 
 
 \begin{frame}{Urquhart benchmark}
-	\centering
+  \begin{center}
 	\begin{align*}
 	x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow (x_n \longleftrightarrow \\
 	(x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow x_n))))))
@@ -218,9 +228,12 @@ Verification via separation logic
 
 	\begin{tikzpicture}[scale=.9]
 		\begin{axis}[ylabel=time in s, xlabel=n]
-			\addplot table [col sep=comma] {urquhart2000.csv};
+      %TODO: fix labels
+			\addplot table [col sep=comma] {urquhart1500.csv};
+			\addplot table [col sep=comma] {buddy_urquhart1500.csv};
 		\end{axis}
 	\end{tikzpicture}
+  \end{center}
 \end{frame}
 
 
