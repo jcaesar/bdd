@@ -175,26 +175,6 @@
 \end{frame}
 
 
-\begin{frame}{Implementation}
-\begingroup
-\addtolength{\jot}{-1mm}
-{\footnotesize
-\begin{flalign*}
-  %TODO: Fugly hack to move to the right
-  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =&
-  \\
-  %TODO: Im to stupid for correct alignment, whitespace FTW
-  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}&
-  \\
-  &\hskip12mm \textit{getentryi}\ ::\ (\tau, nat)\ \textit{hashtable}&
-\end{flalign*}
-}
-\endgroup
-\vspace*{-10mm}
-Verification via separation logic
-\end{frame}
-
-
 \begin{frame}{Pointermap}
 \begin{itemize}
   \item given an element, it constructs a pointer (or small representation) to 
@@ -219,7 +199,55 @@ Verification via separation logic
 \end{frame}
 
 
-\begin{frame}{Urquhart benchmark}
+\begin{frame}{Implementation}
+\begingroup
+{\footnotesize
+\begin{flalign*}
+  %TODO: Fugly hack to move to the right
+  &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap-impl} =&
+  \\
+  %TODO: Im to stupid for correct alignment, whitespace FTW
+  &\hskip12mm \textit{entriesi}\ \ \ ::\ \tau\ \textit{array-list}&
+  \\
+  &\hskip12mm \textit{getentryi}\ ::\ (\tau, nat)\ \textit{hashtable}&
+\end{flalign*}
+}
+\endgroup
+
+Verification via separation logic
+
+\begingroup
+{\footnotesize
+\begin{flalign*}
+    &\hskip1cm(ibf, i) \in R \Longrightarrow (tbf, t) \in R \Longrightarrow
+    (ebd, e) \in R \Longrightarrow&
+  \\
+    &\hskip1cm <\textit{bdd-relator}\ R\ S>&
+  \\
+    &\hskip15mm iteci\ i\ t\ e&
+  \\
+    &\hskip1cm <\lambda(b,s').\ \textit{bdd-relator}\ 
+    (\{(\textit{bf-ite}\ ibf\ tbf\ ebf,b)\} \cup R)\ s'>&
+\end{flalign*}
+}
+\endgroup
+\end{frame}
+
+
+\begin{frame}{First optimization}
+  \begin{itemize}
+    \item ``naive'' implementation very slow
+    \item add lookup function for memoization of bdd-ite
+      \begin{itemize}
+        \item using map ($ bdd \times bdd \times bdd \Rightarrow bdd $)
+              on abstract level for proving correctness
+        \item using hashmap on concrete implementation
+      \end{itemize}
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Equivalence/tautology benchmark}
   \begin{center}
 	\begin{align*}
 	x_1 \longleftrightarrow (x_2 \longleftrightarrow (\dots \longleftrightarrow (x_n \longleftrightarrow \\
@@ -227,10 +255,12 @@ Verification via separation logic
 	\end{align*}
 
 	\begin{tikzpicture}[scale=.9]
-		\begin{axis}[ylabel=time in s, xlabel=n]
+		\begin{axis}[ylabel=time in s, xlabel=n, ymode=log, legend pos=south east]
       %TODO: fix labels
-			\addplot table [col sep=comma] {urquhart1500.csv};
-			\addplot table [col sep=comma] {buddy_urquhart1500.csv};
+      \pgfplotsset{every x tick label/.append style={font=\scriptsize}}
+			\addplot table [col sep=comma] {csv/urquhart1500.csv};
+			\addplot table [col sep=comma] {csv/buddy_urquhart1500.csv};
+      \addlegendentry[pos=southwest]{ {\footnotesize Isabelle BDD --- BuDDy}}
 		\end{axis}
 	\end{tikzpicture}
   \end{center}
@@ -247,7 +277,8 @@ Verification via separation logic
 	\begin{block}{Achievements}
 		\begin{itemize}
 			\item About a factor of 10 faster than previous work on BDDs in Isabelle
-			\item Haskell tool for tautology checking available
+      \item Haskell tool for tautology checking and creating .dot-files
+            available
 		\end{itemize}
 	\end{block}
 \end{frame}

@@ -1,24 +1,27 @@
-inputs 1 2 3 4 5 6 7 8 9 10;
+initial 100 100;
+
+inputs
+  s1 s2 s3 s4 s5 s6 s7 s8 s9 s10;
 
 actions
-t10 = 10;
-t9 = t10 biimp 9;
-t8 = t9 biimp 8;
-t7 = t8 biimp 7;
-t6 = t7 biimp 6;
-t5 = t6 biimp 5;
-t4 = t5 biimp 4;
-t3 = t4 biimp 3;
-t2 = t3 biimp 2;
-t1 = t2 biimp 1;
-t10' = t1 biimp 10;
-t9' = t10' biimp 9;
-t8' = t9' biimp 8;
-t7' = t8' biimp 7;
-t6' = t7' biimp 6;
-t5' = t6' biimp 5;
-t4' = t5' biimp 4;
-t3' = t4' biimp 3;
-t2' = t3' biimp 2;
-t1' = t2' biimp 1;
-tautology t1';
+t10 = s10;
+t9 = t10 biimp s9;
+t8 = t9 biimp s8;
+t7 = t8 biimp s7;
+t6 = t7 biimp s6;
+t5 = t6 biimp s5;
+t4 = t5 biimp s4;
+t3 = t4 biimp s3;
+t2 = t3 biimp s2;
+t1 = t2 biimp s1;
+t10z = t1 biimp s10;
+t9z = t10z biimp s9;
+t8z = t9z biimp s8;
+t7z = t8z biimp s7;
+t6z = t7z biimp s6;
+t5z = t6z biimp s5;
+t4z = t5z biimp s4;
+t3z = t4z biimp s3;
+t2z = t3z biimp s2;
+t1z = t2z biimp s1;
+tautology t1z;
