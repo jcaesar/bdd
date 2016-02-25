@@ -177,10 +177,11 @@
 
 \begin{frame}{Pointermap}
 \begin{itemize}
-  \item given an element, it constructs a pointer (or small representation) to 
-        that element. For equal elements it supplies an equal pointer
+  \item given an element, it constructs a pointer (or small representation) to
+        that element; it provides equal pointers for equal elements
         %TODO: better formulation
   \item given a pointer, we can retrieve an element
+  \item TODO: add relevant operations of pointermap
 \end{itemize}
 \begingroup
 \addtolength{\jot}{-1mm}
@@ -234,15 +235,19 @@ Verification via separation logic
 \end{frame}
 
 
-\begin{frame}{First optimization}
+\begin{frame}{Optimization}
   \begin{itemize}
     \item ``naive'' implementation very slow
+    \item catch obvious cases (e.g. $(\lambda x. \textit{True})$) in
+          \textit{bdd-ite}
     \item add lookup function for memoization of bdd-ite
       \begin{itemize}
-        \item using map ($ bdd \times bdd \times bdd \Rightarrow bdd $)
+        \item using map ($ bdd \times bdd \times bdd \Rightarrow bdd\
+              \textit{option} $)
               on abstract level for proving correctness
         \item using hashmap on concrete implementation
       \end{itemize}
+    \item TODO: add minimal example for memoization
   \end{itemize}
 \end{frame}
 
@@ -260,7 +265,8 @@ Verification via separation logic
       \pgfplotsset{every x tick label/.append style={font=\scriptsize}}
 			\addplot table [col sep=comma] {csv/urquhart1500.csv};
 			\addplot table [col sep=comma] {csv/buddy_urquhart1500.csv};
-      \addlegendentry[pos=southwest]{ {\footnotesize Isabelle BDD --- BuDDy}}
+      \addlegendentry[pos=southwest]{ {\footnotesize Isabelle BDD}}
+      \addlegendentry[pos=southwest]{ {\footnotesize Buddy}}
 		\end{axis}
 	\end{tikzpicture}
   \end{center}
