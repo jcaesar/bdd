@@ -59,7 +59,7 @@
 \definecolor{mybg}{rgb}{1,1,1}
 \setbeamercolor{background canvas}{bg=mybg}
 
-\title{An executables specification of BDDs in Isabelle}
+\title{An executable specification of BDDs in Isabelle}
 \author{\normalsize Max Haslbeck and Julius Michaelis}
 \institute[]{\footnotesize Fakultät für Informatik\\TU München}
 \date{\footnotesize 26 February 2016}
@@ -426,7 +426,7 @@ Verification via separation logic:
   \\
     &\hskip1cm <\textit{bdd-relator}\ R\ S>&
   \\
-    &\hskip15mm iteci\ i\ t\ e&
+    &\hskip15mm ci-ite\ i\ t\ e&
   \\
     &\hskip1cm <\lambda(b,s').\ \textit{bdd-relator}\ 
     (\{(\textit{bf-ite}\ ibf\ tbf\ ebf,b)\} \cup R)\ s'>&
@@ -436,7 +436,7 @@ Verification via separation logic:
 \end{frame}
 
 
-\begin{frame}<1-1>[label=optimization]{Optimization}
+\begin{frame}[label=optimization]{Optimization}
   \begin{itemize}
     \visible<1->{
     \item optimize ``naive'' implementation and verify the optimizations step-by-step
@@ -455,34 +455,6 @@ Verification via separation logic:
     \end{itemize}
 \end{itemize}
 \end{frame}
-
-
-\begin{frame}{Memoization example}
-    %\item bf-ite F $x_1$ G = bf-ite (x1) (bf-ite F True G) (bf-ite F False G)
-    %\item bf-ite F $x_2$ G = bf-ite (x2) (bf-ite F True G) (bf-ite F False G)
-\begin{flalign*}
-    &\hskip4mm   \textit{bf-ite}\ F\ (\lambda l.\ l\ x_1)\ G\ =\
-    \textit{bf-ite}\ (\lambda l.\ l\ x_1)\ 
-    \\
-    %TODO: to lazy for proper align
-    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ True)\ G)
-    \\
-    %TODO: to lazy for proper align
-    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ False)\ G)
-    \\
-    &\hskip4mm   \textit{bf-ite}\ F\ (\lambda l.\ l\ x_2)\ G\ =\
-    \textit{bf-ite}\ (\lambda l.\ l\ x_2)\ 
-    \\
-    %TODO: to lazy for proper align
-    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ True)\ G)
-    \\
-    %TODO: to lazy for proper align
-    &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ False)\ G)
-\end{flalign*}
-\end{frame}
-
-
-\againframe<2-2>{optimization}
 
 
 \begin{frame}{Equivalence/tautology benchmark}
@@ -515,7 +487,7 @@ Verification via separation logic:
 	\end{block}
 	\begin{block}{Achievements}
 		\begin{itemize}
-			\item About a factor of 10 faster than previous work on BDDs in Isabelle
+			\item Implementation and verification of BDDs in Isabelle
       \item Haskell tool for tautology checking and creating .dot-files
             available
 		\end{itemize}
