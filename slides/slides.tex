@@ -141,19 +141,26 @@
 \addtolength{\jot}{-1mm}
 {\footnotesize
 \begin{flalign*}
+  \onslide<1->{
     &\textbf{type\_synonym}\ \tau\ bf\ \textbf{=}\ (\tau \Rightarrow bool)
     \Rightarrow bool &
+    }
+  \onslide<2->{
   \\[1\baselineskip]
     & \textbf{definition}\ \textit{bf-ite}\ ::\ \tau\ bf \Rightarrow
     \tau\ bf \Rightarrow \tau\ bf \Rightarrow \tau\ bf\ \textbf{where} &
   \\
     &\hskip4mm   \textit{bf-ite}\ i\ t\ e\ =\ (\lambda x.\ \text{if}\ i\ x\
     \text{then}\ t\ x\ \text{else}\ e\ x)&
+  }
+  \onslide<3->{
   \\[1\baselineskip]
     &\textbf{definition}\ \textit{bf-restrict}\ ::\ \tau\ bf \Rightarrow \tau
     \Rightarrow bool \Rightarrow \tau\ bf\ \textbf{where}&
   \\
     &\hskip4mm \textit{bf-restrict}\ f\ v\ b\ =\ (\lambda a.\ f\ (a(v := b))&
+  }
+  \onslide<4->{
   \\[1\baselineskip]
     & \textbf{lemma:}\ \textit{bf-ite}\ I\ T\ E\ =&
   \\
@@ -172,6 +179,7 @@
   \\
     &\phantom{\textbf{lemma:}\ \textit{bf-ite}\ (\textit{bf-ite}}\
     (\textit{bf-restrict}\ E\ v\ \textit{False}))&
+  }
 \end{flalign*}
 }
 \endgroup
@@ -179,23 +187,30 @@
 \end{frame}
 
 
-\begin{frame}{Binary Decision Trees}
+\begin{frame}<1-2>[label=bdtformulas]{Binary Decision Trees}
 \begingroup
 \addtolength{\jot}{-1mm}
 {\footnotesize
 \begin{flalign*}
-    &\textbf{datatype}\ (\tau :: \textit{linorder})\ \textit{bdt}\ \textbf{=}\
+   \visible<1->{
+   &\textbf{datatype}\ (\tau :: \textit{linorder})\ \textit{bdt}\ \textbf{=}\
     \textit{Trueif}\ |\ \textit{Falseif}\ |\ IF\ \tau\ (\tau\ \textit{bdt})\
     (\tau\ \textit{bdt}) &
+  }
+  \visible<2->{
   \\[\baselineskip]
   &\textbf{definition}\
     \textit{bf-bdt-rel}\ = \{(bf, bd).\ \textit{ro-bdt}\ bd\ \land\ \forall a.\
     bf\ a = \textit{val-bdt}\ bd\ a\} &
+  }
+  \visible<3->{
   \\[\baselineskip]
     & \textbf{lemma:}\
     (bf,bd) \in \textit{bf-bdt-rel} \Longrightarrow (bf',bd') \in
     \textit{bf-bdt-rel}& \\ & \phantom{lemma:}\ \Longrightarrow  (bf = bf')
     \leftrightarrow (bd = bd') &
+  }
+  \visible<4->{
   \\[\baselineskip]
     &\textbf{lemma:}\ (i,ibd) \in
     \textit{bf-bdt-rel} \Longrightarrow (t,tbd) \in \textit{bf-bdt-rel}&
@@ -203,6 +218,7 @@
     &\phantom{lemma:}\Longrightarrow (e,ebd) \in \textit{bf-bdt-rel} & \\ &
     \phantom{lemma:}\Longrightarrow (\textit{bf-ite}\ i\ t\ e, \textit{bdt-ite}\
     ibd\ tbd\ ebd) \in \textit{bf-bdt-rel}&
+  }
 \end{flalign*}
 }
 \endgroup
@@ -210,7 +226,7 @@
 \end{frame}
 
 
-\begin{frame}{Binary Decision Trees}
+\begin{frame}[label=bdtgraph]{Binary Decision Trees}
 \begin{center}
 \begin{figure}
 \begin{tikzpicture}[>=latex,line join=bevel,scale=0.6]
@@ -321,45 +337,63 @@
 \end{frame}
 
 
+\againframe<3-4>{bdtformulas}
+
+
+\againframe{bdtgraph}
+
 \begin{frame}{BDDs on abstract datatypes}
 \begin{itemize}
+  \visible<1->{
   \item usage of Isabelle's locale feature
     \begin{itemize}
       \item define basic operations and respective assumptions
       \item Relation \textit{bdt-bdd-rel}
+      }
+  \visible<2->{
       \item $ (ib, ibd) \in \textit{bdt-bdd-rel}  \Longrightarrow $ \\
             $(tb, tbd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
             $(eb, ebd) \in \textit{bdt-bdd-rel} \Longrightarrow $ \\
             $(\textit{bdt-ite}\ ib\ tb\ eb, \textit{bdd-ite}\ ibd\ tbd\ ebd)
-             \in \textit{bdt-bdd-rel} $
+             \in \textit{bdt-bdd-rel} $ \\
+      \phantom{Hack for more space between items}
     \end{itemize}
+  }
+  \visible<3->{
   \item instantiation of locale with abstract datatype \textit{pointermap}
+  }
 \end{itemize}
 \end{frame}
 
 
 \begin{frame}{Pointermap}
+\visible<1->{
 \begin{itemize}
   \item given an element, it constructs a pointer (or small representation) to
         that element; it provides equal pointers for equal elements
   \item given a pointer, we can retrieve an element
 \end{itemize}
+}
 \begingroup
 \addtolength{\jot}{-1mm}
 {\footnotesize
 \begin{flalign*}
+\visible<2->{
   %TODO: Fugly hack to move to the right
   &\hskip1cm\textbf{record}\ \tau\ \textit{pointermap} =& \\
   %TODO: Im to stupid for correct alignment, whitespace FTW
   &\hskip12mm \textit{entries}\ \ \ ::\ \tau\ \textit{list}& \\
   &\hskip12mm \textit{getentry}\ ::\ \tau\ \Rightarrow \textit{nat}\
   \textit{option}&
+}
+\visible<3->{
   \\[\baselineskip]
   &\hskip12mm \textbf{fun}\ \textit{pm\_pth} :: \tau\ \textit{pointermap} \Rightarrow 
   \textit{nat} \Rightarrow \tau&
   \\
   &\hskip12mm \textbf{fun}\ \textit{pm\_getmk}\ :: \tau \Rightarrow \tau\ \textit{pointermap}
   \Rightarrow (\textit{nat} \times  \textit{pointermap})&
+}
 \end{flalign*}
 }
 \endgroup
@@ -382,7 +416,7 @@
 }
 \endgroup
 
-Verification via separation logic
+Verification via separation logic:
 
 \begingroup
 {\footnotesize
@@ -402,23 +436,28 @@ Verification via separation logic
 \end{frame}
 
 
-\begin{frame}{Optimization}
+\begin{frame}<1-1>[label=optimization]{Optimization}
   \begin{itemize}
-    \item ``naive'' implementation very slow
-    \item catch obvious cases (e.g. $(\lambda x. \textit{True})$) in
+    \visible<1->{
+    \item optimize ``naive'' implementation and verify the optimizations step-by-step
+    \item first catch obvious cases
+         (e.g. $(\textit{bf-ite}\ (\lambda x. \textit{True})\ t\ e)$) in
           \textit{bdd-ite}
-    \item add lookup function for memoization of bdd-ite
-      \begin{itemize}
-        \item using map ($ bdd \times bdd \times bdd \Rightarrow bdd\
-              \textit{option} $)
-              on abstract level for proving correctness
-        \item using hashmap on concrete implementation
-      \end{itemize}
-  \end{itemize}
+    \item add lookup function for memoization of \textit{bdd-ite}:
+    }
+    \visible<2->{
+    \begin{itemize}
+      \item using map ($ bdd \times bdd \times bdd \Rightarrow bdd\
+            \textit{option} $)
+            on abstract level for proving correctness
+      \item using hashmap on concrete implementation
+    }
+    \end{itemize}
+\end{itemize}
 \end{frame}
 
 
-\begin{frame}{Optimization example}
+\begin{frame}{Memoization example}
     %\item bf-ite F $x_1$ G = bf-ite (x1) (bf-ite F True G) (bf-ite F False G)
     %\item bf-ite F $x_2$ G = bf-ite (x2) (bf-ite F True G) (bf-ite F False G)
 \begin{flalign*}
@@ -441,6 +480,9 @@ Verification via separation logic
     &\hskip47mm(\textit{bf-ite}\ F\ (\lambda l.\ False)\ G)
 \end{flalign*}
 \end{frame}
+
+
+\againframe<2-2>{optimization}
 
 
 \begin{frame}{Equivalence/tautology benchmark}
