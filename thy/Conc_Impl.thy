@@ -1,4 +1,4 @@
-section{*Imparative implementation*}
+section\<open>Imparative implementation\<close>
 theory Conc_Impl
 imports PointerMapImpl AbstractInterpretation
   (*"$AFP/Automatic_Refinement/Lib/Refine_Lib"*)
@@ -391,7 +391,7 @@ lemma iteci_lu_rule: "
 done
 
 
-subsection{*A standard library of functions*}
+subsection\<open>A standard library of functions\<close>
 
 declare iteci_rule[THEN mp, sep_heap_rules]
 
@@ -435,7 +435,7 @@ definition "tautci v bdd \<equiv> do {
 	return (d = TD)
 }"
 
-subsection{* Printing *}
+subsection\<open>Printing\<close>
 
 partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
 "serializeci p s = do {

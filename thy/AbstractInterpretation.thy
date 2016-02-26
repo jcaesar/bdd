@@ -1,4 +1,4 @@
-section{*Functional interpretation for the abstract implementation*}
+section\<open>Functional interpretation for the abstract implementation\<close>
 theory AbstractInterpretation
 imports Abstract_Impl PointerMap
 begin
@@ -246,7 +246,7 @@ proof  -
 			(* for the first thing, we don't have a helper lemma *)
 			apply(clarsimp simp: const_def Rmi_def IFC_def bdd_sane_def ifmi_les_hlp pointermap_sane_getmkD pointermap_update_pthI split: if_splits prod.splits)
 			(* rest goes by the helper lemmas *)
-			using ifmi_les[OF `bdd_sane s` ifm] ifmi_saneI[OF `bdd_sane s` ifm] ifm apply(simp)
+			using ifmi_les[OF \<open>bdd_sane s\<close> ifm] ifmi_saneI[OF \<open>bdd_sane s\<close> ifm] ifm apply(simp)
 		done
 	next case goal4 thus ?case 
 	  apply (clarsimp simp add: const_def split: Option.bind_splits if_splits)

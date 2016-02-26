@@ -7,12 +7,12 @@ theory Boolean_Expression_Checkers
 imports Main
 begin
 
-section{* Tautology (etc) Checking via Binary Decision Trees *}
+section\<open>Tautology (etc) Checking via Binary Decision Trees\<close>
 
-subsection {* Boolean Expressions *}
+subsection \<open>Boolean Expressions\<close>
 
-text{* This is the interface to the tautology checker. If you have your own
-type of boolean expressions you need to translate into this type first. *}
+text\<open>This is the interface to the tautology checker. If you have your own
+type of boolean expressions you need to translate into this type first.\<close>
 
 datatype 'a bool_expr =
   Const_bool_expr bool |
@@ -33,7 +33,7 @@ primrec val_bool_expr :: "'a bool_expr \<Rightarrow> ('a \<Rightarrow> bool) \<R
 "val_bool_expr (Iff_bool_expr b1 b2) s = (val_bool_expr b1 s = val_bool_expr b2 s)"
 
 
-subsection{* Binary Decision Trees *}
+subsection\<open>Binary Decision Trees\<close>
 
 datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex"
 
@@ -44,16 +44,16 @@ fun val_ifex :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> boo
 "val_ifex (IF n t1 t2) s = (if s n then val_ifex t1 s else val_ifex t2 s)"
 
 
-subsection{* A Simple Minded Translation *}
+subsection\<open>A Simple Minded Translation\<close>
 
-text {* Simple minded normalisation, can create branches with repeated vars: *}
+text \<open>Simple minded normalisation, can create branches with repeated vars:\<close>
 
 primrec normif0 :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex" where
 "normif0 Trueif t1 t2 = t1" |
 "normif0 Falseif t1 t2 = t2" |
 "normif0 (IF x t1 t2) t3 t4 = IF x (normif0 t1 t3 t4) (normif0 t2 t3 t4)"
 
-text {* The corresponding translation from boolean expressions to if-expressions: *}
+text \<open>The corresponding translation from boolean expressions to if-expressions:\<close>
 
 primrec ifex0 :: "'a bool_expr \<Rightarrow> 'a ifex" where
 "ifex0 (Const_bool_expr b) = (if b then Trueif else Falseif)" |
@@ -73,13 +73,13 @@ theorem val_ifex0: "val_ifex (ifex0 b) = val_bool_expr b"
 by(induct_tac b)(auto simp: val_normif0 Let_def)
 
 
-subsection{* Translation to Reduced Binary Decision Trees *}
+subsection\<open>Translation to Reduced Binary Decision Trees\<close>
 
-text {* An improved translation. *}
+text \<open>An improved translation.\<close>
 
-subsubsection{* Environment *}
+subsubsection\<open>Environment\<close>
 
-text{* Environments are substitutions of values for variables: *}
+text\<open>Environments are substitutions of values for variables:\<close>
 
 type_synonym 'a env_bool = "('a * bool) list"
 
@@ -101,10 +101,10 @@ lemma agreeDF:
   "\<lbrakk> agree s env; distinct (map fst env) \<rbrakk> \<Longrightarrow> (x,False) \<in> set env \<Longrightarrow> \<not> s x"
 by(simp add: agree_def)
 
-subsubsection{* Translation and Normalisation *}
+subsubsection\<open>Translation and Normalisation\<close>
 
-text {* A normalisation avoiding duplicate variables and collapsing
-  @{term "If x t t"} to @{text t}. *}
+text \<open>A normalisation avoiding duplicate variables and collapsing
+  @{term "If x t t"} to @{text t}.\<close>
 
 definition mkIF :: "'a \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex" where
 "mkIF x t1 t2 = (if t1=t2 then t1 else IF x t1 t2)"
@@ -133,7 +133,7 @@ primrec ifex_of :: "'a bool_expr \<Rightarrow> 'a ifex" where
 "ifex_of (Iff_bool_expr b1 b2) = (let t1 = ifex_of b1; t2 = ifex_of b2 in
    normif [] t1 t2 (normif [] t2 Falseif Trueif))"
 
-subsubsection{* Functional Correctness Proof *}
+subsubsection\<open>Functional Correctness Proof\<close>
 
 lemma val_mkIF: "val_ifex (mkIF x t1 t2) s = val_ifex (IF x t1 t2) s"
 by(auto simp: mkIF_def Let_def)
@@ -156,10 +156,10 @@ done
 theorem val_ifex: "val_ifex (ifex_of b) s = val_bool_expr b s"
 by(induct_tac b)(auto simp: val_normif agree_Nil Let_def)
 
-subsubsection{* A Tautology Checker for Arbitrary If-Expressions *}
+subsubsection\<open>A Tautology Checker for Arbitrary If-Expressions\<close>
 
-text{* Not really needed because @{const ifex_of} produces reduced
-expressions which can be checked very easily. *}
+text\<open>Not really needed because @{const ifex_of} produces reduced
+expressions which can be checked very easily.\<close>
 
 fun taut_test_rec :: "'a ifex \<Rightarrow> 'a env_bool \<Rightarrow> bool" where
 "taut_test_rec Trueif env = True" |
@@ -194,11 +194,11 @@ corollary taut_test_ifex: "taut_test_ifex t = (\<forall>s. val_ifex t s)"
 using taut_test_rec[of "[]" t]
 by (auto simp: val_ifex taut_test_ifex_def agree_Nil)
 
-subsubsection{* Reduced If-Expressions *}
+subsubsection\<open>Reduced If-Expressions\<close>
 
-text{* Proof that the result of @{const ifex_of} is reduced.
+text\<open>Proof that the result of @{const ifex_of} is reduced.
 An expression reduced iff no variable appears twice on any branch and
-there is no subexpression @{term"IF x t t"}. *}
+there is no subexpression @{term"IF x t t"}.\<close>
 
 fun reduced :: "'a ifex \<Rightarrow> 'a set \<Rightarrow> bool" where
 "reduced (IF x t1 t2) X =
@@ -232,8 +232,8 @@ qed (auto simp: reduced_reduce)
 theorem reduced_ifex: "reduced (ifex_of b) {}"
 by(induct b)(auto simp: reduced_normif[of "[]", simplified] Let_def)
 
-text{* Proof that reduced if-expressions are @{const Trueif}, @{const Falseif}
-or can evaluate to both @{const True} and @{const False}. *}
+text\<open>Proof that reduced if-expressions are @{const Trueif}, @{const Falseif}
+or can evaluate to both @{const True} and @{const False}.\<close>
 
 lemma same_val_if_reduced:
   "reduced t X \<Longrightarrow> \<forall>x. x \<notin> X \<longrightarrow> s1 x = s2 x \<Longrightarrow> val_ifex t s1 = val_ifex t s2"
@@ -295,7 +295,7 @@ proof(induction t arbitrary: X)
 qed auto
 
 
-subsection{* Tautology Checking *}
+subsection\<open>Tautology Checking\<close>
 
 definition taut_test :: "'a bool_expr \<Rightarrow> bool" where
 "taut_test b = (ifex_of b = Trueif)"
@@ -305,7 +305,7 @@ unfolding taut_test_def using reduced_IF_depends[OF reduced_ifex, of b]
 by (metis val_ifex val_ifex.simps)
 
 
-subsection{* Satisfiability Checking *}
+subsection\<open>Satisfiability Checking\<close>
 
 definition sat_test :: "'a bool_expr \<Rightarrow> bool" where
 "sat_test b = (ifex_of b \<noteq> Falseif)"
@@ -315,7 +315,7 @@ unfolding sat_test_def using reduced_IF_depends[OF reduced_ifex, of b]
 by (metis val_ifex val_ifex.simps(1) val_ifex.simps(2))
 
 
-subsection{* Equivalence Checking *}
+subsection\<open>Equivalence Checking\<close>
 
 definition equiv_test :: "'a bool_expr \<Rightarrow> 'a bool_expr \<Rightarrow> bool" where
 "equiv_test b1 b2 = taut_test (Iff_bool_expr b1 b2)"
@@ -324,7 +324,7 @@ corollary equiv_test: "equiv_test b1 b2 = (\<forall>s. val_bool_expr b1 s = val_
 by(auto simp:equiv_test_def taut_test)
 
 
-text{* Hide everything except the boolean expressions and the checkers. *}
+text\<open>Hide everything except the boolean expressions and the checkers.\<close>
 (*
 hide_type (open) ifex env_bool
 hide_const (open)  Trueif Falseif IF val_ifex normif0 ifex0 agree mkIF

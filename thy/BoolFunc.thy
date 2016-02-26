@@ -1,23 +1,23 @@
-section{* Boolean functions *}
+section\<open>Boolean functions\<close>
 theory BoolFunc
 imports Main
 begin
-text{*
+text\<open>
 	The end result of our implementation is verified against these functions:
-*}
+\<close>
 type_synonym 'a boolfunc = "('a \<Rightarrow> bool) \<Rightarrow> bool"
 
-text{* if-then-else on boolean functions. *}
+text\<open>if-then-else on boolean functions.\<close>
 definition "bf_ite i t e \<equiv> (\<lambda>l. if i l then t l else e l)"
-text{* if-then-else is interesting because we can, together with constant true and false, represent all binary boolean functions using maximally two applications of it. *}
+text\<open>if-then-else is interesting because we can, together with constant true and false, represent all binary boolean functions using maximally two applications of it.\<close>
 definition "bf_True \<equiv> (\<lambda>l. True)"
 definition "bf_False \<equiv> (\<lambda>l. False)"
-text{* A quick demonstration: *}
+text\<open>A quick demonstration:\<close>
 definition "bf_and a b \<equiv> bf_ite a b bf_False"
 lemma "(bf_and a b) as \<longleftrightarrow> a as \<and> b as" unfolding bf_and_def  bf_ite_def bf_False_def bf_True_def by meson 
 definition "bf_not b \<equiv> bf_ite b bf_False bf_True"
 lemma bf_not_alt: "bf_not a as \<longleftrightarrow> \<not>a as" unfolding bf_not_def bf_ite_def bf_False_def bf_True_def by meson
-text{* For convenience, we want a few functions more: *}
+text\<open>For convenience, we want a few functions more:\<close>
 definition "bf_or a b \<equiv> bf_ite a bf_True b"
 definition "bf_lit v \<equiv> (\<lambda>l. l v)"
 definition "bf_if v t e \<equiv> bf_ite (bf_lit v) t e"
@@ -32,28 +32,28 @@ lemma bf_xor_alt: "bf_xor a b = (bf_ite a (bf_not b) b)" (* two application vers
 	unfolding bf_False_def bf_True_def
 	unfolding bf_ite_def
 	by simp
-text{* All of these are implemented and had their implementation verified. *}
+text\<open>All of these are implemented and had their implementation verified.\<close>
 
 lemma [dest!]: "bf_False = bf_True \<Longrightarrow> False" unfolding bf_True_def bf_False_def fun_eq_iff by simp (* This has annoyed me once too often *)
 
 
-subsection{* Shannon decomposition *}
-text{*
+subsection\<open>Shannon decomposition\<close>
+text\<open>
 	A restriction of a boolean function on a variable is creating the boolean function that evaluates as if that variable was set to a fixed value:
-*}
+\<close>
 definition "bf_restrict (i::'a) (val::bool) (f::'a boolfunc) \<equiv> (\<lambda>v. f (v(i:=val)))"
 
-text {*
+text \<open>
 	Restrictions are useful, because they remove variables from the set of significant variables:
-*}
+\<close>
 definition "bf_vars bf = {v. \<exists>as. bf_restrict v True bf as \<noteq> bf_restrict v False bf as}"
 lemma "var \<notin> bf_vars (bf_restrict var val ex)"
 unfolding bf_vars_def bf_restrict_def by(simp)
 
-text{*
+text\<open>
 	We can decompose calculating if-then-else into computing if-then-else of two triples of functions with one variable restricted to true / false.
 	Given that the functions have finite arity, we can use this to construct a recursive definition.
-*}
+\<close>
 lemma brace90shannon: "bf_ite F G H ass =
   bf_ite (\<lambda>l. l i) 
 	       (bf_ite (bf_restrict i True F) (bf_restrict i True G) (bf_restrict i True H))

@@ -1,4 +1,4 @@
-section{*Abstract ITE Implementation*}
+section\<open>Abstract ITE Implementation\<close>
 theory Abstract_Impl
 imports BDT
         "$AFP/Automatic_Refinement/Lib/Refine_Lib"

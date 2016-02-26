@@ -1,13 +1,13 @@
-section{*Binary Decision Trees*}
+section\<open>Binary Decision Trees\<close>
 theory BDT
 imports Boolean_Expression_Checkers BoolFunc
 begin
 
-text{*
+text\<open>
 	We first define all operations and properties on binary decision trees.
 	This has the advantage that we can use a simple, structurally defined type
 	and the disadvantage that we cannot represent sharing.
-*}
+\<close>
 
 (* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
 (* type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool" *)
@@ -52,12 +52,12 @@ lemma roifex_set_var_subtree:
 
 lemma roifex_Trueif_unique: "ro_ifex b \<Longrightarrow> \<forall>ass. val_ifex b ass \<Longrightarrow> b = Trueif"
 proof(induction b)
-  case (IF v b1 b2) with roifex_set_var_subtree[OF `ro_ifex (IF v b1 b2)`] show ?case by force
+  case (IF v b1 b2) with roifex_set_var_subtree[OF \<open>ro_ifex (IF v b1 b2)\<close>] show ?case by force
 qed(auto)
 
 lemma roifex_Falseif_unique: "ro_ifex b \<Longrightarrow> \<forall>ass. \<not> val_ifex b ass \<Longrightarrow> b = Falseif"
 proof(induction b)
-  case (IF v b1 b2) with roifex_set_var_subtree[OF `ro_ifex (IF v b1 b2)`, of v b1 b2] show ?case
+  case (IF v b1 b2) with roifex_set_var_subtree[OF \<open>ro_ifex (IF v b1 b2)\<close>, of v b1 b2] show ?case
     by fastforce
 qed(auto)
 
@@ -73,7 +73,7 @@ lemma ifex_ordered_not_part: "ifex_ordered  b \<Longrightarrow> b = IF v b1 b2 \
 lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> (\<And>ass. val_ifex x ass = val_ifex y ass) \<Longrightarrow> x = y"
  proof(induction x arbitrary: y)
   case (IF xv xb1 xb2) note IFind = IF 
-    from `ro_ifex (IF xv xb1 xb2)`  `ro_ifex y` `\<And>ass. val_ifex (IF xv xb1 xb2) ass = val_ifex y ass`
+    from \<open>ro_ifex (IF xv xb1 xb2)\<close>  \<open>ro_ifex y\<close> \<open>\<And>ass. val_ifex (IF xv xb1 xb2) ass = val_ifex y ass\<close>
       show ?case
         proof(induction y)
           case (IF yv yb1 yb2)
@@ -408,9 +408,9 @@ proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
     restrict_top_ifex_ordered_invar[OF goal3(6)]
     restrict_top_ifex_ordered_invar[OF goal3(7)]
     restrict_top_ifex_ordered_invar[OF goal3(8)], symmetric]
-  note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) `ifex_ordered i`  goal3(3)]
-             restrict_top_bf[OF three_ins(2) goal3(2) `ifex_ordered t`  goal3(4)]
-             restrict_top_bf[OF three_ins(3) goal3(2) `ifex_ordered e`  goal3(5)]
+  note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) \<open>ifex_ordered i\<close>  goal3(3)]
+             restrict_top_bf[OF three_ins(2) goal3(2) \<open>ifex_ordered t\<close>  goal3(4)]
+             restrict_top_bf[OF three_ins(3) goal3(2) \<open>ifex_ordered e\<close>  goal3(5)]
   show ?case apply(rule trans[OF brace90shannon[where i=a]])
     by (auto simp: restrict_top_ifex_ordered_invar goal3(1,2,6-8) uf1 mIH bf_ite_def[of "\<lambda>l. l a"]
              split: ifc_split)

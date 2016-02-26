@@ -1,22 +1,22 @@
-section{* Collapsing the levels *}
+section\<open>Collapsing the levels\<close>
 theory LevelCollapse
 imports Conc_Impl
 begin
-text{* 
+text\<open>
 The theory up to this point is implemented in a way that separated the different aspects into different levels.
 This is highly beneficial for us, since it allows us to tackle the difficulties arising in small chunks.
 However, exporting this to the user would be highly impractical.
 Thus, this theory collapses all the different levels (i.e. refinement steps) and relates the computations in the heap monad to 
 @{type boolfunc}.
-*}
+\<close>
 
 definition "bddmi_rel cs \<equiv> {(a,c)|a b c. (a,b) \<in> bf_ifex_rel \<and> (c,b) \<in> Rmi cs}"
 definition "bdd_relator p s \<equiv> \<exists>\<^sub>Acs. is_bdd_impl cs s * \<up>(p \<subseteq> (bddmi_rel cs) \<and> bdd_sane cs) * true"
 
-text{*
+text\<open>
 The @{type assn} predicate @{term bdd_relator} is the interface that is exposed to the user.
 (The contents of the definition are not exposed.)
-*}
+\<close>
 
 lemma bdd_relator_mono: "q \<subseteq> p \<Longrightarrow> bdd_relator p s \<Longrightarrow>\<^sub>A bdd_relator q s" unfolding bdd_relator_def by sep_auto
 
@@ -63,11 +63,11 @@ lemma add_true:
 	shows "<b * true> p <a>\<^sub>t"
 	using assms add_anything[where x=true] by force
 
-text{*
+text\<open>
 This is the general form one wants to work with:
 if a function on the bdd is called with a set of already existing and valid pointers, the arguments to the function have to be in that set.
 The result is that one more pointer is the set of existing and valid pointers.
-*}
+\<close>
 thm iteci_rule[THEN mp] brofix.ite_impl_R ifex_ite_rel_bf
 lemma iteci_rule[sep_heap_rules]: "
 \<lbrakk>(ib, ic) \<in> rp; (tb, tc) \<in> rp; (eb, ec) \<in> rp\<rbrakk> \<Longrightarrow>
@@ -134,8 +134,8 @@ lemma fci_rule[sep_heap_rules]:
 	apply(force simp add: brofix.les_def)
 done
 
-text{* IFC/ifmi/ifci require that the variable order is ensured by the user. 
-Instead of using ifci, a combination of litci and iteci have to be used. *}
+text\<open>IFC/ifmi/ifci require that the variable order is ensured by the user. 
+Instead of using ifci, a combination of litci and iteci have to be used.\<close>
 lemma [sep_heap_rules]:
 "\<lbrakk>(tb, tc) \<in> rp; (eb, ec) \<in> rp\<rbrakk> \<Longrightarrow>
 <bdd_relator rp s> 
@@ -259,7 +259,7 @@ declare blit_def[code]
 (* Todo: verify iteci_opt *)
 export_code open iteci_lu notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
 
-subsection{*Tests and examples*}
+subsection\<open>Tests and examples\<close>
 
 lemma "<emp> do {
 	s \<leftarrow> emptyci;

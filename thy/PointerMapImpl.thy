@@ -1,4 +1,4 @@
-section{*Imparative implementation for Pointermap*}
+section\<open>Imparative implementation for Pointermap\<close>
 theory PointerMapImpl
 imports ArrayList 
   "$AFP/Separation_Logic_Imperative_HOL/Sep_Main"
