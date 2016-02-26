@@ -172,15 +172,19 @@ using assms
 	apply(rule bdd_relator_mono; fast)
 done
 
+definition hackhackhack where "hackhackhack x y \<longleftrightarrow> x \<in> y"
+lemma hackhackhack_cong[cong]: "y = y' \<Longrightarrow> hackhackhack x y = hackhackhack x y'" unfolding hackhackhack_def by auto
+lemma hackhackhackI: "x \<in> y \<Longrightarrow> hackhackhack x y" unfolding hackhackhack_def .
+
 lemma cirules1[sep_heap_rules]:
-	assumes "(tb, tc) \<in> rp" "(eb, ec) \<in> rp"
+	assumes "hackhackhack (tb, tc) rp" "hackhackhack (eb, ec) rp"
 	shows
 		"<bdd_relator rp s> andci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_and tb eb,r) rp) s'>"
 		"<bdd_relator rp s> orci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_or tb eb,r) rp) s'>"
 		"<bdd_relator rp s> biimpci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_biimp tb eb,r) rp) s'>"
 		"<bdd_relator rp s> xorci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_xor tb eb,r) rp) s'>"
 (* actually, these functions would allow for more insert. I think that would be inconvenient though. *)
-using assms
+using assms unfolding hackhackhack_def
 by(unfold bf_and_def andci_def bf_or_def orci_def bf_nand_def biimpci_def bf_biimp_def xorci_def bf_xor_alt)
   (rule bind_rule, (rule fci_rule | rule tci_rule | (rule notci_rule; assumption)); clarify, rule cons_post_rule, (rule iteci_rule; blast), clarify, (rule bdd_relator_mono; fast))+
 (* Because I can, that's why. (see below for the unfolded version) *)
@@ -270,6 +274,23 @@ by sep_auto
 
 lemma "a \<Longrightarrow>\<^sub>A b \<Longrightarrow> a * true \<Longrightarrow>\<^sub>A b" oops
 lemma "a \<Longrightarrow>\<^sub>A emp" oops
+
+setup \<open>map_theory_simpset (fn ctxt =>
+  ctxt addSolver (Simplifier.mk_solver "hackhackhack"
+    (fn ctxt => fn n =>
+      let
+        val tac =
+          resolve_tac ctxt @{thms hackhackhackI} THEN'
+            REPEAT_ALL_NEW (resolve_tac ctxt @{thms Set.insertI1 Set.insertI2})
+      in
+        SOLVED' tac n
+      end))
+)\<close>
+
+schematic_lemma
+  "\<And>x a b aa ba ab bb. hackhackhack (?tb30 x a b aa ba ab bb, a) {(bf_lit 2, ab), (bf_lit (Suc 0), aa), (bf_lit 0, a)}"
+apply simp
+done
 
 lemma "<emp> do {
 	s \<leftarrow> emptyci;
