@@ -36,6 +36,7 @@ text\<open>All of these are implemented and had their implementation verified.\<
 
 lemma [dest!]: "bf_False = bf_True \<Longrightarrow> False" unfolding bf_True_def bf_False_def fun_eq_iff by simp (* This has annoyed me once too often *)
 
+lemmas [simp] = bf_and_def bf_or_def bf_nand_def bf_biimp_def bf_xor_alt bf_nand_def bf_nor_def bf_not_def 
 
 subsection\<open>Shannon decomposition\<close>
 text\<open>

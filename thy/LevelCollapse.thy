@@ -18,7 +18,7 @@ The @{type assn} predicate @{term bdd_relator} is the interface that is exposed 
 (The contents of the definition are not exposed.)
 \<close>
 
-lemma bdd_relator_mono: "q \<subseteq> p \<Longrightarrow> bdd_relator p s \<Longrightarrow>\<^sub>A bdd_relator q s" unfolding bdd_relator_def by sep_auto
+lemma bdd_relator_mono[intro!]: "q \<subseteq> p \<Longrightarrow> bdd_relator p s \<Longrightarrow>\<^sub>A bdd_relator q s" unfolding bdd_relator_def by sep_auto
 
 lemma bdd_relator_absorb_true[simp]: "bdd_relator p s * true = bdd_relator p s" unfolding bdd_relator_def by simp
 
@@ -185,10 +185,7 @@ lemma notci_rule[sep_heap_rules]:
 	assumes "node_relator (tb, tc) rp"
 	shows "<bdd_relator rp s> notci tc s <\<lambda>(r,s'). bdd_relator (insert (bf_not tb,r) rp) s'>"
 using assms
-	apply(unfold bf_not_def notci_def)
-	apply sep_auto
-	apply(rule bdd_relator_mono; fast)
-done
+by(sep_auto simp: notci_def)
 
 lemma cirules1[sep_heap_rules]:
 	assumes "node_relator (tb, tc) rp" "node_relator (eb, ec) rp"
@@ -199,7 +196,7 @@ lemma cirules1[sep_heap_rules]:
 		"<bdd_relator rp s> xorci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_xor tb eb,r) rp) s'>"
 (* actually, these functions would allow for more insert. I think that would be inconvenient though. *)
 using assms
-by (sep_auto simp:  bf_and_def andci_def bf_or_def orci_def bf_nand_def biimpci_def bf_biimp_def xorci_def bf_xor_alt intro: bdd_relator_mono)+
+by (sep_auto simp: andci_def orci_def biimpci_def xorci_def)+
 
 lemma cirules2[sep_heap_rules]:
   assumes "node_relator (tb, tc) rp" "node_relator (eb, ec) rp"
@@ -207,7 +204,7 @@ lemma cirules2[sep_heap_rules]:
 		"<bdd_relator rp s> nandci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_nand tb eb,r) rp) s'>"
 		"<bdd_relator rp s> norci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_nor tb eb,r) rp) s'>"
 	using assms
-	by(sep_auto intro!: fr_refl bdd_relator_mono simp: nandci_def bf_nand_def norci_def bf_nor_def)+
+	by(sep_auto simp: nandci_def norci_def)+
 
 lemma litci_rule[sep_heap_rules]:
 	"<bdd_relator rp s> litci v s <\<lambda>(r,s'). bdd_relator (insert (bf_lit v,r) rp) s'>"
@@ -265,6 +262,8 @@ declare blit_def[code]
 (* Todo: verify iteci_opt *)
 export_code open iteci_lu notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
 
+lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> *)
+
 subsection\<open>Tests and examples\<close>
 
 lemma "<emp> do {
@@ -290,7 +289,7 @@ lemma "<emp> do {
 	(t,s) \<leftarrow> biimpci t1 t2 s;
 	tautci t s
 } <\<up>>\<^sub>t"
-by (sep_auto  simp: bf_biimp_def bf_True_def bf_and_def bf_or_def bf_False_def bf_not_def bf_ite_def split: if_splits)
+by sep_auto
 
 
 
