@@ -63,6 +63,25 @@ lemma add_true:
 	shows "<b * true> p <a>\<^sub>t"
 	using assms add_anything[where x=true] by force
 
+
+definition node_relator where "node_relator x y \<longleftrightarrow> x \<in> y"
+text \<open>\<open>sep_auto\<close> behaves sub-optimal when having @{term "(bf,bdd) \<in> computed_pointer_relation"} as assumption in our cases. Using node_relator instead fixes this behavior with a custom solver for \<open>simp\<close>.\<close>
+
+lemma node_relator_cong[cong]: "y = y' \<Longrightarrow> node_relator x y = node_relator x y'" unfolding node_relator_def by auto
+lemma node_relatorI: "x \<in> y \<Longrightarrow> node_relator x y" unfolding node_relator_def .
+
+setup \<open>map_theory_simpset (fn ctxt =>
+  ctxt addSolver (Simplifier.mk_solver "node_relator"
+    (fn ctxt => fn n =>
+      let
+        val tac =
+          resolve_tac ctxt @{thms node_relatorI} THEN'
+            REPEAT_ALL_NEW (resolve_tac ctxt @{thms Set.insertI1 Set.insertI2})
+      in
+        SOLVED' tac n
+      end))
+)\<close>
+
 text\<open>
 This is the general form one wants to work with:
 if a function on the bdd is called with a set of already existing and valid pointers, the arguments to the function have to be in that set.
@@ -70,11 +89,11 @@ The result is that one more pointer is the set of existing and valid pointers.
 \<close>
 thm iteci_rule[THEN mp] brofix.ite_impl_R ifex_ite_rel_bf
 lemma iteci_rule[sep_heap_rules]: "
-\<lbrakk>(ib, ic) \<in> rp; (tb, tc) \<in> rp; (eb, ec) \<in> rp\<rbrakk> \<Longrightarrow>
+\<lbrakk>node_relator (ib, ic)  rp; node_relator (tb, tc) rp; node_relator (eb, ec) rp\<rbrakk> \<Longrightarrow>
 <bdd_relator rp s> 
 	iteci_lu ic tc ec s
 <\<lambda>(r,s'). bdd_relator (insert (bf_ite ib tb eb,r) rp) s'>"
-	apply(unfold bdd_relator_def)
+	apply(unfold bdd_relator_def node_relator_def)
 	apply(intro norm_pre_ex_rule)
 	apply(clarsimp)
 	apply(unfold bddmi_rel_def)
@@ -160,10 +179,14 @@ lemma [sep_heap_rules]:
 	apply(force sim p add: brofix.les_def)*)
 oops
 lemma notci_rule[sep_heap_rules]:
-	assumes "(tb, tc) \<in> rp"
+	assumes "node_relator (tb, tc) rp"
 	shows "<bdd_relator rp s> notci tc s <\<lambda>(r,s'). bdd_relator (insert (bf_not tb,r) rp) s'>"
 using assms
 	apply(unfold bf_not_def notci_def)
+	apply sep_auto
+	
+	apply(subst(asm) node_relator_def)
+	
 	apply(rule bind_rule, rule fci_rule, clarify)
 	apply(rule bind_rule, rule tci_rule, clarify)
 	apply(rule cons_post_rule)
@@ -172,19 +195,15 @@ using assms
 	apply(rule bdd_relator_mono; fast)
 done
 
-definition hackhackhack where "hackhackhack x y \<longleftrightarrow> x \<in> y"
-lemma hackhackhack_cong[cong]: "y = y' \<Longrightarrow> hackhackhack x y = hackhackhack x y'" unfolding hackhackhack_def by auto
-lemma hackhackhackI: "x \<in> y \<Longrightarrow> hackhackhack x y" unfolding hackhackhack_def .
-
 lemma cirules1[sep_heap_rules]:
-	assumes "hackhackhack (tb, tc) rp" "hackhackhack (eb, ec) rp"
+	assumes "node_relator (tb, tc) rp" "node_relator (eb, ec) rp"
 	shows
 		"<bdd_relator rp s> andci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_and tb eb,r) rp) s'>"
 		"<bdd_relator rp s> orci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_or tb eb,r) rp) s'>"
 		"<bdd_relator rp s> biimpci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_biimp tb eb,r) rp) s'>"
 		"<bdd_relator rp s> xorci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_xor tb eb,r) rp) s'>"
 (* actually, these functions would allow for more insert. I think that would be inconvenient though. *)
-using assms unfolding hackhackhack_def
+using assms unfolding node_relator_def
 by(unfold bf_and_def andci_def bf_or_def orci_def bf_nand_def biimpci_def bf_biimp_def xorci_def bf_xor_alt)
   (rule bind_rule, (rule fci_rule | rule tci_rule | (rule notci_rule; assumption)); clarify, rule cons_post_rule, (rule iteci_rule; blast), clarify, (rule bdd_relator_mono; fast))+
 (* Because I can, that's why. (see below for the unfolded version) *)
@@ -234,7 +253,8 @@ using assms
 done
 
 lemma tautci_rule[sep_heap_rules]:
-	shows "(tb, tc) \<in> rp \<Longrightarrow> <bdd_relator rp s> tautci tc s <\<lambda>r. bdd_relator rp s * \<up>(r \<longleftrightarrow> tb = bf_True)>"
+	shows "node_relator (tb, tc) rp \<Longrightarrow> <bdd_relator rp s> tautci tc s <\<lambda>r. bdd_relator rp s * \<up>(r \<longleftrightarrow> tb = bf_True)>"
+	apply(unfold node_relator_def)
 	apply(unfold tautci_def)
 	apply(unfold bdd_relator_def)
 	apply(intro norm_pre_ex_rule; clarsimp)
@@ -275,23 +295,6 @@ by sep_auto
 lemma "a \<Longrightarrow>\<^sub>A b \<Longrightarrow> a * true \<Longrightarrow>\<^sub>A b" oops
 lemma "a \<Longrightarrow>\<^sub>A emp" oops
 
-setup \<open>map_theory_simpset (fn ctxt =>
-  ctxt addSolver (Simplifier.mk_solver "hackhackhack"
-    (fn ctxt => fn n =>
-      let
-        val tac =
-          resolve_tac ctxt @{thms hackhackhackI} THEN'
-            REPEAT_ALL_NEW (resolve_tac ctxt @{thms Set.insertI1 Set.insertI2})
-      in
-        SOLVED' tac n
-      end))
-)\<close>
-
-schematic_lemma
-  "\<And>x a b aa ba ab bb. hackhackhack (?tb30 x a b aa ba ab bb, a) {(bf_lit 2, ab), (bf_lit (Suc 0), aa), (bf_lit 0, a)}"
-apply simp
-done
-
 lemma "<emp> do {
 	s \<leftarrow> emptyci;
 	(a,s) \<leftarrow> litci 0 s;
@@ -305,17 +308,8 @@ lemma "<emp> do {
 	(t,s) \<leftarrow> biimpci t1 t2 s;
 	tautci t s
 } <\<up>>\<^sub>t"
-apply(rule bind_rule, (sep_auto; fail), (clarify | -))+
-apply(rule bind_rule, (rule cirules1;blast), clarify)+
-apply(rule cons_post_rule)
-apply(rule tautci_rule[of bf_True])
-apply(simp)
-apply(rule disjI1)
-apply(unfold fun_eq_iff bf_biimp_def bf_True_def bf_and_def bf_or_def bf_False_def bf_not_def bf_ite_def)[1]
-apply(simp split: if_splits;fail)
-apply(simp)
-done
-(* Our setup seems to be very bad for sep_auto. TODO: Fix*)
+by (sep_auto  simp: bf_biimp_def bf_True_def bf_and_def bf_or_def bf_False_def bf_not_def bf_ite_def split: if_splits)
+
 
 
 end
