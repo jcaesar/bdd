@@ -67,8 +67,10 @@ lemma add_true:
 definition node_relator where "node_relator x y \<longleftrightarrow> x \<in> y"
 text \<open>\<open>sep_auto\<close> behaves sub-optimal when having @{term "(bf,bdd) \<in> computed_pointer_relation"} as assumption in our cases. Using node_relator instead fixes this behavior with a custom solver for \<open>simp\<close>.\<close>
 
-lemma node_relator_cong[cong]: "y = y' \<Longrightarrow> node_relator x y = node_relator x y'" unfolding node_relator_def by auto
 lemma node_relatorI: "x \<in> y \<Longrightarrow> node_relator x y" unfolding node_relator_def .
+lemma node_relatorD: "node_relator x y \<Longrightarrow> x \<in> y" unfolding node_relator_def .
+
+ML\<open>fun TRY' tac = tac ORELSE' K all_tac\<close>
 
 setup \<open>map_theory_simpset (fn ctxt =>
   ctxt addSolver (Simplifier.mk_solver "node_relator"
@@ -76,7 +78,8 @@ setup \<open>map_theory_simpset (fn ctxt =>
       let
         val tac =
           resolve_tac ctxt @{thms node_relatorI} THEN'
-            REPEAT_ALL_NEW (resolve_tac ctxt @{thms Set.insertI1 Set.insertI2})
+          REPEAT_ALL_NEW (resolve_tac ctxt @{thms Set.insertI1 Set.insertI2}) THEN'
+          TRY' (dresolve_tac ctxt @{thms node_relatorD} THEN' assume_tac ctxt)
       in
         SOLVED' tac n
       end))
@@ -184,14 +187,6 @@ lemma notci_rule[sep_heap_rules]:
 using assms
 	apply(unfold bf_not_def notci_def)
 	apply sep_auto
-	
-	apply(subst(asm) node_relator_def)
-	
-	apply(rule bind_rule, rule fci_rule, clarify)
-	apply(rule bind_rule, rule tci_rule, clarify)
-	apply(rule cons_post_rule)
-	apply(rule iteci_rule; blast)
-	apply(clarify)
 	apply(rule bdd_relator_mono; fast)
 done
 
@@ -203,29 +198,16 @@ lemma cirules1[sep_heap_rules]:
 		"<bdd_relator rp s> biimpci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_biimp tb eb,r) rp) s'>"
 		"<bdd_relator rp s> xorci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_xor tb eb,r) rp) s'>"
 (* actually, these functions would allow for more insert. I think that would be inconvenient though. *)
-using assms unfolding node_relator_def
-by(unfold bf_and_def andci_def bf_or_def orci_def bf_nand_def biimpci_def bf_biimp_def xorci_def bf_xor_alt)
-  (rule bind_rule, (rule fci_rule | rule tci_rule | (rule notci_rule; assumption)); clarify, rule cons_post_rule, (rule iteci_rule; blast), clarify, (rule bdd_relator_mono; fast))+
-(* Because I can, that's why. (see below for the unfolded version) *)
+using assms
+by (sep_auto simp:  bf_and_def andci_def bf_or_def orci_def bf_nand_def biimpci_def bf_biimp_def xorci_def bf_xor_alt intro: bdd_relator_mono)+
 
 lemma cirules2[sep_heap_rules]:
-	assumes "(tb, tc) \<in> rp" "(eb, ec) \<in> rp"
+  assumes "node_relator (tb, tc) rp" "node_relator (eb, ec) rp"
 	shows
 		"<bdd_relator rp s> nandci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_nand tb eb,r) rp) s'>"
 		"<bdd_relator rp s> norci tc ec s <\<lambda>(r,s'). bdd_relator (insert (bf_nor tb eb,r) rp) s'>"
 	using assms
 	by(sep_auto intro!: fr_refl bdd_relator_mono simp: nandci_def bf_nand_def norci_def bf_nor_def)+
-(* in case sep_auto starts acting up here like it does in the proof above:
-apply(rule bind_rule)
-apply(rule cirules1(2,1); assumption)
-apply(clarify)
-apply(rule cons_post_rule)
-apply(rule notci_rule[THEN add_true]; blast)
-apply(rule fr_refl)
-apply(clarify)
-apply(rule bdd_relator_mono)
-apply(fast)
-*)
 
 lemma litci_rule[sep_heap_rules]:
 	"<bdd_relator rp s> litci v s <\<lambda>(r,s'). bdd_relator (insert (bf_lit v,r) rp) s'>"
