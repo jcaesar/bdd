@@ -472,28 +472,40 @@ fun string_of_nat :: "nat \<Rightarrow> string" where
   "string_of_nat n = (if n < 10 then [char_of_nat (48 + n)] else 
      string_of_nat (n div 10) @ [char_of_nat (48 + (n mod 10))])"
 
-definition labelci :: "bddi \<Rightarrow> nat \<Rightarrow> string Heap" where
+definition labelci :: "bddi \<Rightarrow> nat \<Rightarrow> (string \<times> string \<times> string) Heap" where
 "labelci s n = do {
 	 d \<leftarrow> destrci n s;
-	 return (string_of_nat n @ ''[label='' @ (case d of
+	 let son = string_of_nat n;
+	 let label = (case d of
 	 	TD \<Rightarrow> ''T'' |
 	 	FD \<Rightarrow> ''F'' |
-	 	(IFD v _ _) \<Rightarrow> string_of_nat v
-	 ) @ ''];\010'')
+	 	(IFD v _ _) \<Rightarrow> string_of_nat v);
+	 return (label, son, son @ ''[label='' @ label @ ''];\010'')
 }"
 definition "graphifyci1 bdd a \<equiv> do {
 	let ((f,t),y) = a;
 	let c = (string_of_nat f @ '' -> '' @ string_of_nat t);
 	return (c @ (case y of 0 \<Rightarrow> '' [style=dotted]'' | Suc _ \<Rightarrow> '''') @ '';\010'')
 }"
-definition graphifyci :: "string \<Rightarrow> nat \<Rightarrow> bddi \<Rightarrow> string Heap" where
+
+definition "trd = snd \<circ> snd"
+definition "fstp = apsnd fst"
+
+definition "the_thing_By f l = (let 
+	nub = remdups (map fst l) in
+	map (\<lambda>e. (e, map snd (filter (\<lambda>g. (f e (fst g))) l))) nub)"
+definition "the_thing = the_thing_By (op =)"
+
+
+definition graphifyci (*:: "string \<Rightarrow> nat \<Rightarrow> bddi \<Rightarrow> string Heap"*) where
 "graphifyci name ep bdd \<equiv> do {
 	s \<leftarrow> serializeci ep bdd;
 	let e = map fst s;
-	l \<leftarrow> mapM (labelci bdd) (remdups (map fst e @ map snd e)); 
+	l \<leftarrow> mapM (labelci bdd) (rev (remdups (map fst e @ map snd e)));
+	let grp =  (map (\<lambda>l. foldr (\<lambda>a t. t @ a @ '';'') (snd l) ''{rank=same;'' @ ''}\010'') (the_thing (map fstp l)));
 	e \<leftarrow> mapM (graphifyci1 bdd) s;
 	let emptyhlp = (case ep of 0 \<Rightarrow> ''F;\010'' | Suc 0 \<Rightarrow> ''T;\010'' | _ \<Rightarrow> '''');  
-	return (''digraph '' @ name @ '' {\010'' @ concat l @ concat e @ emptyhlp @ ''}'')
+	return (''digraph '' @ name @ '' {\010'' @ concat (map trd l) @ concat grp @ concat e @ emptyhlp @ ''}'')
 }"
 
 end
