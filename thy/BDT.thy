@@ -657,7 +657,9 @@ proof(induction i arbitrary: ass)
 	note IF.prems[unfolded ifex_sat.simps]
 	thus ?case proof(cases "ifex_sat e")
 		case (Some a) thus ?thesis using IF.prems 
-			by(clarsimp simp only: val_ifex.simps ifex_sat.simps option.simps fun_upd_same if_False ifex_upd_other[OF ni(2)]) (rule IF.IH(2), simp_all)
+			apply(clarsimp simp only: val_ifex.simps ifex_sat.simps option.simps fun_upd_same if_False ifex_upd_other[OF ni(2)]) 
+			apply(rule IF.IH(2), simp_all)
+			done
 	next
 		case None
 		obtain a where Some: "ifex_sat t = Some a" using None IF.prems(2) by fastforce
@@ -673,6 +675,124 @@ proof(rule ccontr)
 	from goal1(3) obtain as where "ifex_sat i = Some as" by blast
 	from ifex_sat_SomeD[OF goal1(1) this] show False using goal1(2) by simp
 qed
+
+fun ifex_sat_list where
+"ifex_sat_list Trueif = Some []" |
+"ifex_sat_list Falseif = None" |
+"ifex_sat_list (IF v t e) =
+	(case ifex_sat_list e of 
+		Some a \<Rightarrow> Some ((v,False)#a) |
+		None \<Rightarrow> (case ifex_sat_list t of
+			Some a \<Rightarrow> Some ((v,True)#a) |
+			None \<Rightarrow> None))
+"
+definition "update_assignment_alt u as = (\<lambda>v. case map_of u v of None \<Rightarrow> as v | Some n \<Rightarrow> n)"
+fun update_assignment where
+"update_assignment ((v,u)#us) as = (update_assignment us as)(v:=u)" |
+"update_assignment [] as = as"
+
+lemma update_assignment_notin: "a \<notin> fst ` set us \<Longrightarrow> update_assignment us as a = as a"
+by(induction us) clarsimp+
+
+lemma update_assignment_alt: "update_assignment u as = update_assignment_alt u as"
+by(induction u arbitrary: as) (clarsimp simp: update_assignment_alt_def fun_eq_iff)+
+
+lemma update_assignment: "distinct (map fst ((v,u)#us)) \<Longrightarrow> update_assignment ((v,u)#us) as = update_assignment us (as(v:=u))"
+unfolding update_assignment_alt update_assignment_alt_def
+unfolding fun_eq_iff
+by(clarsimp split: option.splits) force 
+
+lemma ass_upd_same: "update_assignment ((v, u) # a) ass v = u" by simp
+
+lemma ifex_sat_list_subset:  "ifex_sat_list t = Some u \<Longrightarrow> fst ` set u \<subseteq> ifex_var_set t" 
+proof(induction t arbitrary: u)
+	case (IF v t e)
+	show ?case
+	proof(cases "ifex_sat_list e")
+		case (Some ue)
+		note IF.IH(2)[OF this]
+		hence "fst ` set ue \<subseteq> ifex_var_set (IF v t e)" by simp blast
+		moreover have "fst ` set u = insert v (fst ` set ue)" using IF.prems Some by force 
+		ultimately show ?thesis by simp
+	next
+		case None
+		with IF.prems obtain ut where Some: "ifex_sat_list t = Some ut" by(simp split: option.splits)
+		note IF.IH(1)[OF this]
+		hence "fst ` set ut \<subseteq> ifex_var_set (IF v t e)" by simp blast
+		moreover have "fst ` set u = insert v (fst ` set ut)" using IF.prems None Some by force 
+		ultimately show ?thesis by simp
+	qed
+qed simp_all
+
+lemma sat_list_distinct: "ifex_no_twice t \<Longrightarrow> ifex_sat_list t = Some u \<Longrightarrow> distinct (map fst u)"
+proof(induction t arbitrary: u)
+	case (IF v t e)
+	from IF.prems have nt: "ifex_no_twice t" "ifex_no_twice e" by simp_all
+	note mIH = IF.IH(1)[OF this(1)] IF.IH(2)[OF this(2)]
+	show ?case
+	proof(cases "ifex_sat_list e")
+		case (Some a)
+		note mIH = mIH(2)[OF this]
+		thus ?thesis using IF.prems(2) unfolding ifex_sat_list.simps using Some
+		apply(clarsimp) using IF.prems(1) apply(clarsimp) using ifex_sat_list_subset apply fastforce done
+	next
+		case None
+		with IF.prems obtain ut where Some: "ifex_sat_list t = Some ut" by(simp split: option.splits)
+		note mIH(1)[OF this]
+		thus ?thesis using IF.prems(2) unfolding ifex_sat_list.simps using None Some
+		apply(clarsimp) using IF.prems(1) apply(clarsimp) using ifex_sat_list_subset apply fastforce done
+	qed
+qed simp_all
+
+lemma ifex_sat_list_NoneD: "ifex_sat_list i = None \<Longrightarrow> val_ifex i ass = False"
+	by(induction i) (simp_all split: option.splits)
+lemma ifex_sat_list_SomeD: "ifex_no_twice i \<Longrightarrow> ifex_sat_list i = Some u \<Longrightarrow> ass = update_assignment u ass' \<Longrightarrow> val_ifex i ass = True"
+proof(induction i arbitrary: ass ass' u)
+	case (IF v t e)
+	have nt: "ifex_no_twice t" "ifex_no_twice e" using IF.prems(1) by simp_all
+	have ni: "v \<notin> ifex_var_set t" "v \<notin> ifex_var_set e" using IF.prems(1) by simp_all
+	note IF.prems[unfolded ifex_sat.simps]
+	thus ?case proof(cases "ifex_sat_list e")
+		case (Some a)
+		have ef: "u = (v, False) # a" using IF.prems(2) Some by simp
+		from IF.prems(3) have au: "ass = update_assignment a (ass'(v := False))" unfolding ef using update_assignment[OF sat_list_distinct[OF IF.prems(1,2), unfolded ef]] by presburger
+		have avF: "ass v = False" using IF.prems(3)[symmetric] unfolding ef by clarsimp
+		show ?thesis using IF.IH(2)[OF nt(2) Some au] Some IF.prems(2) avF by simp
+	next
+		case None
+		obtain a where Some: "ifex_sat_list t = Some a" using None IF.prems(2) by fastforce
+		have ef: "u = (v, True) # a" using IF.prems(2) None Some by simp
+		from IF.prems(3) have au: "ass = update_assignment a (ass'(v := True))" unfolding ef using update_assignment[OF sat_list_distinct[OF IF.prems(1,2), unfolded ef]] by presburger
+		have avT: "ass v = True" using IF.prems(3)[symmetric] unfolding ef by clarsimp
+		show ?thesis using IF.IH(1)[OF nt(1) Some au] Some IF.prems(2) avT by simp
+	qed
+qed simp_all
+
+fun sat_list_to_bdt where
+"sat_list_to_bdt [] = Trueif" |
+"sat_list_to_bdt ((v,u)#us) = (if u then IF v (sat_list_to_bdt us) Falseif else IF v Falseif (sat_list_to_bdt us))"
+
+lemma "ifex_sat_list i = Some u \<Longrightarrow> val_ifex (sat_list_to_bdt u) as \<Longrightarrow> val_ifex i as"
+proof(induction i arbitrary: u)
+	case (IF v t e)
+	show ?case proof(cases "ifex_sat_list e")
+		case (Some a)
+		note mIH = IF.IH(2)[OF this]
+		have ef: "u = (v, False) # a" using IF.prems(1) Some by simp
+		have avF: "as v = False" using IF.prems(2) unfolding ef by(simp split: if_splits)
+		have "val_ifex (sat_list_to_bdt a) as" using IF.prems(2) unfolding ef using avF by simp
+		note mIH = mIH[OF this]
+		thus ?thesis using avF by simp
+	next
+		case None
+		obtain a where Some: "ifex_sat_list t = Some a" using None IF.prems(1) by fastforce
+		have ef: "u = (v, True) # a" using IF.prems(1) Some None by simp
+		have avT: "as v = True" using IF.prems(2) unfolding ef by(simp split: if_splits)
+		have "val_ifex (sat_list_to_bdt a) as" using IF.prems(2) unfolding ef using avT by simp
+		note mIH = IF.IH(1)[OF Some this]
+		thus ?thesis using avT by simp
+	qed
+qed simp_all
 
 lemma bf_ifex_rel_consts[simp,intro!]:
 	"(bf_True, Trueif) \<in> bf_ifex_rel"
