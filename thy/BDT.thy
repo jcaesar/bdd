@@ -852,7 +852,7 @@ lemma all_false_ass[simp]: "(\<forall>v. \<not> ass v) \<longleftrightarrow> ass
 definition "ifex_unrelated_false e ass \<equiv> \<forall>v. v \<notin> ifex_var_set e \<longrightarrow> ass v = False"
 lemma "finite {ass. ifex_unrelated_false e ass}"
 apply(unfold ifex_unrelated_false_def)
-sorry
+oops
 
 lemma val_sat_list_bdt_updated[intro]: "ifex_no_twice e \<Longrightarrow> ifex_sat_list e = Some x2 \<Longrightarrow> val_ifex (sat_list_to_bdt x2) (update_assignment x2 any)"
 	apply(induction e arbitrary: x2)
@@ -866,6 +866,43 @@ lemma val_sat_list_bdt_updated[intro]: "ifex_no_twice e \<Longrightarrow> ifex_s
 	apply(fastforce dest: ifex_sat_list_subset)
 	apply blast
 done
+
+lemma threeofeight1:
+	"\<lbrakk>ro_ifex e;
+	ifex_sat_list e = Some x;
+	e' = ifex_ite (sat_list_to_bdt x) Falseif e\<rbrakk> \<Longrightarrow>
+	val_ifex e' ass \<longrightarrow> val_ifex e ass"
+	apply(clarify, subst (asm) val_ifex_ite_subst)
+	apply(simp_all add: sat_list_to_bdt_minimal sat_list_to_bdt_ordered bf_ite_def del: ifex_ite.simps split: if_splits)
+done
+lemma threeofeight3: (* we already had that lemma, this is just a concise reformulation *)
+	"\<lbrakk>ro_ifex e;
+	ifex_sat_list e = Some x\<rbrakk> \<Longrightarrow>
+	val_ifex e (update_assignment x any)"
+by (simp add: ifex_sat_list_SomeD ordered_ifex_no_twiceI)
+lemma threeofeight2:
+	"\<lbrakk>ro_ifex e;
+	ifex_sat_list e = Some x;
+	e' = ifex_ite (sat_list_to_bdt x) Falseif e\<rbrakk> \<Longrightarrow>
+	\<not>val_ifex e' (update_assignment x any)"
+	apply(clarify, subst (asm) val_ifex_ite_subst)
+	apply(simp_all add: sat_list_to_bdt_minimal sat_list_to_bdt_ordered bf_ite_def del: ifex_ite.simps split: if_splits)
+using ordered_ifex_no_twiceI by blast
+
+lemma threeofeight4: (* closer to what was requested *)
+	"\<lbrakk>ro_ifex e;
+	ifex_sat_list e = Some x;
+	e' = ifex_ite (sat_list_to_bdt x) Falseif e\<rbrakk> \<Longrightarrow>
+	\<exists>ass. val_ifex e ass \<and> \<not>val_ifex e' ass \<and> (v \<notin> ifex_var_set e \<longrightarrow> ass v = False)"
+	apply(rule_tac x = "(update_assignment x (const False))" in exI)
+	apply(intro conjI)
+	apply(simp add: threeofeight3;fail)
+	apply(simp add: threeofeight2;fail)
+	apply(clarsimp simp: const_def[abs_def] simp del: ifex_ite.simps)
+	apply(subst(asm) update_assignment_notin)
+	apply(blast dest: ifex_sat_list_subset)
+by -
+
 
 lemma rimp: "(a \<longrightarrow> b) \<longleftrightarrow> (\<not>b \<longrightarrow> \<not>a)" by blast
 
