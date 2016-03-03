@@ -794,6 +794,126 @@ proof(induction i arbitrary: u)
 	qed
 qed simp_all
 
+function ifex_sat_list_cover where
+"ifex_sat_list_cover e = (if ro_ifex e then
+	(case ifex_sat_list e of 
+		None \<Rightarrow> [] | 
+		Some l \<Rightarrow> let 
+			le = sat_list_to_bdt l;
+			lm = ifex_ite le Falseif e in
+			l # ifex_sat_list_cover lm)
+	else [])"
+by clarsimp+
+
+lemma sat_list_to_bdt_not_false[simp,intro!]: "sat_list_to_bdt l \<noteq> Falseif"
+by(cases l) (clarsimp split: if_splits)+
+lemmas [simp,intro!] = sat_list_to_bdt_not_false[symmetric]
+
+lemma sat_list_to_bdt_minimal: "ifex_sat_list u = Some l \<Longrightarrow> ifex_minimal (sat_list_to_bdt l)"
+by(induction u arbitrary: l) (clarsimp split: option.splits)+
+
+lemma ifex_var_set_sat_list[simp]: "ifex_var_set (sat_list_to_bdt l) = fst ` set l"
+by(induction l) (simp, force)
+
+lemma Ball_fst: "(\<forall>x \<in> S. P (fst x)) \<longleftrightarrow> (\<forall>x y. (x, y) \<in> S \<longrightarrow> P x)" by auto (* let's not name this Ball_pair\<dots> *)
+
+inductive sorted_strict :: "('a :: ord) list \<Rightarrow> bool" where (* < instead of \<le>. Is that really not defined anywhere? *)
+  Nil [iff]: "sorted_strict []"
+| Cons: "\<forall>y\<in>set xs. x < y \<Longrightarrow> sorted_strict xs \<Longrightarrow> sorted_strict (x # xs)"
+
+lemma sat_list_to_bdt_ordered: 
+	assumes "ifex_ordered u" "ifex_sat_list u = Some l"
+	shows "ifex_ordered (sat_list_to_bdt l)"
+proof -
+	from assms have  "sorted_strict (map fst l)"
+		apply(induction u arbitrary: l)
+		apply simp_all[2]
+		apply(clarsimp split: option.splits)
+		apply(fastforce dest: ifex_sat_list_subset intro!: sorted_strict.intros(2))+
+	done
+	thus ?thesis
+		apply(induction l)
+		apply simp
+		apply(subst(asm) sorted_strict.simps)
+		apply(clarsimp simp: sorted_Cons Ball_fst)
+	done
+qed
+
+lemma sat_list_to_bdt_ro: "\<lbrakk>ifex_sat_list e = Some x2; ro_ifex e\<rbrakk> \<Longrightarrow> ro_ifex (sat_list_to_bdt x2)"
+using sat_list_to_bdt_minimal sat_list_to_bdt_ordered by blast
+
+lemma "(a,b) \<in> {(a,b). P a b} = P a b" by simp
+
+lemma val_ifex_ite_subst: "\<lbrakk>ro_ifex i; ro_ifex t; ro_ifex e\<rbrakk> \<Longrightarrow> val_ifex (ifex_ite i t e) = bf_ite (val_ifex i) (val_ifex t) (val_ifex e)"
+using val_ifex_ite by blast
+
+lemma all_false_ass[simp]: "(\<forall>v. \<not> ass v) \<longleftrightarrow> ass = (\<lambda>_. False)" by auto
+
+definition "ifex_unrelated_false e ass \<equiv> \<forall>v. v \<notin> ifex_var_set e \<longrightarrow> ass v = False"
+lemma "finite {ass. ifex_unrelated_false e ass}"
+apply(unfold ifex_unrelated_false_def)
+sorry
+
+lemma val_sat_list_bdt_updated[intro]: "ifex_no_twice e \<Longrightarrow> ifex_sat_list e = Some x2 \<Longrightarrow> val_ifex (sat_list_to_bdt x2) (update_assignment x2 any)"
+	apply(induction e arbitrary: x2)
+	apply(simp)
+	apply(simp)
+	apply(clarsimp split: option.splits)
+	apply(subst ifex_upd_other)
+	apply(fastforce dest: ifex_sat_list_subset)
+	apply blast
+	apply(subst ifex_upd_other)
+	apply(fastforce dest: ifex_sat_list_subset)
+	apply blast
+done
+
+lemma rimp: "(a \<longrightarrow> b) \<longleftrightarrow> (\<not>b \<longrightarrow> \<not>a)" by blast
+
+termination ifex_sat_list_cover
+apply(relation "{(a,b).(\<forall>ass. val_ifex a ass \<longrightarrow> val_ifex b ass) \<and> (\<exists>ass. \<not>val_ifex a ass \<and> val_ifex b ass)}") (* we can't measure the cardinality of the set of satisfying assignments, this makes this whole proof a bit tricky *)
+defer
+apply(simp del: ifex_ite.simps)
+apply(frule (1) sat_list_to_bdt_ro)
+apply(subst val_ifex_ite_subst)
+apply(simp_all)[3]
+apply(rule conjI)
+apply(clarsimp simp: bf_ite_def)
+apply(rule_tac x = "update_assignment (the (ifex_sat_list e)) undefined" in exI)
+apply(clarsimp simp: bf_ite_def simp del: ifex_ite.simps)
+apply(intro conjI)
+apply(subst val_ifex_ite_subst)
+apply(simp_all)[3]
+apply(clarsimp simp: bf_ite_def simp del: ifex_ite.simps)
+apply(blast intro: ordered_ifex_no_twiceI)
+apply(simp add: ifex_sat_list_SomeD ordered_ifex_no_twiceI;fail)
+defer defer defer
+(*apply(subgoal_tac "\<forall>P. \<not>All P \<longrightarrow> (\<forall>x. \<not> P x \<longrightarrow> (\<forall>y. \<not> P y \<longrightarrow> (y, x) \<in> {(a, b). (\<forall>ass. val_ifex a ass \<longrightarrow> val_ifex b ass) \<and> (\<exists>ass. \<not>val_ifex a ass \<and> val_ifex b ass)}))")
+apply(subst wf_def)
+apply (auto;fail)
+apply clarify
+apply(rule ccontr)
+apply(clarsimp)
+thm wf_acc_iff
+apply(subst rimp)
+find_theorems "(?a \<longrightarrow> ?b) \<longrightarrow> ?c"
+apply(unfold imp_conv_disj not_all de_Morgan_conj de_Morgan_disj not_ex not_not Set.mem_Collect_eq prod.simps)
+apply clarsimp
+apply(rename_tac x1 xa1)
+apply(clarify)
+apply(unfold imp_conv_disj not_all de_Morgan_conj de_Morgan_disj not_ex not_not Set.mem_Collect_eq prod.simps)
+apply(clarsimp)
+apply(unfold de_Morgan_disj)*)
+apply(subst wf_acc_iff)
+apply(clarsimp)
+apply(rule accI)
+apply(clarsimp)
+sledgehammer
+find_theorems "Wellfounded.acc"
+
+sorry
+v alue "ifex_sat_list_cover (IF (1::nat) (IF 2 Falseif Trueif) (IF 2 Trueif Falseif))"
+
+
 lemma bf_ifex_rel_consts[simp,intro!]:
 	"(bf_True, Trueif) \<in> bf_ifex_rel"
 	"(bf_False, Falseif) \<in> bf_ifex_rel"

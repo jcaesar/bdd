@@ -36,6 +36,8 @@ text\<open>All of these are implemented and had their implementation verified.\<
 
 definition "bf_imp a b = bf_ite a b bf_True"
 lemma bf_imp_alt: "bf_imp a b = bf_or (bf_not a) b" unfolding bf_or_def bf_not_def bf_imp_def unfolding bf_ite_def bf_True_def bf_False_def unfolding fun_eq_iff by simp
+definition "bf_minus a b = bf_ite b bf_False a"
+lemma bf_minus_alt: "bf_minus a b = bf_and a (bf_not b)" unfolding bf_and_def bf_not_def bf_minus_def unfolding bf_ite_def bf_True_def bf_False_def unfolding fun_eq_iff by simp
 
 lemma [dest!]: "bf_False = bf_True \<Longrightarrow> False" unfolding bf_True_def bf_False_def fun_eq_iff by simp (* This has annoyed me once too often *)
 
