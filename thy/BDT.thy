@@ -13,12 +13,21 @@ text\<open>
 (* type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool" *)
 
 
-fun ifex_vars :: "('a :: linorder) ifex \<Rightarrow> 'a list" where
+fun ifex_vars :: "'a ifex \<Rightarrow> 'a list" where
   "ifex_vars (IF v t e) =  v # ifex_vars t @ ifex_vars e" |
   "ifex_vars Trueif = []" |
   "ifex_vars Falseif = []"
 
 abbreviation "ifex_var_set a \<equiv> set (ifex_vars a)"
+
+definition sat_assns :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) set" where
+  "sat_assns e = {s. val_ifex e s \<and> (\<forall>v. v \<notin> ifex_var_set e \<longrightarrow> \<not>s v)}"
+
+lemma finite_sat_assns [simp]: "finite (sat_assns e)"
+proof (rule finite_subset)
+  from finite_set_of_finite_funs[of "ifex_var_set e" UNIV False]
+    show "finite {s. \<forall>x. x \<notin> ifex_var_set e \<longrightarrow> \<not>s x}" by simp
+qed (auto simp: sat_assns_def)
 
 fun ifex_ordered :: "('a::linorder) ifex \<Rightarrow> bool" where
   "ifex_ordered (IF v t e) = ((\<forall>tv \<in> (ifex_var_set t \<union> ifex_var_set e). v < tv)
@@ -193,7 +202,7 @@ lemma restrict_IF_id: assumes o: "ifex_ordered (IF v t e)" assumes le: "v' < v"
 	using restrict_id[OF o, unfolded ifex_top_var.simps, OF refl le, of val] .
 
 lemma restrict_top_eq: "ifex_ordered (IF v t e) \<Longrightarrow> restrict (IF v t e) v val = restrict_top (IF v t e) v val"
-	using restrict_untouched_id by auto
+	by (auto intro: restrict_untouched_id)
 
 lemma restrict_top_ifex_ordered_invar: "ifex_ordered b \<Longrightarrow> ifex_ordered (restrict_top b var val)"
   by (induction b) simp_all
@@ -868,10 +877,10 @@ lemma val_sat_list_bdt_updated[intro]: "ifex_no_twice e \<Longrightarrow> ifex_s
 done
 
 lemma threeofeight1:
-	"\<lbrakk>ro_ifex e;
+	"\<lbrakk>val_ifex e' ass; ro_ifex e;
 	ifex_sat_list e = Some x;
-	e' = ifex_ite (sat_list_to_bdt x) Falseif e\<rbrakk> \<Longrightarrow>
-	val_ifex e' ass \<longrightarrow> val_ifex e ass"
+	e' = ifex_ite (sat_list_to_bdt x) Falseif e\<rbrakk> 
+	 \<Longrightarrow> val_ifex e ass"
 	apply(clarify, subst (asm) val_ifex_ite_subst)
 	apply(simp_all add: sat_list_to_bdt_minimal sat_list_to_bdt_ordered bf_ite_def del: ifex_ite.simps split: if_splits)
 done
@@ -890,66 +899,46 @@ lemma threeofeight2:
 using ordered_ifex_no_twiceI by blast
 
 lemma threeofeight4: (* closer to what was requested *)
-	"\<lbrakk>ro_ifex e;
-	ifex_sat_list e = Some x;
-	e' = ifex_ite (sat_list_to_bdt x) Falseif e\<rbrakk> \<Longrightarrow>
-	\<exists>ass. val_ifex e ass \<and> \<not>val_ifex e' ass \<and> (v \<notin> ifex_var_set e \<longrightarrow> ass v = False)"
-	apply(rule_tac x = "(update_assignment x (const False))" in exI)
-	apply(intro conjI)
-	apply(simp add: threeofeight3;fail)
-	apply(simp add: threeofeight2;fail)
-	apply(clarsimp simp: const_def[abs_def] simp del: ifex_ite.simps)
-	apply(subst(asm) update_assignment_notin)
-	apply(blast dest: ifex_sat_list_subset)
-by -
+  assumes "ro_ifex e" "ifex_sat_list e = Some x"
+  defines "e' \<equiv> ifex_ite (sat_list_to_bdt x) Falseif e"
+  shows   "\<exists>s\<in>sat_assns e. s \<notin> sat_assns e'"
+proof
+  def x' \<equiv> "update_assignment x (const False)"
+  from ifex_sat_list_subset[OF assms(2)]
+    have "\<forall>v. v\<notin>ifex_var_set e \<longrightarrow> \<not>x' v" unfolding x'_def
+    by (intro allI impI, subst update_assignment_notin) auto
+  moreover from threeofeight3[OF assms(1,2)] have "val_ifex e x'"
+    by (simp add: x'_def)
+  ultimately show "x' \<in> sat_assns e" by (simp add: sat_assns_def)
+  from threeofeight2[OF assms(1,2) meta_eq_to_obj_eq[OF assms(3)]]
+    show "x' \<notin> sat_assns e'" by (simp add: sat_assns_def e'_def x'_def del: ifex_ite.simps)
+qed
 
 
 lemma rimp: "(a \<longrightarrow> b) \<longleftrightarrow> (\<not>b \<longrightarrow> \<not>a)" by blast
 
 termination ifex_sat_list_cover
-apply(relation "{(a,b).(\<forall>ass. val_ifex a ass \<longrightarrow> val_ifex b ass) \<and> (\<exists>ass. \<not>val_ifex a ass \<and> val_ifex b ass)}") (* we can't measure the cardinality of the set of satisfying assignments, this makes this whole proof a bit tricky *)
-defer
-apply(simp del: ifex_ite.simps)
-apply(frule (1) sat_list_to_bdt_ro)
-apply(subst val_ifex_ite_subst)
-apply(simp_all)[3]
-apply(rule conjI)
-apply(clarsimp simp: bf_ite_def)
-apply(rule_tac x = "update_assignment (the (ifex_sat_list e)) undefined" in exI)
-apply(clarsimp simp: bf_ite_def simp del: ifex_ite.simps)
-apply(intro conjI)
-apply(subst val_ifex_ite_subst)
-apply(simp_all)[3]
-apply(clarsimp simp: bf_ite_def simp del: ifex_ite.simps)
-apply(blast intro: ordered_ifex_no_twiceI)
-apply(simp add: ifex_sat_list_SomeD ordered_ifex_no_twiceI;fail)
-defer defer defer
-(*apply(subgoal_tac "\<forall>P. \<not>All P \<longrightarrow> (\<forall>x. \<not> P x \<longrightarrow> (\<forall>y. \<not> P y \<longrightarrow> (y, x) \<in> {(a, b). (\<forall>ass. val_ifex a ass \<longrightarrow> val_ifex b ass) \<and> (\<exists>ass. \<not>val_ifex a ass \<and> val_ifex b ass)}))")
-apply(subst wf_def)
-apply (auto;fail)
-apply clarify
-apply(rule ccontr)
-apply(clarsimp)
-thm wf_acc_iff
-apply(subst rimp)
-find_theorems "(?a \<longrightarrow> ?b) \<longrightarrow> ?c"
-apply(unfold imp_conv_disj not_all de_Morgan_conj de_Morgan_disj not_ex not_not Set.mem_Collect_eq prod.simps)
-apply clarsimp
-apply(rename_tac x1 xa1)
-apply(clarify)
-apply(unfold imp_conv_disj not_all de_Morgan_conj de_Morgan_disj not_ex not_not Set.mem_Collect_eq prod.simps)
-apply(clarsimp)
-apply(unfold de_Morgan_disj)*)
-apply(subst wf_acc_iff)
-apply(clarsimp)
-apply(rule accI)
-apply(clarsimp)
-sledgehammer
-find_theorems "Wellfounded.acc"
-
-sorry
-v alue "ifex_sat_list_cover (IF (1::nat) (IF 2 Falseif Trueif) (IF 2 Trueif Falseif))"
-
+proof (relation "measure (card \<circ> sat_assns)", simp, clarsimp simp del: ifex_ite.simps)
+  case (goal1 e xs)
+  note [simp del] = ifex_ite.simps
+  def e' \<equiv> "ifex_ite (sat_list_to_bdt xs) Falseif e"
+  have "sat_assns e' \<subseteq> sat_assns e"
+  proof
+    fix s assume "s \<in> sat_assns e'"
+    hence "val_ifex e' s" by (simp add: sat_assns_def)
+    hence "val_ifex e s" by (rule threeofeight1) (insert goal1, simp_all add: e'_def)
+    moreover from ifex_sat_list_subset[OF goal1(1)] 
+      have "ifex_var_set e' \<subseteq> ifex_var_set e"
+      by (auto simp: e'_def dest!: ifex_vars_subset)
+    ultimately show "s \<in> sat_assns e" using \<open>s \<in> sat_assns e'\<close> 
+      by (auto simp: sat_assns_def)
+  qed
+  moreover from goal1 have "\<exists>s\<in>sat_assns e. s \<notin> sat_assns e'" unfolding e'_def
+    by (intro threeofeight4) simp_all
+  ultimately have "sat_assns e' \<subset> sat_assns e" by blast
+  thus "card (sat_assns e') < card (sat_assns e)"
+    by (intro psubset_card_mono) simp_all
+qed
 
 lemma bf_ifex_rel_consts[simp,intro!]:
 	"(bf_True, Trueif) \<in> bf_ifex_rel"
@@ -974,9 +963,8 @@ done
 lemma bf_ifex_rel_consts_ensured_rev[simp]: 
 	"(x,Trueif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_True)"
 	"(x,Falseif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_False)"
-	by(simp_all add: bf_True_def bf_False_def bf_ifex_rel_def fun_eq_iff)
+  by (auto simp: bf_True_def bf_False_def bf_ifex_rel_def)
 
 declare ifex_ite_opt.simps restrict_top.simps lowest_tops.simps[simp del]
-
 
 end
