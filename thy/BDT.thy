@@ -1,6 +1,6 @@
 section\<open>Binary Decision Trees\<close>
 theory BDT
-imports Boolean_Expression_Checkers BoolFunc
+imports BoolFunc
 begin
 
 text\<open>
@@ -9,9 +9,12 @@ text\<open>
 	and the disadvantage that we cannot represent sharing.
 \<close>
 
-(* datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex" *)
-(* type_synonym boolfunc2 = "(nat \<Rightarrow> bool) \<Rightarrow> bool" *)
+datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex"
 
+fun val_ifex :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" where
+"val_ifex Trueif s = True" |
+"val_ifex Falseif s = False" |
+"val_ifex (IF n t1 t2) s = (if s n then val_ifex t1 s else val_ifex t2 s)"
 
 fun ifex_vars :: "('a :: linorder) ifex \<Rightarrow> 'a list" where
   "ifex_vars (IF v t e) =  v # ifex_vars t @ ifex_vars e" |
@@ -279,12 +282,12 @@ lemma ifex_ite_induct2[case_names Trueif Falseif IF]: "
   (\<And>i t e a. sentence (restrict_top i a True) (restrict_top t a True) (restrict_top e a True) \<Longrightarrow>
              sentence (restrict_top i a False) (restrict_top t a False) (restrict_top e a False) \<Longrightarrow>
    lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
-proof(induction i t e rule: ifex_ite.induct)
-	case goal1 show ?case
+proof(induction i t e rule: ifex_ite.induct, goal_cases)
+	case (1 i t e) show ?case
 	proof(cases "lowest_tops [i, t, e]")
-		case None thus ?thesis by (cases i) (auto intro: goal1)
+		case None thus ?thesis by (cases i) (auto intro: 1)
 	next
-		case (Some a) thus ?thesis by(auto intro: goal1)
+		case (Some a) thus ?thesis by(auto intro: 1)
   qed
 qed
 
@@ -294,19 +297,23 @@ lemma ifex_ite_induct[case_names Trueif Falseif IF]: "
   (\<And>i t e a. (\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val)) \<Longrightarrow> 
    lowest_tops [i, t, e] = Some a \<Longrightarrow> sentence i t e) \<Longrightarrow> sentence i t e"
 proof(induction i t e rule: ifex_ite_induct2)
-	case goal3
+	case (IF i t e a)
 	have "(\<And>val. sentence (restrict_top i a val) (restrict_top t a val) (restrict_top e a val))"
-		apply(case_tac val) apply(auto) using goal3(1,2,6) apply(blast intro: goal3(4,5))+ done
-	note goal3(6)[OF this goal3(3)] thus ?case .
+		apply(case_tac val)
+		apply(auto) 
+		using IF(1,2,6)
+		apply(blast intro: IF(4,5))+ 
+	done
+	note IF(6)[OF this IF(3)] thus ?case .
 qed blast+
 
 lemma lowest_restrictor: "lowest_tops e = Some a \<Longrightarrow> (\<And>i. i \<in> set e \<Longrightarrow> ifex_ordered i) \<Longrightarrow> x \<in> \<Union>(set (map (set \<circ> ifex_vars \<circ> (\<lambda>i. restrict_top i a vl)) e)) \<Longrightarrow> a < x"
-proof(simp, rule ccontr)
-	case goal1
-	from goal1(3) obtain xa where xa1: "xa\<in>set e" "x \<in> ifex_var_set (restrict_top xa a vl)" by blast
+proof(simp, rule ccontr, goal_cases)
+	case 1
+	from 1(3) obtain xa where xa1: "xa\<in>set e" "x \<in> ifex_var_set (restrict_top xa a vl)" by blast
 	obtain v vt ve where xa: "xa = IF v vt ve" apply(cases xa) using xa1 by auto
-	have o: "ifex_ordered (IF v vt ve)" using goal1(2) xa1(1) unfolding xa .
-	have "x < a" using goal1(4) apply(subgoal_tac "x \<noteq> a", simp) using goal1(3)
+	have o: "ifex_ordered (IF v vt ve)" using 1(2) xa1(1) unfolding xa .
+	have "x < a" using 1(4) apply(subgoal_tac "x \<noteq> a", simp) using 1(3)
 	using not_element_restrict[of v "IF v vt ve"] unfolding restrict_top_eq[OF o] 
 oops (* forget it *)
 
@@ -315,15 +322,15 @@ lemma restrict_top_subset: "x \<in> ifex_var_set (restrict_top i vr vl) \<Longri
 
 lemma ifex_vars_subset: "x \<in> ifex_var_set (ifex_ite i t e) \<Longrightarrow> (x \<in> ifex_var_set i) \<or> (x \<in> ifex_var_set t) \<or> (x \<in> ifex_var_set e)"
 proof(induction rule: ifex_ite_induct2)
-	case goal3
+	case (IF i t e a)
 	have "x \<in> {x. x = a} \<or> x \<in> (ifex_var_set (ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True))) \<or> x \<in> (ifex_var_set (ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)))"
 		(*apply(subst ifex_ite.simps) apply(simp only: goal3(2) option.simps ifex_vars.simps set_simps set_append insert_def Un_iff split: option.split) *)
-		using goal3 by(simp add: IFC_def split: if_splits) 
+		using IF by(simp add: IFC_def split: if_splits) 
 	hence "x = a \<or>
 		x \<in> (ifex_var_set (restrict_top i a True )) \<or> x \<in> (ifex_var_set (restrict_top t a True )) \<or> x \<in> (ifex_var_set (restrict_top e a True )) \<or>
 		x \<in> (ifex_var_set (restrict_top i a False)) \<or> x \<in> (ifex_var_set (restrict_top t a False)) \<or> x \<in> (ifex_var_set (restrict_top e a False))"
-	using goal3(1-2) by blast
-	thus ?case using restrict_top_subset apply - apply(erule disjE) defer apply blast using  lowest_tops_in[OF goal3(3)] apply(simp only: set_concat set_map set_simps) by blast
+	using IF by blast
+	thus ?case using restrict_top_subset apply - apply(erule disjE) defer apply blast using lowest_tops_in[OF IF(3)] apply(simp only: set_concat set_map set_simps) by blast
 qed simp_all
 
 lemma three_ins: "i \<in> set [i, t, e]" "t \<in> set [i, t, e]" "e \<in> set [i, t, e]" by simp_all
@@ -339,22 +346,22 @@ apply(meson le_cases order_trans) (* I stared at this for quite a few minutes\<d
 done
 
 lemma hlp1: "i \<in> set is \<Longrightarrow> lowest_tops is = Some a \<Longrightarrow> ifex_ordered i \<Longrightarrow> a \<notin> (ifex_var_set (restrict_top i a val))"
-proof(rule ccontr, unfold not_not)
-	case goal1
-	from goal1(4) obtain vi vt ve where vi: "i = IF vi vt ve" by(cases i) simp_all
-	with goal1(4) goal1(3) have ne: "vi \<noteq> a" by(simp split: if_splits) blast+
-	moreover have "vi \<le> a" using goal1(3,4) proof -
-		case goal1
+proof(rule ccontr, unfold not_not, goal_cases)
+	case 1
+	from 1(4) obtain vi vt ve where vi: "i = IF vi vt ve" by(cases i) simp_all
+	with 1 have ne: "vi \<noteq> a" by(simp split: if_splits) blast+
+	moreover have "vi \<le> a" using 1(3,4) proof(-,goal_cases)
+		case 1
 		hence "a \<in> (ifex_var_set vt) \<or> a \<in> (ifex_var_set ve)" using ne by(simp add: vi)
-		thus ?case using goal1(1)[unfolded vi ifex_ordered.simps] using less_imp_le by auto
+		thus ?case using \<open>ifex_ordered i\<close> vi using less_imp_le by auto
 	qed
-	moreover have "a \<le> vi" using goal1(1) unfolding vi using goal1(2) hlp2 by metis
+	moreover have "a \<le> vi" using 1(1) unfolding vi using 1(2) hlp2 by metis
 	ultimately show False by simp
 qed
 
 lemma order_ifex_ite_invar: "ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow> ifex_ordered (ifex_ite i t e)"
 proof(induction i t e rule: ifex_ite_induct)
-	case goal3 note goal1 = goal3
+	case (IF i t e) note goal1 = IF
 	note l = restrict_top_ifex_ordered_invar
 	note l[OF goal1(3)] l[OF goal1(4)] l[OF goal1(5)]
 	note mIH = goal1(1)[OF this]
@@ -377,8 +384,8 @@ by(induction i t e rule: ifex_ite_induct) (simp_all split: ifc_split option.spli
 
 lemma restrict_top_bf: "i \<in> set is \<Longrightarrow> lowest_tops is = Some vr \<Longrightarrow> 
 	ifex_ordered i \<Longrightarrow> (\<And>ass. fi ass = val_ifex i ass) \<Longrightarrow> val_ifex (restrict_top i vr vl) ass = bf_restrict vr vl fi ass"
-proof(cases i)
-	case goal3
+proof(cases i, goal_cases)
+	case (3 x31 x32 x33)  note goal3 = 3
 	have rr: "restrict_top i vr vl = restrict i vr vl" 
 	proof(cases "x31 = vr")
 		case True
@@ -402,7 +409,7 @@ lemma val_ifex_ite: "
   ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow>
   (bf_ite fi ft fe) ass = val_ifex (ifex_ite i t e) ass"
 proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
-  case goal3
+  case (IF i t e a) note goal3 = IF
   thm goal3(1)
   note mIH = goal3(1)[OF refl refl refl 
     restrict_top_ifex_ordered_invar[OF goal3(6)]
@@ -411,9 +418,10 @@ proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
   note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) \<open>ifex_ordered i\<close>  goal3(3)]
              restrict_top_bf[OF three_ins(2) goal3(2) \<open>ifex_ordered t\<close>  goal3(4)]
              restrict_top_bf[OF three_ins(3) goal3(2) \<open>ifex_ordered e\<close>  goal3(5)]
-  show ?case apply(rule trans[OF brace90shannon[where i=a]])
-    by (auto simp: restrict_top_ifex_ordered_invar goal3(1,2,6-8) uf1 mIH bf_ite_def[of "\<lambda>l. l a"]
-             split: ifc_split)
+  show ?case
+    by(rule trans[OF brace90shannon[where i=a]])
+      (auto simp: restrict_top_ifex_ordered_invar goal3(1,2,6-8) uf1 mIH bf_ite_def[of "\<lambda>l. l a"]
+           split: ifc_split)
 qed (simp add: bf_ite_def bf_ifex_rel_def)+
 
 theorem ifex_ite_rel_bf: "
@@ -461,7 +469,7 @@ lemma ifex_ite_opt_eq: "
 apply(induction i t e rule: ifex_ite_opt.induct)
   apply(subst ifex_ite_opt.simps)
   apply(case_tac "\<exists>r. param_opt i t e = Some r")
-    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps add: ifex_ite_opt.simps)
+    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
     apply(rule param_opt_ifex_ite_eq)
       apply(auto simp add: bf_ifex_rel_def)[4]
     
@@ -629,7 +637,7 @@ proof(induction i arbitrary: a)
 		moreover from IF.IH(1)[OF ni(1)] have "as v = False" using Some .
 		ultimately show ?thesis using ne by simp
 	qed (* feels like this should be easier *)
-qed(simp_all add: const_def fun_eq_iff)
+qed(simp_all add: fun_eq_iff)
 
 lemma ifex_upd_other: "v \<notin> ifex_var_set i \<Longrightarrow> val_ifex i (a(v:=any)) = val_ifex i a" 
 proof(induction i)
@@ -670,10 +678,10 @@ proof(induction i arbitrary: ass)
 qed simp_all
 lemma ifex_sat_NoneI: "ifex_no_twice i \<Longrightarrow> (\<And>ass. val_ifex i ass = False) \<Longrightarrow> ifex_sat i = None" 
 (* using ifex_sat_SomeD by fastforce *)
-proof(rule ccontr)
-	case goal1
-	from goal1(3) obtain as where "ifex_sat i = Some as" by blast
-	from ifex_sat_SomeD[OF goal1(1) this] show False using goal1(2) by simp
+proof(rule ccontr, goal_cases)
+	case 1
+	from 1(3) obtain as where "ifex_sat i = Some as" by blast
+	from ifex_sat_SomeD[OF 1(1) this] show False using 1(2) by simp
 qed
 
 fun ifex_sat_list where

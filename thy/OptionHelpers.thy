@@ -19,7 +19,7 @@ named_theorems ospec_rules
 
 lemma oreturn_rule[ospec_rules]: "\<lbrakk> P r \<rbrakk> \<Longrightarrow> ospec (Some r) P" by simp
 
-lemma obind_rule[ospec_rules]: "\<lbrakk> ospec m Q; \<And>r. Q r \<Longrightarrow> ospec (f r) P \<rbrakk> \<Longrightarrow> ospec (m\<guillemotright>=f) P"
+lemma obind_rule[ospec_rules]: "\<lbrakk> ospec m Q; \<And>r. Q r \<Longrightarrow> ospec (f r) P \<rbrakk> \<Longrightarrow> ospec (m \<bind> f) P"
   apply (cases m)
   apply (auto split: Option.bind_splits)
   done
@@ -27,7 +27,7 @@ lemma obind_rule[ospec_rules]: "\<lbrakk> ospec m Q; \<And>r. Q r \<Longrightarr
 lemma ospec_alt: "ospec m P = (case m of None \<Rightarrow> False | Some x \<Rightarrow> P x)"
   by (auto split: option.splits)
 
-lemma ospec_bind_simp: "ospec (m\<guillemotright>=f) P \<longleftrightarrow> (ospec m (\<lambda>r. ospec (f r) P))"
+lemma ospec_bind_simp: "ospec (m \<bind> f) P \<longleftrightarrow> (ospec m (\<lambda>r. ospec (f r) P))"
   apply (cases m)
   apply (auto split: Option.bind_splits)
   done

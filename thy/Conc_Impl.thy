@@ -51,7 +51,7 @@ definition destrci :: "nat \<Rightarrow> bddi \<Rightarrow> (nat, nat) IFEXD Hea
 "destrci n bdd \<equiv> (case n of
 	0 \<Rightarrow> return FD |
 	Suc 0 \<Rightarrow> return TD |
-	Suc (Suc p) \<Rightarrow> pm_pthi (dpmi bdd) p \<guillemotright>= (\<lambda>(v,t,e). return (IFD v t e)))"
+	Suc (Suc p) \<Rightarrow> pm_pthi (dpmi bdd) p \<bind> (\<lambda>(v,t,e). return (IFD v t e)))"
 
 term "brofix.les"
 
@@ -75,7 +75,7 @@ lemma [sep_heap_rules]: "ifmi' v t e bdd = Some (p, bdd') \<Longrightarrow>
 	<\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi = p)>\<^sub>t"
 	apply(clarsimp simp: is_bdd_impl_def ifmi'_def simp del: ifmi.simps)
 	apply(sep_auto
-	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def bdd_sane_def const_def
+	  simp: ifci_def apfst_def map_prod_def is_bdd_impl_def bdd_sane_def
 	  split: prod.splits if_splits Option.bind_splits)
 done
 

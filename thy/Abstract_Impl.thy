@@ -5,7 +5,6 @@ imports BDT
         OptionHelpers
 begin
 
-
 datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni 
 
 locale bdd_impl_pre =
@@ -144,7 +143,7 @@ lemma restrict_top_alt: "restrict_top n var val = (case n of
   (IF v t e) \<Rightarrow> (if v = var then (if val then t else e) else (IF v t e))
 | _ \<Rightarrow> n)"
   apply (induction n var val rule: restrict_top.induct)
-  apply (simp_all add: restrict_top.simps)
+  apply (simp_all)
   done
 
 lemma restrict_top_impl_spec: "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (restrict_top_impl ni vr vl s) (\<lambda>(res,s'). (res, restrict_top n vr vl) \<in> R s \<and> s'=s)"
@@ -176,8 +175,8 @@ partial_function(option) ite_impl where
 lemma ite_impl_R: "I s
        \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
        \<Longrightarrow> ospec (ite_impl ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite i t e) \<in> R s' \<and> I s' \<and> les s s')"
-proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct)
-	case goal1 
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite.induct, goal_cases)
+	case (1 i t e s ii ti ei) note goal1 = 1
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
 	show ?case proof(cases "lowest_tops [i,t,e]")
 		case None from goal1(3-6) show ?thesis
@@ -404,9 +403,9 @@ lemma ite_impl_opt_R: "
   I s
   \<Longrightarrow> in_rel (R s) ii i \<Longrightarrow> in_rel (R s) ti t \<Longrightarrow> in_rel (R s) ei e
   \<Longrightarrow> ospec (ite_impl_opt ii ti ei s) (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
-proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct)
-  note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
-	case goal1 
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct, goal_cases)
+  note ifex_ite_opt.simps[simp del] restrict_top.simps[simp del]
+	case (1 i t e s ii ti ei) note goal1 = 1
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
  note mIH = goal1(1,2)
 	from goal1(3-6) show ?case
@@ -477,9 +476,9 @@ lemma ite_impl_lu_R: "I s
        \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
        \<Longrightarrow> ospec (ite_impl_lu ii ti ei s) 
                  (\<lambda>(r, s'). (r, ifex_ite_opt i t e) \<in> R s' \<and> I s' \<and> les s s')"
-proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct)
-  note ifex_ite_opt.simps[simp del] lowest_tops.simps[simp del] restrict_top.simps[simp del]
-	case goal1 
+proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct, goal_cases)
+  note restrict_top.simps[simp del]
+	case (1 i t e s ii ti ei) note goal1 = 1
 	have la2: "list_all2 (in_rel (R s)) [ii,ti,ei] [i,t,e]" using goal1(4-6) by simp
  note mIH = goal1(1,2)
 	from goal1(3-6) show ?case
@@ -495,7 +494,7 @@ apply(erule_tac x = ei in allE)
 apply(erule_tac x = a in allE)
 apply(metis cmp_rule_eq)
 
-apply(clarsimp simp del: ifex_ite_lu.simps ifex_ite_opt.simps)
+apply(clarsimp )
 apply(case_tac "param_opt i t e")
   defer
   apply(rule obind_rule)

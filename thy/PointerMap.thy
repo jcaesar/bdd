@@ -30,32 +30,31 @@ definition "pointermap_p_valid p m \<equiv> p < length (entries m)"
 
 definition "pointermap_getmk a m \<equiv> (case getentry m a of Some p \<Rightarrow> (p,m) | None \<Rightarrow> let u = pointermap_insert a m in (the (getentry u a), u))"  
 
-lemma conjI2: "P \<Longrightarrow> Q \<Longrightarrow> Q \<and> P" ..
 lemma pointermap_sane_appendD: "pointermap_sane s \<Longrightarrow> m \<notin> set (entries s) \<Longrightarrow> pointermap_sane (pointermap_insert m s)"
 unfolding pointermap_sane_def pointermap_insert_def
-proof(rule conjI2, rule conjI2)
-	case goal3 thus ?case by simp
+proof(intro conjI[rotated],goal_cases)
+	case 3 thus ?case by simp
 next
-	case goal2 thus ?case 
+	case 2 thus ?case 
 	apply(unfold Ball_def) 
 	apply(rule)
 	apply(rule)
 	apply(rename_tac n)
 	apply(case_tac "n < length (entries s)")
-	proof -
-		case goal1 
+	proof(-, goal_cases)
+		case (1 n) note goal1 = 1
 		from goal1(4) have sa: "\<And>a. (entries s @ a) ! n = entries s ! n" by (simp add: nth_append)
 		from goal1(1,4) have ih: "getentry s (entries s ! n) = Some n" by simp
 		from goal1(2,4) have ne: "entries s ! n \<noteq> m" using nth_mem by fastforce
 		from sa ih ne show ?case by simp
 	next
-		case goal2
+		case (2 n) note goal2 = 2
 		from goal2(3,4) have ln: "n = length (entries s)" by simp
 		hence sa: "\<And>a. (entries s @ [a]) ! n = a" by simp
 		from sa ln show ?case by simp
 	qed
 next
-	case goal1 thus ?case
+	case 1 thus ?case
 		apply(auto simp add: nth_append fun_upd_same Ball_def)
 		apply(force)
 	done
@@ -63,10 +62,10 @@ qed
 
 lemma luentries_noneD: "getentry s a = None \<Longrightarrow> pointermap_sane s \<Longrightarrow> a \<notin> set (entries s)"
 unfolding pointermap_sane_def
-proof
-	case goal1
-	from goal1(3) obtain n where "n < length (entries s)" "entries s ! n = a" unfolding in_set_conv_nth by blast
-	with goal1(2,1) show False by force
+proof(rule ccontr, goal_cases)
+	case 1
+	from 1(3) obtain n where "n < length (entries s)" "entries s ! n = a" unfolding in_set_conv_nth by blast
+	with 1(2,1) show False by force
 qed
 
 lemma pm_pth_append: "pointermap_p_valid p m \<Longrightarrow> pm_pth (pointermap_insert a m) p = pm_pth m p"
