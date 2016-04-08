@@ -65,7 +65,7 @@ lemma add_true:
 
 
 definition node_relator where "node_relator x y \<longleftrightarrow> x \<in> y"
-text \<open>\<open>sep_auto\<close> behaves sub-optimal when having @{term "(bf,bdd) \<in> computed_pointer_relation"} as assumption in our cases. Using node_relator instead fixes this behavior with a custom solver for \<open>simp\<close>.\<close>
+text \<open>\<open>sep_auto\<close> behaves sub-optimal when having @{term "(bf,bdd) \<in> computed_pointer_relation"} as assumption in our cases. Using @{const node_relator} instead fixes this behavior with a custom solver for \<open>simp\<close>.\<close>
 
 lemma node_relatorI: "x \<in> y \<Longrightarrow> node_relator x y" unfolding node_relator_def .
 lemma node_relatorD: "node_relator x y \<Longrightarrow> x \<in> y" unfolding node_relator_def .
@@ -251,16 +251,6 @@ by(sep_auto simp: bdd_relator_def)
 
 (* At some point in history, I've got to make sure that all those emptyci_rule and firends don't appear duplicate.
    Today is not this day. *)
-
-(* I had some nice code_printing setup here, to implement blita/blit'. But that only did what would have been generated anyway *)
-lemma [code del]:
-    "blit src si dst di len
-      = blit' src (integer_of_nat si) dst (integer_of_nat di)
-          (integer_of_nat len)" by (simp add: blit'_def)
-declare blit_def[code]
-
-(* Todo: verify iteci_opt *)
-export_code open iteci_lu notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci in Haskell module_name IBDD file "../hs/gen"
 
 lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> *)
 

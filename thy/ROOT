@@ -1,27 +1,25 @@
-session "BDDs" = Datastructs +
+session "BDDs" = UAFP +
 	options [document = pdf, document_output = "output"]
-	theories[document=false]
-		"Boolean_Expression_Checkers"
-		"$AFP/Automatic_Refinement/Lib/Refine_Lib"
 	theories
 		BoolFunc
 		BDT
 		Abstract_Impl
+		ArrayList
+		PointerMap
 		AbstractInterpretation
+		PointerMapImpl
 		Conc_Impl
 		LevelCollapse
 	document_files
 		"root.tex"
 
-session "Datastructs" = HOL +
-	options [document = pdf, document_output = "output/ds"]
+session "BDDCode" = BDDs +
+	theories
+		BDDCode
+
+session UAFP = HOL +
 	theories[document=false]
+		"$AFP/Automatic_Refinement/Lib/Refine_Lib"
 		"$AFP/Separation_Logic_Imperative_HOL/Examples/Array_Blit"
 		"$AFP/Separation_Logic_Imperative_HOL/Sep_Main"
 		"$AFP/Separation_Logic_Imperative_HOL/Examples/Hash_Map_Impl"
-	theories
-		ArrayList
-		PointerMap
-		PointerMapImpl
-	document_files
-		"root.tex"
