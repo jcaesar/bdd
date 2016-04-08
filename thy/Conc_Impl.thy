@@ -53,7 +53,7 @@ definition destrci :: "nat \<Rightarrow> bddi \<Rightarrow> (nat, nat) IFEXD Hea
 	Suc 0 \<Rightarrow> return TD |
 	Suc (Suc p) \<Rightarrow> pm_pthi (dpmi bdd) p \<bind> (\<lambda>(v,t,e). return (IFD v t e)))"
 
-term "brofix.les"
+term "mi.les"
 
 lemma emptyci_rule[sep_heap_rules]: "<emp> emptyci <is_bdd_impl emptymi>\<^sub>t"
 	by(sep_auto simp: is_bdd_impl_def emptyci_def emptymi_def)
@@ -89,9 +89,9 @@ lemma destrci_rule[sep_heap_rules]: "
 	apply(sep_auto simp: destrci_def bdd_node_valid_def is_bdd_impl_def ifexd_valid_def bdd_sane_def dest: p_valid_RmiI)+
 done
 
-term brofix.restrict_top_impl
+term mi.restrict_top_impl
 
-thm brofix.case_ifexi_def
+thm mi.case_ifexi_def
 
 definition "case_ifexici fti ffi fii ni bddi \<equiv> do {
   dest \<leftarrow> destrci ni bddi;
@@ -99,7 +99,7 @@ definition "case_ifexici fti ffi fii ni bddi \<equiv> do {
 }"
 
 lemma [sep_decon_rules]:
-  assumes S: "brofix.case_ifexi fti ffi fii ni bdd = Some r"
+  assumes S: "mi.case_ifexi fti ffi fii ni bdd = Some r"
   assumes [sep_heap_rules]: 
     "destrmi' ni bdd = Some TD \<Longrightarrow> fti bdd = Some r \<Longrightarrow> <is_bdd_impl bdd bddi> ftci <Q>"
     "destrmi' ni bdd = Some FD \<Longrightarrow> ffi bdd = Some r \<Longrightarrow> <is_bdd_impl bdd bddi> ffci <Q>"
@@ -107,7 +107,7 @@ lemma [sep_decon_rules]:
      \<Longrightarrow> <is_bdd_impl bdd bddi> fici v t e <Q> "
   shows "<is_bdd_impl bdd bddi> case_ifexici ftci ffci fici ni bddi <Q>"
   using S
-  unfolding brofix.case_ifexi_def
+  unfolding mi.case_ifexi_def
   apply (clarsimp split: Option.bind_splits IFEXD.splits)
   apply (sep_auto simp: case_ifexici_def) 
   apply (sep_auto simp: case_ifexici_def) 
@@ -124,11 +124,11 @@ definition "restrict_topci p vr vl bdd =
 	"
 
 lemma [sep_heap_rules]:
-	assumes "brofix.restrict_top_impl p var val bdd = Some (r,bdd')"
+	assumes "mi.restrict_top_impl p var val bdd = Some (r,bdd')"
 	shows "<is_bdd_impl bdd bddi> restrict_topci p var val bddi
         	<\<lambda>ri. is_bdd_impl bdd bddi * \<up>(ri = r)>"
     using assms    	
-    unfolding brofix.restrict_top_impl_def restrict_topci_def
+    unfolding mi.restrict_top_impl_def restrict_topci_def
     by sep_auto
 
 fun lowest_topsci where
@@ -148,19 +148,19 @@ fun lowest_topsci where
 declare lowest_topsci.simps[simp del]
 
 lemma [sep_heap_rules]: 
-	assumes "brofix.lowest_tops_impl es bdd = Some (r,bdd')"
+	assumes "mi.lowest_tops_impl es bdd = Some (r,bdd')"
 	shows "<is_bdd_impl bdd bddi> lowest_topsci es bddi
 	<\<lambda>(ri). is_bdd_impl bdd bddi * \<up>(ri = r \<and> bdd'=bdd)>"
 proof -
-  note [simp] = lowest_topsci.simps brofix.lowest_tops_impl.simps
+  note [simp] = lowest_topsci.simps mi.lowest_tops_impl.simps
 
   show ?thesis using assms
 	apply (induction es arbitrary: bdd r bdd' bddi)
 	apply (sep_auto ) (* TODO: Have to split on destrmi'-cases manually, else sep-aut introduces schematic before case-split is done *)
-	apply (clarsimp simp: brofix.case_ifexi_def split: Option.bind_splits IFEXD.splits)
-	apply (sep_auto simp: brofix.case_ifexi_def)
-	apply (sep_auto simp: brofix.case_ifexi_def)
-	apply (sep_auto simp: brofix.case_ifexi_def)
+	apply (clarsimp simp: mi.case_ifexi_def split: Option.bind_splits IFEXD.splits)
+	apply (sep_auto simp: mi.case_ifexi_def)
+	apply (sep_auto simp: mi.case_ifexi_def)
+	apply (sep_auto simp: mi.case_ifexi_def)
 	done
 qed
 
@@ -186,11 +186,11 @@ partial_function(heap) iteci where
 declare iteci.simps[code]
 
 lemma iteci_rule: "
-  ( brofix.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  ( mi.ite_impl i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl.fixp_induct)
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: mi.ite_impl.fixp_induct)
   defer
   apply simp
   apply clarify
@@ -245,11 +245,11 @@ definition param_optci where
   }"
 
 lemma param_optci_rule: "
-  ( brofix.param_opt_impl i t e bdd = Some (p,bdd'))  \<Longrightarrow>
+  ( mi.param_opt_impl i t e bdd = Some (p,bdd'))  \<Longrightarrow>
   <is_bdd_impl bdd bddi> 
     param_optci i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p)>\<^sub>t"
-by (sep_auto simp add: brofix.param_opt_impl.simps param_optci_def tmi'_def fmi'_def
+by (sep_auto simp add: mi.param_opt_impl.simps param_optci_def tmi'_def fmi'_def
              split: Option.bind_splits)
 
 lemma bdd_hm_lookup_rule: "
@@ -328,11 +328,11 @@ oops
 
 (* Proof by copy-paste *)
 lemma iteci_lu_rule: "
-  ( brofix.ite_impl_lu i t e bdd = Some (p,bdd'))  \<longrightarrow>
+  ( mi.ite_impl_lu i t e bdd = Some (p,bdd'))  \<longrightarrow>
   <is_bdd_impl bdd bddi> 
     iteci_lu i t e bddi 
   <\<lambda>(pi,bddi'). is_bdd_impl bdd' bddi' * \<up>(pi=p )>\<^sub>t"
-  apply (induction arbitrary: i t e bddi bdd p bdd' rule: brofix.ite_impl_lu.fixp_induct)
+  apply (induction arbitrary: i t e bddi bdd p bdd' rule: mi.ite_impl_lu.fixp_induct)
   defer
   apply(simp)
   apply clarify

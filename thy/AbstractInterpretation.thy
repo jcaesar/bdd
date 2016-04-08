@@ -3,6 +3,10 @@ theory AbstractInterpretation
 imports Abstract_Impl PointerMap
 begin
 
+text\<open>For the lack of a better name, the suffix mi stands for middle-implementation. 
+This relects that this ``implementation'' is neither entirely abstract,
+nor has it been made fully concrete: the data structures are decided, but not their implementations.\<close>
+
 record bdd =
 	dpm :: "(nat \<times> nat \<times> nat) pointermap"
 	dcl :: "((nat \<times> nat \<times> nat),nat) map"
@@ -30,7 +34,7 @@ fun Rmi_g :: "nat \<Rightarrow> nat ifex \<Rightarrow> bdd \<Rightarrow> bool" w
 
 definition "Rmi s \<equiv> {(a,b)|a b. Rmi_g a b s}"
 
-interpretation mi: bdd_impl_cmp_pre Rmi by -
+interpretation mi_pre: bdd_impl_cmp_pre Rmi by -
 
 definition "bdd_node_valid bdd n \<equiv> n \<in> Domain (Rmi bdd)"
 lemma [simp]:
@@ -42,11 +46,11 @@ lemma [simp]:
 
 definition "ifexd_valid bdd e \<equiv> (case e of IFD _ t e \<Rightarrow> bdd_node_valid bdd t \<and> bdd_node_valid bdd e | _ \<Rightarrow> True)"
 
-definition "bdd_sane bdd \<equiv> pointermap_sane (dpm bdd) \<and> mi.map_invar_impl (dcl bdd) bdd"
+definition "bdd_sane bdd \<equiv> pointermap_sane (dpm bdd) \<and> mi_pre.map_invar_impl (dcl bdd) bdd"
 
 lemma [simp,intro!]: "bdd_sane emptymi" 
 	unfolding emptymi_def bdd_sane_def bdd.simps 
-by(simp add: mi.map_invar_impl_def)
+by(simp add: mi_pre.map_invar_impl_def)
 
 lemma prod_split3: "P (case prod of (x, xa, xaa) \<Rightarrow> f x xa xaa) = (\<forall>x1 x2 x3. prod = (x1, x2, x3) \<longrightarrow> P (f x1 x2 x3))"
 by(simp split: prod.splits)
@@ -121,9 +125,9 @@ qed simp_all
 lemma ifmi_les:
     assumes "bdd_sane s"
     assumes "ifmi v ni1 ni2 s = (ni, s')"
-    shows "mi.les s s'"
+    shows "mi_pre.les s s'"
 using assms
-by(clarsimp simp: bdd_sane_def comp_def apfst_def map_prod_def mi.les_def Rmi_def ifmi_les_hlp split: if_splits prod.splits)
+by(clarsimp simp: bdd_sane_def comp_def apfst_def map_prod_def mi_pre.les_def Rmi_def ifmi_les_hlp split: if_splits prod.splits)
 
 lemma ifmi_notouch_dcl: "ifmi v ni1 ni2 s = (ni, s') \<Longrightarrow> dcl s' = dcl s"
 	by(clarsimp split: if_splits prod.splits)
@@ -136,7 +140,7 @@ lemma ifmi_saneI: "bdd_sane s \<Longrightarrow> ifmi v ni1 ni2 s = (ni, s') \<Lo
 	  apply(simp_all)[2]
 	apply(frule (1) ifmi_les)
 	apply(unfold bdd_sane_def, clarify)
-	apply(rule mi.map_invar_impl_les[rotated])
+	apply(rule mi_pre.map_invar_impl_les[rotated])
 	 apply assumption
 	apply(drule ifmi_notouch_dcl)
 	apply(simp)
@@ -151,11 +155,11 @@ lemma rmigif: "Rmi_g ni (IF v n1 n2) s \<Longrightarrow> \<exists>n. ni = Suc (S
 done
 
 lemma in_lesI:
-	assumes "mi.les s s'"
+	assumes "mi_pre.les s s'"
     assumes "(ni1, n1) \<in> Rmi s"
     assumes "(ni2, n2) \<in> Rmi s"
     shows "(ni1, n1) \<in> Rmi s'" "(ni2, n2) \<in> Rmi s'"
-by (meson assms mi.les_def)+
+by (meson assms mi_pre.les_def)+
 
 
 lemma ifmi_modification_validI:
@@ -223,9 +227,9 @@ lemma updS_Rmi: "Rmi (updS s x r) = Rmi s"
 
 find_theorems dcl_update
 
-interpretation brofix: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' dcl updS "op ="
+interpretation mi: bdd_impl_cmp bdd_sane Rmi tmi' fmi' ifmi' destrmi' dcl updS "op ="
 proof  -
-  note s = mi.les_def[simp] Rmi_def
+  note s = mi_pre.les_def[simp] Rmi_def
 
   note [simp] = tmi'_def fmi'_def ifmi'_def destrmi'_def apfst_def map_prod_def
 
@@ -266,7 +270,7 @@ proof  -
   next
     case 9 thus ?case unfolding bdd_sane_def by simp
   next
-    case 10 thus ?case unfolding bdd_sane_def mi.map_invar_impl_def
+    case 10 thus ?case unfolding bdd_sane_def mi_pre.map_invar_impl_def
        apply(clarsimp simp add: updS_Rmi simp del: ifex_ite_opt.simps)
        apply(clarsimp simp add: updS_def simp del: ifex_ite_opt.simps)
        by blast (* TODO: clean me *)
@@ -292,7 +296,7 @@ lemma ifmi_result_validI:
 	shows "bdd_node_valid s' ni"
 proof -
 	from vld obtain n1 n2 where "(ni1, n1) \<in> Rmi s" "(ni2, n2) \<in> Rmi s" unfolding bdd_node_valid_def by blast
-	note brofix.IFimpl_rule[OF sane this]
+	note mi.IFimpl_rule[OF sane this]
 	note this[unfolded ifmi'_ifmi[OF sane vld] ospec.simps, of v, unfolded ifm, unfolded prod.simps]
 	thus ?thesis unfolding bdd_node_valid_def by blast
 qed

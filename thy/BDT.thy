@@ -10,6 +10,7 @@ text\<open>
 \<close>
 
 datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex"
+text\<open>The type is the same as in Boolean Expression Checkers by Tobias Nipkow.\<close>
 
 fun val_ifex :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" where
 "val_ifex Trueif s = True" |

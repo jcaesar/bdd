@@ -90,7 +90,7 @@ This is the general form one wants to work with:
 if a function on the bdd is called with a set of already existing and valid pointers, the arguments to the function have to be in that set.
 The result is that one more pointer is the set of existing and valid pointers.
 \<close>
-thm iteci_rule[THEN mp] brofix.ite_impl_R ifex_ite_rel_bf
+thm iteci_rule[THEN mp] mi.ite_impl_R ifex_ite_rel_bf
 lemma iteci_rule[sep_heap_rules]: "
 \<lbrakk>node_relator (ib, ic)  rp; node_relator (tb, tc) rp; node_relator (eb, ec) rp\<rbrakk> \<Longrightarrow>
 <bdd_relator rp s> 
@@ -102,7 +102,7 @@ lemma iteci_rule[sep_heap_rules]: "
 	apply(unfold bddmi_rel_def)
 	apply(drule (1) rev_subsetD)+
 	apply(clarsimp)
-	apply(drule (3) brofix.ite_impl_lu_R[where ii=ic and ti=tc and ei=ec, unfolded in_rel_def])
+	apply(drule (3) mi.ite_impl_lu_R[where ii=ic and ti=tc and ei=ec, unfolded in_rel_def])
 	apply(drule ospecD2)
 	apply(clarsimp simp del: ifex_ite.simps)
 	apply(rule cons_post_rule)
@@ -117,7 +117,7 @@ lemma iteci_rule[sep_heap_rules]: "
 	 apply(sep_auto; fail)
 	apply(clarsimp simp del: ifex_ite.simps)
 	apply(rule conjI[rotated])
-	 apply(force simp add: brofix.les_def)
+	 apply(force simp add: mi.les_def)
 	apply(rule exI)
 	apply(rule conjI)
 	 apply(erule (2) ifex_ite_opt_rel_bf[unfolded in_rel_def]) 
@@ -131,13 +131,13 @@ lemma tci_rule[sep_heap_rules]:
 	apply(unfold bdd_relator_def)
 	apply(intro norm_pre_ex_rule)
 	apply(clarsimp)
-	apply(frule brofix.Timpl_rule)
+	apply(frule mi.Timpl_rule)
 	apply(drule ospecD2)
 	apply(clarify)
 	apply(sep_auto)
 	 apply(unfold bddmi_rel_def)
 	 apply(clarsimp)
-	apply(force simp add: brofix.les_def)
+	apply(force simp add: mi.les_def)
 done
 
 lemma fci_rule[sep_heap_rules]:
@@ -147,13 +147,13 @@ lemma fci_rule[sep_heap_rules]:
 	apply(unfold bdd_relator_def)
 	apply(intro norm_pre_ex_rule)
 	apply(clarsimp)
-	apply(frule brofix.Fimpl_rule)
+	apply(frule mi.Fimpl_rule)
 	apply(drule ospecD2)
 	apply(clarify)
 	apply(sep_auto)
 	 apply(unfold bddmi_rel_def)
 	 apply(clarsimp)
-	apply(force simp add: brofix.les_def)
+	apply(force simp add: mi.les_def)
 done
 
 text\<open>IFC/ifmi/ifci require that the variable order is ensured by the user. 
@@ -170,7 +170,7 @@ lemma [sep_heap_rules]:
 	apply(clarsimp)
 	apply(drule (1) rev_subsetD)+
 	apply(clarsimp)
-	apply(frule (2) brofix.IFimpl_rule[of _ tc _ ec])
+	apply(frule (2) mi.IFimpl_rule[of _ tc _ ec])
 	apply(drule ospecD2)
 	apply(clarify)
 	apply(sep_auto)
@@ -179,7 +179,7 @@ lemma [sep_heap_rules]:
 	 apply(clarsimp)
 	 apply(rule_tac x = Falseif in exI) (* okay, now I'm starting to prove something new, which I shouldn't *)
 	 apply(auto simp add: bf_False_def bf_ifex_rel_def)[1]
-	apply(force sim p add: brofix.les_def)*)
+	apply(force sim p add: mi.les_def)*)
 oops
 lemma notci_rule[sep_heap_rules]:
 	assumes "node_relator (tb, tc) rp"
@@ -222,13 +222,13 @@ using assms
 	apply(unfold bddmi_rel_def)
 	apply(clarsimp simp only: bf_ifex_rel_consts_ensured)
 	apply(rename_tac tc fc sc sm a aa b ba fm tm)
-	apply(frule_tac brofix.IFimpl_rule)
+	apply(frule_tac mi.IFimpl_rule)
 	  apply(thin_tac "(fm, Falseif) \<in> Rmi sm") apply(assumption) apply(assumption) (* sorry for the hacky hack, I don't know how to instantiate IFimpl_rule *)
 	apply(clarsimp)
 	apply(drule ospecD2)
 	apply(clarify)
 	apply(sep_auto)
-	apply(force simp add: brofix.les_def)
+	apply(force simp add: mi.les_def)
 done
 
 lemma tautci_rule[sep_heap_rules]:
@@ -241,7 +241,7 @@ lemma tautci_rule[sep_heap_rules]:
 	apply(drule (1) rev_subsetD)
 	apply(clarsimp)
 	apply(rename_tac sm ti)
-	apply(frule (1) brofix.DESTRimpl_rule; drule ospecD2; clarify)
+	apply(frule (1) mi.DESTRimpl_rule; drule ospecD2; clarify)
 	apply(sep_auto split: ifex.splits)
 done
 
