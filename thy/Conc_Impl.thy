@@ -1,6 +1,6 @@
 section\<open>Imparative implementation\<close>
 theory Conc_Impl
-imports PointerMapImpl AbstractInterpretation
+imports Pointer_Map_Impl Middle_Impl 
 begin
 
 record bddi =

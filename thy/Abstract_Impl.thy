@@ -2,7 +2,7 @@ section\<open>Abstract ITE Implementation\<close>
 theory Abstract_Impl
 imports BDT
         "$AFP/Automatic_Refinement/Lib/Refine_Lib"
-        OptionHelpers
+        Option_Helpers
 begin
 
 datatype ('a, 'ni) IFEXD = TD | FD | IFD 'a 'ni 'ni 

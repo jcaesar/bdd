@@ -1,9 +1,9 @@
 section\<open>Imparative implementation for Pointermap\<close>
-theory PointerMapImpl
-imports ArrayList 
+theory Pointer_Map_Impl
+imports Array_List 
   "$AFP/Separation_Logic_Imperative_HOL/Sep_Main"
   "$AFP/Separation_Logic_Imperative_HOL/Examples/Hash_Map_Impl"
-  PointerMap
+  Pointer_Map
 begin
 
   record 'a pointermap_impl =

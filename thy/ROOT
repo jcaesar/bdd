@@ -1,21 +1,21 @@
 session "BDDs" = UAFP +
 	options [document = pdf, document_output = "output"]
 	theories
-		BoolFunc
+		Bool_Func
 		BDT
 		Abstract_Impl
-		ArrayList
-		PointerMap
-		AbstractInterpretation
-		PointerMapImpl
+		Array_List
+		Pointer_Map
+		Middle_Impl
+		Pointer_Map_Impl
 		Conc_Impl
-		LevelCollapse
+		Level_Collapse
 	document_files
 		"root.tex"
 
-session "BDDCode" = BDDs +
+session "BDD_Code" = BDDs +
 	theories
-		BDDCode
+		BDD_Code
 
 session UAFP = HOL +
 	theories[document=false]

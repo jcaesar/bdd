@@ -1,5 +1,5 @@
 section\<open>Collapsing the levels\<close>
-theory LevelCollapse
+theory Level_Collapse
 imports Conc_Impl
 begin
 text\<open>

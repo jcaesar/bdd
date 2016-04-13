@@ -1,6 +1,6 @@
 section\<open>Functional interpretation for the abstract implementation\<close>
-theory AbstractInterpretation
-imports Abstract_Impl PointerMap
+theory Middle_Impl
+imports Abstract_Impl Pointer_Map
 begin
 
 text\<open>For the lack of a better name, the suffix mi stands for middle-implementation. 

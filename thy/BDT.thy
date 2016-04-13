@@ -1,6 +1,6 @@
 section\<open>Binary Decision Trees\<close>
 theory BDT
-imports BoolFunc
+imports Bool_Func
 begin
 
 text\<open>

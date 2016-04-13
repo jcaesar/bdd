@@ -10,13 +10,14 @@ mkdir IBDD
 
 cp -r "$D"/thy/{*.thy,document} IBDD
 
-sed -i 's/$AFP/../' IBDD/*.thy
+mkdir IBDD/hs
+sed -i -e 's/$AFP/../' -e 's#../hs/gen#hs#' IBDD/*.thy
 
 cat >IBDD/ROOT <<HEREFILE
 session "IBDD" (AFP) = IBDDUsedAFP +
 	options [document = pdf, document_output = "output"]
 	theories
-$(cd "$D/thy" && (find . -name \*.thy | grep -v BDDCode | sed -n 's/^\(.*\).thy$/		"\1"/p'))
+$(cd "$D/thy" && (find . -name \*.thy | grep -v BDD_Code | sed -n 's/^\(.*\).thy$/		"\1"/p'))
 	document_files
 		"root.tex"
 

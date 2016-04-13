@@ -1,6 +1,6 @@
 section\<open>Array List\<close>
 text\<open>Most of this has been contributed by Peter Lammich.\<close>
-theory ArrayList
+theory Array_List
 imports
 	"$AFP/Separation_Logic_Imperative_HOL/Examples/Array_Blit"
 begin

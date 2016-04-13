@@ -1,5 +1,5 @@
 section\<open>Pointermap\<close>
-theory PointerMap
+theory Pointer_Map
 imports Main
 begin
 

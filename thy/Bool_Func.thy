@@ -1,5 +1,5 @@
 section\<open>Boolean functions\<close>
-theory BoolFunc
+theory Bool_Func
 imports Main
 begin
 text\<open>
