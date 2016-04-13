@@ -1,7 +1,6 @@
 section\<open>Imparative implementation\<close>
 theory Conc_Impl
 imports PointerMapImpl AbstractInterpretation
-  (*"$AFP/Automatic_Refinement/Lib/Refine_Lib"*)
 begin
 
 record bddi =
@@ -37,7 +36,7 @@ lemma is_bdd_impl_prec: "precise is_bdd_impl"
 	apply(unfold star_aci(1)[symmetric]) (* black unfold magic *)
 	apply(unfold star_aci(2)[symmetric])
 	apply blast
-	(* todo: that proof is exactly the same as for pointermap. make a rule from it? *)
+	(* This proof is exactly the same as for pointermap. One could make a rule from it. *)
 done
 
 definition "emptyci :: bddi Heap \<equiv> do { ep \<leftarrow> pointermap_empty; ehm \<leftarrow> hm_new; return \<lparr>dpmi=ep, dcli=ehm\<rparr> }"
@@ -156,7 +155,8 @@ proof -
 
   show ?thesis using assms
 	apply (induction es arbitrary: bdd r bdd' bddi)
-	apply (sep_auto ) (* TODO: Have to split on destrmi'-cases manually, else sep-aut introduces schematic before case-split is done *)
+	apply (sep_auto) 
+	(* Unfortunately, we have to split on destrmi'-cases manually, else sep-aut introduces schematic before case-split is done *)
 	apply (clarsimp simp: mi.case_ifexi_def split: Option.bind_splits IFEXD.splits)
 	apply (sep_auto simp: mi.case_ifexi_def)
 	apply (sep_auto simp: mi.case_ifexi_def)
@@ -224,8 +224,6 @@ lemma iteci_rule: "
   done
 
 declare  iteci_rule[THEN mp, sep_heap_rules]
-
-(* ITE VERSION WITH TURBO :) *)
 
 definition param_optci where
   "param_optci i t e bdd = do {
@@ -322,7 +320,10 @@ partial_function(heap) iteci_lu_code where "iteci_lu_code i t e s = do {
 }"
 
 declare iteci_lu_code.simps[code]
-(* reduced the time by around 30%. But I guess this is annoying to show. *)
+(* reduced the run-time of our examples by around 30%. 
+  But we would need some efficient automated machinery to show this,
+  and I'm not even sure how to correctly use induction correctly for this.
+  Thus: Future work.*)
 lemma iteci_lu_code[code_unfold]: "iteci_lu i t e s = iteci_lu_code i t e s"
 oops
 
@@ -378,7 +379,7 @@ lemma iteci_lu_rule: "
   apply(sep_auto)
   unfolding updS_def apply(sep_auto)
 
-  apply simp  (* Warning: Dragons ahead! *)
+  apply simp  (* More Dragons *)
   using option_admissible[where P=
     "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi. 
       <is_bdd_impl x4 bddi> 
@@ -436,6 +437,7 @@ definition "tautci v bdd \<equiv> do {
 }"
 
 subsection\<open>Printing\<close>
+text\<open>The following functions are exported unverified. They are intended for BDD debugging purposes.\<close>
 
 partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((nat \<times> nat) \<times> nat) list Heap" where
 "serializeci p s = do {
@@ -450,7 +452,7 @@ partial_function(heap) serializeci :: "nat \<Rightarrow> bddi \<Rightarrow> ((na
 	)
 }"
 declare serializeci.simps[code]
-(* why does this snap to heap as a monad? Well, it doesn't matter\<dots> *)
+(* This snaps to heap as a Monad, which is not intended, but irrelevant. *)
 fun mapM where
 "mapM f [] = return []" |
 "mapM f (a#as) = do {
@@ -497,7 +499,7 @@ definition "the_thing_By f l = (let
 definition "the_thing = the_thing_By (op =)"
 
 
-definition graphifyci (*:: "string \<Rightarrow> nat \<Rightarrow> bddi \<Rightarrow> string Heap"*) where
+definition graphifyci :: "string \<Rightarrow> nat \<Rightarrow> bddi \<Rightarrow> string Heap" where
 "graphifyci name ep bdd \<equiv> do {
 	s \<leftarrow> serializeci ep bdd;
 	let e = map fst s;

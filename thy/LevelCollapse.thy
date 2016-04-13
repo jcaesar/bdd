@@ -163,23 +163,7 @@ lemma [sep_heap_rules]:
 <bdd_relator rp s> 
 	ifci v tc ec s
 <\<lambda>(r,s'). bdd_relator (insert (bf_if v tb eb,r) rp) s'>"
-(*
-	apply(unfold bdd_relator_def)
-	apply(intro norm_pre_ex_rule)
-	apply(unfold bddmi_rel_def)
-	apply(clarsimp)
-	apply(drule (1) rev_subsetD)+
-	apply(clarsimp)
-	apply(frule (2) mi.IFimpl_rule[of _ tc _ ec])
-	apply(drule ospecD2)
-	apply(clarify)
-	apply(sep_auto)
-	
-	 apply(unfold bddmi_rel_def)
-	 apply(clarsimp)
-	 apply(rule_tac x = Falseif in exI) (* okay, now I'm starting to prove something new, which I shouldn't *)
-	 apply(auto simp add: bf_False_def bf_ifex_rel_def)[1]
-	apply(force sim p add: mi.les_def)*)
+text\<open>This probably doesn't hold.\<close>
 oops
 lemma notci_rule[sep_heap_rules]:
 	assumes "node_relator (tb, tc) rp"
@@ -224,8 +208,8 @@ using assms
 	apply(frule mi.IFimpl_rule)
 	  apply(rename_tac tc fc sc sm a aa b ba fm tm)
 	  apply(thin_tac "(fm, Falseif) \<in> Rmi sm") 
-	  apply(assumption)
-	 apply(assumption) (* sorry for the hacky hack, I don't know how to instantiate IFimpl_rule *)
+	  apply(assumption) (* hack: instantiate the first premise of mi.IFimpl_rule with the second assumption that matches. The other way around would be fine, too. *)
+	 apply(assumption)
 	apply(clarsimp)
 	apply(drule ospecD2)
 	apply(clarify)
@@ -251,10 +235,9 @@ lemma emptyci_rule[sep_heap_rules]:
 	shows "<emp> emptyci <\<lambda>r. bdd_relator {} r>"
 by(sep_auto simp: bdd_relator_def)
 
-(* At some point in history, I've got to make sure that all those emptyci_rule and firends don't appear duplicate.
-   Today is not this day. *)
+(* TODO: make sure that emptyci_rule and firends don't appear duplicate, once concrete-impl style, once level-collapsed. *)
 
-lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> *)
+lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> I need feedback from real world usage. *)
 
 subsection\<open>Tests and examples\<close>
 

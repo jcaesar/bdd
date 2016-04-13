@@ -1,5 +1,5 @@
 section\<open>Option Helpers\<close>
-text\<open>These definitions have been contributed by Peter Lammich.\<close>
+text\<open>These definitions were contributed by Peter Lammich.\<close>
 theory OptionHelpers
 imports Main "~~/src/HOL/Library/Monad_Syntax"
 begin

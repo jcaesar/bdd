@@ -163,7 +163,7 @@ lemma restrict_val_invar: "\<forall>ass. a ass = val_ifex b ass \<Longrightarrow
       (bf_restrict var val a) ass = val_ifex (restrict b var val) ass"
   unfolding bf_restrict_def using restrict_assignment by simp
 
-lemma restrict_untouched_id: "x \<notin> ifex_var_set t \<Longrightarrow> restrict t x val = t" (* umkehrung gilt auch\<dots> *)
+lemma restrict_untouched_id: "x \<notin> ifex_var_set t \<Longrightarrow> restrict t x val = t" (* inversion should hold, too\<dots> *)
 proof(induction t)
 	case (IF v t e)
 	from IF.prems have "x \<notin> ifex_var_set t" "x \<notin> ifex_var_set e" by simp_all
@@ -180,7 +180,7 @@ fun restrict_top :: "('a :: linorder) ifex \<Rightarrow> 'a \<Rightarrow> bool \
   "restrict_top (IF v t e) var val = (if v = var then (if val then t else e) else (IF v t e))" |
   "restrict_top i _ _ = i"
 
-(* dunno if the following four are useful for something\<dots> *)
+(* the following four are might be useful eventually\<dots> *)
 lemma restrict_top_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v \<Longrightarrow> v' < v \<Longrightarrow> restrict_top e v' val = e"
 	by(induction e) auto
 
@@ -256,7 +256,7 @@ termination ifex_ite
      (simp_all only: termlemma)
 
 
-definition "const x _ = x" (* Mehr Haskell wagen *)
+definition "const x _ = x" (* inspired by Haskell *)
 declare const_def[simp]
 lemma rel_true_false: "(a, Trueif) \<in> bf_ifex_rel \<Longrightarrow> a = const True" "(a, Falseif) \<in> bf_ifex_rel \<Longrightarrow> a = const False"
 	unfolding fun_eq_iff const_def
@@ -308,16 +308,6 @@ proof(induction i t e rule: ifex_ite_induct2)
 	note IF(6)[OF this IF(3)] thus ?case .
 qed blast+
 
-lemma lowest_restrictor: "lowest_tops e = Some a \<Longrightarrow> (\<And>i. i \<in> set e \<Longrightarrow> ifex_ordered i) \<Longrightarrow> x \<in> \<Union>(set (map (set \<circ> ifex_vars \<circ> (\<lambda>i. restrict_top i a vl)) e)) \<Longrightarrow> a < x"
-proof(simp, rule ccontr, goal_cases)
-	case 1
-	from 1(3) obtain xa where xa1: "xa\<in>set e" "x \<in> ifex_var_set (restrict_top xa a vl)" by blast
-	obtain v vt ve where xa: "xa = IF v vt ve" apply(cases xa) using xa1 by auto
-	have o: "ifex_ordered (IF v vt ve)" using 1(2) xa1(1) unfolding xa .
-	have "x < a" using 1(4) apply(subgoal_tac "x \<noteq> a", simp) using 1(3)
-	using not_element_restrict[of v "IF v vt ve"] unfolding restrict_top_eq[OF o] 
-oops (* forget it *)
-
 lemma restrict_top_subset: "x \<in> ifex_var_set (restrict_top i vr vl) \<Longrightarrow> x \<in> ifex_var_set i"
 	by(induction i) (simp_all split: if_splits)
 
@@ -325,7 +315,6 @@ lemma ifex_vars_subset: "x \<in> ifex_var_set (ifex_ite i t e) \<Longrightarrow>
 proof(induction rule: ifex_ite_induct2)
 	case (IF i t e a)
 	have "x \<in> {x. x = a} \<or> x \<in> (ifex_var_set (ifex_ite (restrict_top i a True) (restrict_top t a True) (restrict_top e a True))) \<or> x \<in> (ifex_var_set (ifex_ite (restrict_top i a False) (restrict_top t a False) (restrict_top e a False)))"
-		(*apply(subst ifex_ite.simps) apply(simp only: goal3(2) option.simps ifex_vars.simps set_simps set_append insert_def Un_iff split: option.split) *)
 		using IF by(simp add: IFC_def split: if_splits) 
 	hence "x = a \<or>
 		x \<in> (ifex_var_set (restrict_top i a True )) \<or> x \<in> (ifex_var_set (restrict_top t a True )) \<or> x \<in> (ifex_var_set (restrict_top e a True )) \<or>
@@ -343,7 +332,7 @@ lemma hlp2: "IF vi vt ve \<in> set is
 \<Longrightarrow> a \<le> vi" 
 apply(induction "is" arbitrary: vt ve a rule: lowest_tops.induct)
 apply(auto simp add: min_def split: if_splits option.splits dest: lowest_tops_NoneD) (* solves all but some of second case *)
-apply(meson le_cases order_trans) (* I stared at this for quite a few minutes\<dots> how the\<dots>? *)
+apply(meson le_cases order_trans)
 done
 
 lemma hlp1: "i \<in> set is \<Longrightarrow> lowest_tops is = Some a \<Longrightarrow> ifex_ordered i \<Longrightarrow> a \<notin> (ifex_var_set (restrict_top i a val))"
@@ -372,7 +361,7 @@ proof(induction i t e rule: ifex_ite_induct)
 		auto simp del: ifex_ite.simps
 			simp add: IFC_def goal1(2) hlp1[OF three_ins(1) goal1(2) goal1(3)] hlp1[OF three_ins(2) goal1(2) goal1(4)] hlp1[OF three_ins(3) goal1(2) goal1(5)] 
 			dest: ifex_vars_subset blubb[OF three_ins(1) goal1(3)] blubb[OF three_ins(2) goal1(4)] blubb[OF three_ins(3) goal1(5)] 
-			intro!: le_neq_trans) (* lol *)
+			intro!: le_neq_trans)
 qed simp_all
 
 lemma ifc_split: "P (IFC v t e) \<longleftrightarrow> ((t = e) \<longrightarrow> P t) \<and> (t \<noteq> e \<longrightarrow> P (IF v t e))"
@@ -490,7 +479,7 @@ apply(induction i t e rule: ifex_ite_opt.induct)
       apply(force)
       using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
       using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar apply(metis)
-done (* TODO: Clean me *)
+done
 
 lemma ro_ifexI: "(a,b) \<in> bf_ifex_rel \<Longrightarrow> ro_ifex b" by (simp add: ifex_minimal_implied ifex_ordered_implied)
 
@@ -555,7 +544,7 @@ lemma param_opt_lowest_tops_lem: "param_opt i t e = None \<Longrightarrow> \<exi
 by (auto simp add: param_opt_def)
   
 
-(* this lemma is not really used (except for in the next two, which are not used, but it is an interesting property. *)
+(* this lemma is not really used (except for in the next two, which are not used, but it is an interesting property. You can remove it if the proof breaks!) *)
 lemma ifex_ite_lu_eq: "
  	(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
   \<exists>m'. ifex_ite_lu m i t e = (m', ifex_ite_opt i t e) \<and> map_invar m'"
@@ -644,7 +633,7 @@ proof(induction i arbitrary: a)
 		with IF.prems(2) None have au: "a = as(v1 := True)" by(simp)
 		moreover from IF.IH(1)[OF ni(1)] have "as v = False" using Some .
 		ultimately show ?thesis using ne by simp
-	qed (* feels like this should be easier *)
+	qed (* this proof seems to complicated\<dots> *)
 qed(simp_all add: fun_eq_iff)
 
 lemma ifex_upd_other: "v \<notin> ifex_var_set i \<Longrightarrow> val_ifex i (a(v:=any)) = val_ifex i a" 
@@ -655,7 +644,7 @@ proof(induction i)
 	show ?case by(simp only: val_ifex.simps fun_upd_other[OF ne] ifex_vars.simps IF.IH(1)[OF prems(1)] IF.IH(2)[OF prems(2)] split: if_splits)
 qed simp_all
 
-(* just thinking\<dots> this basically implies that there can be an order, but doesn't require it *)
+(* something weaker than ifex_ordered *)
 fun ifex_no_twice where
 "ifex_no_twice (IF v t e) = (
 	v \<notin> (ifex_var_set t \<union> ifex_var_set e) \<and>
@@ -685,7 +674,7 @@ proof(induction i arbitrary: ass)
 	qed
 qed simp_all
 lemma ifex_sat_NoneI: "ifex_no_twice i \<Longrightarrow> (\<And>ass. val_ifex i ass = False) \<Longrightarrow> ifex_sat i = None" 
-(* using ifex_sat_SomeD by fastforce *)
+(* alternate proof: using ifex_sat_SomeD by fastforce *)
 proof(rule ccontr, goal_cases)
 	case 1
 	from 1(3) obtain as where "ifex_sat i = Some as" by blast
@@ -829,7 +818,7 @@ lemma bf_ifex_rel_consts_ensured[simp]:
 	apply(clarify)
 done
 
-(* obviously, we need the reverse, too *sigh* *)
+(* reverse of the above *)
 lemma bf_ifex_rel_consts_ensured_rev[simp]: 
 	"(x,Trueif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_True)"
 	"(x,Falseif) \<in> bf_ifex_rel \<longleftrightarrow> (x = bf_False)"

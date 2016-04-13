@@ -259,7 +259,7 @@ proof  -
 			apply(rule conjI)
 			(* for the first thing, we don't have a helper lemma *)
 			apply(clarsimp simp: Rmi_def IFC_def bdd_sane_def ifmi_les_hlp pointermap_sane_getmkD pointermap_update_pthI split: if_splits prod.splits)
-			(* rest goes by the helper lemmas *)
+			(* for the rest, we do *)
 			using ifmi_les[OF \<open>bdd_sane s\<close> ifm] ifmi_saneI[OF \<open>bdd_sane s\<close> ifm] ifm apply(simp)
 		done
 	next case 4 thus ?case 

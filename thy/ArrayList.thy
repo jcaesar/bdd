@@ -1,6 +1,5 @@
-(* Array implementation for list, contributed by Peter Lammich (except for the whacky parts) *)
 section\<open>Array List\<close>
-text\<open>This has been contributed by Peter Lammich\<close>
+text\<open>Most of this has been contributed by Peter Lammich.\<close>
 theory ArrayList
 imports
 	"$AFP/Separation_Logic_Imperative_HOL/Examples/Array_Blit"

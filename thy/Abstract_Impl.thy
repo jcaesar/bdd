@@ -306,7 +306,6 @@ unfolding map_invar_impl_def by auto
 
 end
 
-(* How do I get 'ni in here? *)
 locale bdd_impl_cmp = bdd_impl + bdd_impl_cmp_pre +
   fixes M :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b option"
   fixes U :: "'a \<Rightarrow> ('b \<times> 'b \<times> 'b) \<Rightarrow> 'b \<Rightarrow> 'a"
@@ -528,7 +527,7 @@ apply(case_tac "param_opt i t e")
   apply(simp) apply(auto simp add: les_def)[2]
   apply(clarsimp simp add: les_def)
   apply(safe)
-  using map_invar_rule3 apply(presburger) (* One presburger with cheese, please *)
+  using map_invar_rule3 apply(presburger)
   apply(rule map_invar_rule2)
   prefer 6 apply(blast) apply(blast) apply(blast) apply(blast) apply(blast)
   apply(clarsimp simp add: ifex_ite_opt.simps)
