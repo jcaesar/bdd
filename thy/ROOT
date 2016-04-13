@@ -1,3 +1,4 @@
+chapter BDD
 session "BDDs" = UAFP +
 	options [document = pdf, document_output = "output"]
 	theories
