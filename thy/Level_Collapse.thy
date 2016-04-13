@@ -239,33 +239,4 @@ by(sep_auto simp: bdd_relator_def)
 
 lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> I need feedback from real world usage. *)
 
-subsection\<open>Tests and examples\<close>
-
-lemma "<emp> do {
-	s \<leftarrow> emptyci;
-	(t,s) \<leftarrow> tci s;
-	tautci t s
-} <\<lambda>r. \<up>(r = True)>\<^sub>t"
-by sep_auto
-
-lemma "a \<Longrightarrow>\<^sub>A b \<Longrightarrow> a * true \<Longrightarrow>\<^sub>A b" oops
-lemma "a \<Longrightarrow>\<^sub>A emp" oops
-
-lemma "<emp> do {
-	s \<leftarrow> emptyci;
-	(a,s) \<leftarrow> litci 0 s;
-	(b,s) \<leftarrow> litci 1 s;
-	(c,s) \<leftarrow> litci 2 s;
-	(t1i,s) \<leftarrow> orci a b s;
-	(t1,s) \<leftarrow> andci t1i c s;
-	(t2i1,s) \<leftarrow> andci a c s;
-	(t2i2,s) \<leftarrow> andci b c s;
-	(t2,s) \<leftarrow> orci t2i1 t2i2 s;
-	(t,s) \<leftarrow> biimpci t1 t2 s;
-	tautci t s
-} <\<up>>\<^sub>t"
-by sep_auto
-
-
-
 end

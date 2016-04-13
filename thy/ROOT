@@ -10,6 +10,7 @@ session "BDDs" = UAFP +
 		Pointer_Map_Impl
 		Conc_Impl
 		Level_Collapse
+		BDD_Examples
 	document_files
 		"root.tex"
 
