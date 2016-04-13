@@ -57,6 +57,12 @@ by(simp split: prod.splits)
 
 lemma IfI: "(c \<Longrightarrow> P x) \<Longrightarrow> (\<not>c \<Longrightarrow> P y) \<Longrightarrow> P (if c then x else y)" by simp
 lemma fstsndI: "x = (a,b) \<Longrightarrow> fst x = a \<and> snd x = b" by simp
+thm nat.split
+lemma Rmi_g_2_split: "P (Rmi_g n x m) = 
+  ((x = Falseif \<longrightarrow> P (Rmi_g n x m)) \<and> 
+  (x = Trueif \<longrightarrow> P (Rmi_g n x m)) \<and>
+  (\<forall>vs ts es. x = IF vs ts es \<longrightarrow> P (Rmi_g n x m)))" 
+by(cases x;simp)
 
 lemma rmigeq: "Rmi_g ni1 n1 s \<Longrightarrow> Rmi_g ni2 n2 s \<Longrightarrow> ni1 = ni2 \<Longrightarrow> n1 = n2"
 proof(induction ni1 n1 s arbitrary: n2 ni2 rule: Rmi_g.induct, goal_cases)
@@ -66,7 +72,7 @@ proof(induction ni1 n1 s arbitrary: n2 ni2 rule: Rmi_g.induct, goal_cases)
 	note mIH = 1(1)[OF _ _ 2(1) _ refl] 1(2)[OF _ _ 2(2) _ refl]
 	obtain v2 t2 e2 where v2: "n2 = IF v2 t2 e2" using Rmi_g.simps(4,6) goal3(3-5) by(cases n2) blast+
 	thus ?case using goal3(3-4) by(clarsimp simp add: v2 goal3(5)[symmetric] mIH)
-qed (case_tac n2, simp, clarsimp, clarsimp)+
+qed (rename_tac n2 ni2, (case_tac n2; clarsimp))+
 
 lemma rmigneq: "bdd_sane s \<Longrightarrow> Rmi_g ni1 n1 s \<Longrightarrow> Rmi_g ni2 n2 s \<Longrightarrow> ni1 \<noteq> ni2 \<Longrightarrow> n1 \<noteq> n2"
 proof(induction ni1 n1 s arbitrary: n2 ni2 rule: Rmi_g.induct, goal_cases)
@@ -149,7 +155,8 @@ done
 lemma rmigif: "Rmi_g ni (IF v n1 n2) s \<Longrightarrow> \<exists>n. ni = Suc (Suc n)"
 	apply(cases ni)
 	 apply(simp split: if_splits prod.splits)
-	apply(case_tac nat)
+	apply(rename_tac nis)
+	apply(case_tac nis)
 	 apply(simp split: if_splits prod.splits)
 	apply(simp split: if_splits prod.splits)
 done
@@ -270,10 +277,8 @@ proof  -
   next
     case 9 thus ?case unfolding bdd_sane_def by simp
   next
-    case 10 thus ?case unfolding bdd_sane_def mi_pre.map_invar_impl_def
-       apply(clarsimp simp add: updS_Rmi simp del: ifex_ite_opt.simps)
-       apply(clarsimp simp add: updS_def simp del: ifex_ite_opt.simps)
-       by blast (* TODO: clean me *)
+    case 10 thus ?case unfolding bdd_sane_def mi_pre.map_invar_impl_def using updS_Rmi
+       by(clarsimp simp add: updS_def simp del: ifex_ite_opt.simps) blast
   next
     case 11 thus ?case using updS_Rmi by auto
 qed

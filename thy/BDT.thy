@@ -186,7 +186,7 @@ lemma restrict_top_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v
 
 lemma restrict_id: "ifex_ordered e \<Longrightarrow> ifex_top_var e = Some v \<Longrightarrow> v' < v \<Longrightarrow> restrict e v' val = e"
 	proof(induction e arbitrary: v)
-	  case (IF w e1 e2) thus ?case by (case_tac[!] e1, case_tac[!] e2, force+)
+	  case (IF w e1 e2) thus ?case by (cases e1; cases e2; force)
   qed(auto)
 
 lemma restrict_top_IF_id: "ifex_ordered (IF v t e) \<Longrightarrow> v' < v \<Longrightarrow> restrict_top (IF v t e) v' val = (IF v t e)"
@@ -230,7 +230,7 @@ lemma restrict_size_less: "ifex_top_var k = Some var \<Longrightarrow> size (res
 
 lemma lowest_tops_cases: "lowest_tops [i, t, e] = Some var \<Longrightarrow>
        ifex_top_var i = Some var \<or> ifex_top_var t = Some var \<or> ifex_top_var e = Some var"
-by (cases i, case_tac[!] t, case_tac[!] e, auto simp add: min_def)
+by ((cases i; cases t; cases e), auto simp add: min_def)
 
 lemma lowest_tops_lowest: "lowest_tops es = Some a \<Longrightarrow> e \<in> set es \<Longrightarrow> ifex_ordered e \<Longrightarrow> v \<in> ifex_var_set e \<Longrightarrow> a \<le> v"
 apply((induction arbitrary: a rule: lowest_tops.induct))
@@ -469,12 +469,14 @@ lemma ifex_ite_opt_eq: "
  	ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow> ifex_ite_opt i t e = ifex_ite i t e"
 apply(induction i t e rule: ifex_ite_opt.induct)
   apply(subst ifex_ite_opt.simps)
+  apply(rename_tac i t e)
   apply(case_tac "\<exists>r. param_opt i t e = Some r")
     apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
     apply(rule param_opt_ifex_ite_eq)
       apply(auto simp add: bf_ifex_rel_def)[4]
     
     apply(clarsimp simp del: restrict_top.simps ifex_ite.simps ifex_ite_opt.simps)
+    apply(rename_tac i t e)
     apply(case_tac "lowest_tops [i,t,e] = None")
       apply(clarsimp)
       
@@ -511,6 +513,7 @@ lemma map_invar_update_lem: "
   (bf_ite ia ta ea, r) \<in> bf_ifex_rel \<Longrightarrow> map_invar (m((i,t,e) \<mapsto> r))"
   unfolding map_invar_def 
   apply(clarsimp)
+  apply(rename_tac ib tb eb)
   apply(subgoal_tac "ia = ib \<and> ta = tb \<and> ea = eb")
   apply(simp)                                       
   using single_valuedD[OF bf_ifex_rel_single(2)] apply (blast)
@@ -552,11 +555,12 @@ lemma param_opt_lowest_tops_lem: "param_opt i t e = None \<Longrightarrow> \<exi
 by (auto simp add: param_opt_def)
   
 
-
+(* this lemma is not really used (except for in the next two, which are not used, but it is an interesting property. *)
 lemma ifex_ite_lu_eq: "
  	(ia,i) \<in> bf_ifex_rel \<and> (ta,t) \<in> bf_ifex_rel \<and> (ea,e) \<in> bf_ifex_rel \<Longrightarrow> map_invar m \<Longrightarrow> 
   \<exists>m'. ifex_ite_lu m i t e = (m', ifex_ite_opt i t e) \<and> map_invar m'"
-apply(induction i t e arbitrary: ia ta ea m m' r rule: ifex_ite_opt.induct)
+apply(induction i t e arbitrary: ia ta ea m rule: ifex_ite_opt.induct)
+  apply(rename_tac i t e ia ta ea m)
   apply(case_tac "\<exists>b. m (i,t,e) = Some b")
     apply(subst ifex_ite_lu.simps)
     apply(clarsimp)
@@ -570,16 +574,19 @@ apply(induction i t e arbitrary: ia ta ea m m' r rule: ifex_ite_opt.induct)
   apply(clarsimp)
   apply(frule param_opt_lowest_tops_lem)
   apply(clarsimp)
+  apply(rename_tac i t e ia ta ea m y)
   apply(subgoal_tac "(\<exists>ml. ifex_ite_lu m (restrict_top i y True) (restrict_top t y True) 
                                    (restrict_top e y True) = (ml, ifex_ite_opt (restrict_top i y True) (restrict_top t y True) 
                                    (restrict_top e y True)) \<and> map_invar ml)")
   apply(clarsimp)
+    apply(rename_tac i t e ia ta ea m y ml)
     apply(subgoal_tac "(\<exists>mr. ifex_ite_lu ml (restrict_top i y False) (restrict_top t y False) 
                                    (restrict_top e y False) = (mr, ifex_ite_opt (restrict_top i y False) (restrict_top t y False) 
                                       (restrict_top e y False)) \<and> map_invar mr)")
   apply(clarsimp)
   apply(subst ifex_ite_lu.simps)
   apply(clarsimp)
+  apply(rename_tac i t e ia ta ea m y ml mr)
   apply(subgoal_tac "IFC y (ifex_ite_opt (restrict_top i y True) (restrict_top t y True) (restrict_top e y True))
           (ifex_ite_opt (restrict_top i y False) (restrict_top t y False) (restrict_top e y False)) =
           ifex_ite_opt i t e")

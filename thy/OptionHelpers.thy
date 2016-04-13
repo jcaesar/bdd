@@ -1,7 +1,8 @@
+section\<open>Option Helpers\<close>
+text\<open>These definitions have been contributed by Peter Lammich.\<close>
 theory OptionHelpers
 imports Main "~~/src/HOL/Library/Monad_Syntax"
 begin
-
 
 primrec oassert :: "bool \<Rightarrow> unit option" where
   "oassert True = Some ()" | "oassert False = None"
@@ -10,6 +11,8 @@ lemma oassert_iff[simp]:
   "oassert \<Phi> = Some x \<longleftrightarrow> \<Phi>" 
   "oassert \<Phi> = None \<longleftrightarrow> \<not>\<Phi>"  
   by (cases \<Phi>) auto
+
+text\<open>The idea is that we want the result of some computation to be @{term "Some v"} and the contents of @{term v} to satisfy some property @{term Q}.\<close>
 
 primrec ospec :: "('a option) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" where
   "ospec None _ = False"

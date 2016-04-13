@@ -210,7 +210,7 @@ lemma litci_rule[sep_heap_rules]:
 	"<bdd_relator rp s> litci v s <\<lambda>(r,s'). bdd_relator (insert (bf_lit v,r) rp) s'>"
 using assms
 	apply(unfold litci_def)
-	apply(subgoal_tac "\<And>t ab bb.
+	apply(subgoal_tac "\<And>t ab bb. (* introducing some vars\<dots> *)
 		   <bdd_relator (insert (bf_False, ab) (insert (bf_True, t) rp)) bb *
 			true> ifci v t ab bb <\<lambda>r. case r of (r, x) \<Rightarrow> bdd_relator (insert (bf_lit v, r) rp) x>")
 	 apply(sep_auto; fail)
@@ -221,9 +221,11 @@ using assms
 	apply(clarsimp)
 	apply(unfold bddmi_rel_def)
 	apply(clarsimp simp only: bf_ifex_rel_consts_ensured)
-	apply(rename_tac tc fc sc sm a aa b ba fm tm)
-	apply(frule_tac mi.IFimpl_rule)
-	  apply(thin_tac "(fm, Falseif) \<in> Rmi sm") apply(assumption) apply(assumption) (* sorry for the hacky hack, I don't know how to instantiate IFimpl_rule *)
+	apply(frule mi.IFimpl_rule)
+	  apply(rename_tac tc fc sc sm a aa b ba fm tm)
+	  apply(thin_tac "(fm, Falseif) \<in> Rmi sm") 
+	  apply(assumption)
+	 apply(assumption) (* sorry for the hacky hack, I don't know how to instantiate IFimpl_rule *)
 	apply(clarsimp)
 	apply(drule ospecD2)
 	apply(clarify)

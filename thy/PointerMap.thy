@@ -35,29 +35,38 @@ unfolding pointermap_sane_def pointermap_insert_def
 proof(intro conjI[rotated],goal_cases)
 	case 3 thus ?case by simp
 next
-	case 2 thus ?case 
-	apply(unfold Ball_def) 
-	apply(rule)
-	apply(rule)
-	apply(rename_tac n)
-	apply(case_tac "n < length (entries s)")
-	proof(-, goal_cases)
-		case (1 n) note goal1 = 1
-		from goal1(4) have sa: "\<And>a. (entries s @ a) ! n = entries s ! n" by (simp add: nth_append)
-		from goal1(1,4) have ih: "getentry s (entries s ! n) = Some n" by simp
-		from goal1(2,4) have ne: "entries s ! n \<noteq> m" using nth_mem by fastforce
-		from sa ih ne show ?case by simp
-	next
-		case (2 n) note goal2 = 2
-		from goal2(3,4) have ln: "n = length (entries s)" by simp
-		hence sa: "\<And>a. (entries s @ [a]) ! n = a" by simp
-		from sa ln show ?case by simp
-	qed
+	case 2
+	{
+	  fix n
+	  have " \<lbrakk>distinct (entries s) \<and> (\<forall>x. x \<in> {..<length (entries s)} \<longrightarrow> getentry s (entries s ! x) = Some x) \<and> (\<forall>p i. getentry s p = Some i \<longrightarrow> entries s ! i = p \<and> i < length (entries s)); m \<notin> set (entries s);
+          n \<in> {..<length (entries \<lparr>entries = entries s @ [m], getentry = getentry s(m \<mapsto> length (entries s))\<rparr>)}; n < length (entries s)\<rbrakk>
+         \<Longrightarrow> getentry \<lparr>entries = entries s @ [m], getentry = getentry s(m \<mapsto> length (entries s))\<rparr> (entries \<lparr>entries = entries s @ [m], getentry = getentry s(m \<mapsto> length (entries s))\<rparr> ! n) = Some n"
+         "\<lbrakk>distinct (entries s) \<and> (\<forall>x. x \<in> {..<length (entries s)} \<longrightarrow> getentry s (entries s ! x) = Some x) \<and> (\<forall>p i. getentry s p = Some i \<longrightarrow> entries s ! i = p \<and> i < length (entries s)); m \<notin> set (entries s);
+          n \<in> {..<length (entries \<lparr>entries = entries s @ [m], getentry = getentry s(m \<mapsto> length (entries s))\<rparr>)}; \<not> n < length (entries s)\<rbrakk>
+         \<Longrightarrow> getentry \<lparr>entries = entries s @ [m], getentry = getentry s(m \<mapsto> length (entries s))\<rparr> (entries \<lparr>entries = entries s @ [m], getentry = getentry s(m \<mapsto> length (entries s))\<rparr> ! n) = Some n"
+      proof(goal_cases)
+        case 1 note goal1 = 1
+        from goal1(4) have sa: "\<And>a. (entries s @ a) ! n = entries s ! n" by (simp add: nth_append)
+        from goal1(1,4) have ih: "getentry s (entries s ! n) = Some n" by simp
+        from goal1(2,4) have ne: "entries s ! n \<noteq> m" using nth_mem by fastforce
+        from sa ih ne show ?case by simp
+      next
+        case 2 note goal2 = 2
+        from goal2(3,4) have ln: "n = length (entries s)" by simp
+        hence sa: "\<And>a. (entries s @ [a]) ! n = a" by simp
+        from sa ln show ?case by simp
+      qed
+  } note h = this
+	with 2 show ?case by blast
+    (*apply(unfold Ball_def) 
+    apply(rule)
+    apply(rule)
+    apply(rename_tac n)
+    apply(case_tac "n < length (entries s)")
+	by(fact h)+*)
 next
 	case 1 thus ?case
-		apply(auto simp add: nth_append fun_upd_same Ball_def)
-		apply(force)
-	done
+		by(clarsimp simp add: nth_append fun_upd_same Ball_def) force
 qed
 
 lemma luentries_noneD: "getentry s a = None \<Longrightarrow> pointermap_sane s \<Longrightarrow> a \<notin> set (entries s)"

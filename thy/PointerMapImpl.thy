@@ -72,7 +72,7 @@ begin
     apply(cases "getentry m a")
     apply(unfold pointermap_getmki_def)
     apply(unfold return_bind)
-    apply(rule_tac R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None \<and> (snd (entriesi mi) = p)) * true" in bind_rule)
+    apply(rule bind_rule[where R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None \<and> (snd (entriesi mi) = p)) * true"])
     apply(sep_auto simp: pointermap_getmki_defs is_array_list_def split: prod.splits;fail)
     apply(sep_auto simp: pointermap_getmki_defs)+
   done

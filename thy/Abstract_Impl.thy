@@ -483,14 +483,15 @@ proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct, goal_case
  note mIH = goal1(1,2)
 	from goal1(3-6) show ?case
 apply(subst ite_impl_lu.simps)
-apply(case_tac "M s (ii, ti, ei)")
+apply(cases "M s (ii, ti, ei)")
 defer
 apply(frule map_invar_rule1)
 apply(simp only: option.simps ospec.simps prod.simps simp_thms les_refl)
 apply(subst (asm) map_invar_impl_def)
-apply(erule_tac x = ii in allE)
-apply(erule_tac x = ti in allE)
-apply(erule_tac x = ei in allE)
+apply(erule allE[where x = ii])
+apply(erule allE[where x = ti])
+apply(erule allE[where x = ei])
+apply(rename_tac a)
 apply(erule_tac x = a in allE)
 apply(metis cmp_rule_eq)
 

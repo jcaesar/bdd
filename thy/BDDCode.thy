@@ -1,7 +1,9 @@
-
+section\<open>Code export\<close>
 theory BDDCode
 imports LevelCollapse
 begin
+
+text\<open>For convenience reasons, the code export is in a separate theory. For Haskell, we require no special code printings. We only have to reactivate the original equation for @{term blit}\<close>
 
 lemma [code del]:
     "blit src si dst di len
