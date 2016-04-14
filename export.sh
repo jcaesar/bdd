@@ -15,10 +15,12 @@ sed -i -e 's/$AFP/../' -e 's#\(export_code .*\) in Haskell .*$#\1 checking Haske
 cat >IBDD/ROOT <<HEREFILE
 chapter AFP
 session "IBDD" (AFP) = HOL +
-	theories[document=false]
+	theories[document = false]
 $(sed -n 's/$AFP/../p' "$D/thy/ROOT")
 	theories
-$(cd "$D/thy" && (find . -name \*.thy | sed -n 's/^\(.*\).thy$/		"\1"/p'))
+$(cd "$D/thy" && (find . -name \*.thy | grep -v BDD_Code | sed -n 's/^\(.*\).thy$/		"\1"/p'))
+	theories[condition = ISABELLE_GHC]
+		BDD_Code
 	document_files
 		"root.tex"
 HEREFILE
