@@ -10,7 +10,11 @@ text\<open>
 \<close>
 
 datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex"
-text\<open>The type is the same as in Boolean Expression Checkers by Tobias Nipkow.\<close>
+
+text\<open>The type is the same as in Boolean Expression Checkers by Nipkow~\cite{Boolean_Expression_Checkers-AFP}.
+Internally, Boolean Expression Checkers transforms the boolean expressions to reduced BDTs of this type.
+Tests like being tautology testing are then trivial.
+\<close>
 
 fun val_ifex :: "'a ifex \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> bool" where
 "val_ifex Trueif s = True" |

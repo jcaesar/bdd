@@ -11,7 +11,8 @@ Thus, this theory collapses all the different levels (i.e. refinement steps) and
 \<close>
 
 definition "bddmi_rel cs \<equiv> {(a,c)|a b c. (a,b) \<in> bf_ifex_rel \<and> (c,b) \<in> Rmi cs}"
-definition "bdd_relator p s \<equiv> \<exists>\<^sub>Acs. is_bdd_impl cs s * \<up>(p \<subseteq> (bddmi_rel cs) \<and> bdd_sane cs) * true"
+definition bdd_relator :: "(nat boolfunc \<times> nat) set \<Rightarrow> bddi \<Rightarrow> assn" where
+"bdd_relator p s \<equiv> \<exists>\<^sub>Acs. is_bdd_impl cs s * \<up>(p \<subseteq> (bddmi_rel cs) \<and> bdd_sane cs) * true"
 
 text\<open>
 The @{type assn} predicate @{term bdd_relator} is the interface that is exposed to the user.

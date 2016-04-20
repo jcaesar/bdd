@@ -14,6 +14,7 @@ session "BDDs" = UAFP +
 		BDD_Examples
 	document_files
 		"root.tex"
+		"root.bib"
 
 session "BDD_Code" = BDDs +
 	theories

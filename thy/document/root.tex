@@ -45,7 +45,7 @@
 	We present a verified and executable implementation of ROBDDs in Isabelle/HOL.
 	Our implementation relates pointer-based computation in the Heap monad to operations on an abstract definition of boolean functions.
 	Internally, we implemented the if-then-else combinator in a recursive fashion, following the Shannon decomposition of the argument functions.
-	The implementation mixes and adapts known techniques and is built with efficiency in mind. However, it has not been throughoutly optimized.
+	The implementation mixes and adapts known techniques and is built with efficiency in mind. However, it has not been thoroughly optimized.
 \end{abstract}
 
 \tableofcontents
@@ -53,12 +53,24 @@
 % sane default for proof documents
 \parindent 0pt\parskip 0.5ex
 
+\section{Preface}
+This work is not the first to deal with BDDs in Isabelle/HOL.
+Ortner and Schirmer have formalized BDDs in~\cite{BDD-AFP} and proved the correctness of an algorithm that transforms arbitrary BDDs to ROBDDs.
+However, their specification does not provide efficiently executable algorithms on BDDs.
+Giorgino and Strecker have presented efficiently executable algorithms for ROBDDs~\cite{giorgino2012correctness} by reducing their arguments to manipulating edges of graphs.
+However, they have, to the best of our knowledge, not made their theory files available.
+Thus, no library for efficient computation on (RO)BDDs in Isabelle/HOL existed.
+Our work is a response to that situation.
+
+The theoretic background of the implementation is mostly based on~\cite{brace1991efficient}.
+
+
 % generated text of all theories
 \input{session}
 
 % optional bibliography
-%\bibliographystyle{abbrv}
-%\bibliography{root}
+\bibliographystyle{abbrv}
+\bibliography{root}
 
 \end{document}
 
