@@ -239,4 +239,21 @@ by(sep_auto simp: bdd_relator_def)
 
 lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> I need feedback from real world usage. *)
 
+lemma iteeq_rule[sep_heap_rules]: "
+\<lbrakk>node_relator (xb, xc)  rp; node_relator (yb, yc) rp\<rbrakk> \<Longrightarrow>
+<bdd_relator rp s>
+	return (xc = yc)
+<\<lambda>(r). \<up>(r \<longleftrightarrow> xb = yb)>\<^sub>t"
+	apply(unfold bdd_relator_def node_relator_def)
+	apply(intro norm_pre_ex_rule)
+	apply(clarsimp)
+	apply(unfold bddmi_rel_def)
+	apply(drule (1) rev_subsetD)+
+	apply(rule return_cons_rule)
+	apply(clarsimp)
+	apply(rule iffI)
+		using bf_ifex_eq mi.cmp_rule_eq apply(blast)
+	using bf_ifex_eq mi.cmp_rule_eq apply(blast)
+done
+
 end

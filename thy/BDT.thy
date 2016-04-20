@@ -138,6 +138,9 @@ qed (fastforce intro: roifex_Falseif_unique[symmetric] roifex_Trueif_unique[symm
 theorem bf_ifex_rel_single: "single_valued bf_ifex_rel" "single_valued (bf_ifex_rel\<inverse>)"
   unfolding single_valued_def bf_ifex_rel_def using ro_ifex_unique by auto
 
+lemma bf_ifex_eq: "(af, at) \<in> bf_ifex_rel \<Longrightarrow> (bf, bt) \<in> bf_ifex_rel \<Longrightarrow> (af = bf) \<longleftrightarrow> (at = bt)"
+	unfolding bf_ifex_rel_def using ro_ifex_unique by auto
+
 lemma nonempty_if_var_set: "ifex_vars (IF v t e) \<noteq> []" by auto
 
 fun restrict where
