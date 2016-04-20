@@ -240,12 +240,14 @@ by(sep_auto simp: bdd_relator_def)
 
 lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> I need feedback from real world usage. *)
 
+text\<open>Efficient comparison of two nodes.\<close>
+definition "eqci a b \<equiv> return (a = b)" (* wrapping definition so sep_auto does not run into nowhere *)
 lemma iteeq_rule[sep_heap_rules]: "
 \<lbrakk>node_relator (xb, xc)  rp; node_relator (yb, yc) rp\<rbrakk> \<Longrightarrow>
 <bdd_relator rp s>
-	return (xc = yc)
-<\<lambda>(r). \<up>(r \<longleftrightarrow> xb = yb)>\<^sub>t"
-	apply(unfold bdd_relator_def node_relator_def)
+	eqci xc yc
+<\<lambda>r. \<up>(r \<longleftrightarrow> xb = yb)>\<^sub>t"
+	apply(unfold bdd_relator_def node_relator_def eqci_def)
 	apply(intro norm_pre_ex_rule)
 	apply(clarsimp)
 	apply(unfold bddmi_rel_def)

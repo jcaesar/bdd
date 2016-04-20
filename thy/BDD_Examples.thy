@@ -22,8 +22,7 @@ lemma "<emp> do {
 	(t2i1,s) \<leftarrow> andci a c s;
 	(t2i2,s) \<leftarrow> andci b c s;
 	(t2,s) \<leftarrow> orci t2i1 t2i2 s;
-	(t,s) \<leftarrow> biimpci t1 t2 s;
-	tautci t s
+	eqci t1 t2
 } <\<up>>\<^sub>t"
 by sep_auto
 
