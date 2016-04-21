@@ -22,7 +22,7 @@ $(cd "$D/thy" && (find . -name \*.thy | grep -v BDD_Code | sed -n 's/^\(.*\).thy
 	theories[condition = ISABELLE_GHC]
 		BDD_Code
 	document_files
-$(cd "$D/thy/document" && (find . | sed -n 's/^.*$/		"&"/p'))
+$(cd "$D/thy/document" && (find . -type f | sed -n 's/^.*$/		"&"/p'))
 HEREFILE
 
 tar czf ROBDD.tgz ROBDD/
