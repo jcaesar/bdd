@@ -469,7 +469,7 @@ partial_function(option) ite_impl_lu where
 		None \<Rightarrow> None
 )})})}"
 
-declare ifex_ite_lu.simps[simp del] ifex_ite_opt.simps[simp del]
+declare ifex_ite_opt.simps[simp del]
 
 lemma ite_impl_lu_R: "I s
        \<Longrightarrow> (ii,i) \<in> R s \<Longrightarrow> (ti,t) \<in> R s \<Longrightarrow> (ei,e) \<in> R s
