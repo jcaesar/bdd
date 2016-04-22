@@ -17,19 +17,19 @@ begin
     * is_hashmap (getentry b) (getentryi bi)"
 
   lemma is_pointermap_impl_prec: "precise is_pointermap_impl"
-  	unfolding is_pointermap_impl_def[abs_def]
-	apply(rule preciseI)
-	apply(auto)
-	apply(rename_tac a a' x y p F F')
-	apply(rule pointermapieq_exhaust)
-	apply(rule_tac p = "entriesi p" and h = "(x,y)" in preciseD[OF is_array_list_prec])
-	apply(unfold star_aci(1))
-	apply blast
-	apply(rule_tac p = "getentryi p" and h = "(x,y)" in preciseD[OF is_hashmap_prec])
-	apply(unfold star_aci(2)[symmetric])
-	apply(unfold star_aci(1)[symmetric]) (* black unfold magic *)
-	apply(unfold star_aci(2)[symmetric])
-	apply blast
+    unfolding is_pointermap_impl_def[abs_def]
+  apply(rule preciseI)
+  apply(clarsimp)
+  apply(rename_tac a a' x y p F F')
+  apply(rule pointermapieq_exhaust)
+   apply(rule_tac p = "entriesi p" and h = "(x,y)" in preciseD[OF is_array_list_prec])
+   apply(unfold star_aci(1))
+   apply blast
+  apply(rule_tac p = "getentryi p" and h = "(x,y)" in preciseD[OF is_hashmap_prec])
+  apply(unfold star_aci(2)[symmetric])
+  apply(unfold star_aci(1)[symmetric]) (* black unfold magic *)
+  apply(unfold star_aci(2)[symmetric])
+  apply blast
   done
 
   definition pointermap_empty where
@@ -47,34 +47,35 @@ begin
     "pm_pthi m p \<equiv> arl_nth (entriesi m) p"
 
   lemma [sep_heap_rules]: "pointermap_sane m \<Longrightarrow> pointermap_p_valid p m \<Longrightarrow>
-  	< is_pointermap_impl m mi > pm_pthi mi p <\<lambda>ai. is_pointermap_impl m mi * \<up>(ai = pm_pth m p)>"
+    < is_pointermap_impl m mi > pm_pthi mi p <\<lambda>ai. is_pointermap_impl m mi * \<up>(ai = pm_pth m p)>"
     by (sep_auto simp: pm_pthi_def pm_pth_def is_pointermap_impl_def pointermap_p_valid_def)
 
   definition pointermap_getmki where
     "pointermap_getmki a m \<equiv> do {
         lo \<leftarrow> ht_lookup a (getentryi m);
         (case lo of 
-        	Some l \<Rightarrow> return (l,m) | 
-        	None \<Rightarrow> do {
-        		p \<leftarrow> return (snd (entriesi m));
-				ent \<leftarrow> arl_append (entriesi m) a;
-				lut \<leftarrow> hm_update a p (getentryi m);
-				u \<leftarrow> return \<lparr>entriesi = ent, getentryi = lut\<rparr>;
-				return (p,u)
-        	}
+          Some l \<Rightarrow> return (l,m) | 
+          None \<Rightarrow> do {
+            p \<leftarrow> return (snd (entriesi m));
+        ent \<leftarrow> arl_append (entriesi m) a;
+        lut \<leftarrow> hm_update a p (getentryi m);
+        u \<leftarrow> return \<lparr>entriesi = ent, getentryi = lut\<rparr>;
+        return (p,u)
+          }
         )
     }"
-  
+
   lemmas pointermap_getmki_defs = pointermap_getmki_def pointermap_getmk_def pointermap_insert_def is_pointermap_impl_def
-  lemma [sep_heap_rules]: "pointermap_sane m \<Longrightarrow> pointermap_getmk a m = (p,u) \<Longrightarrow> 
-    < is_pointermap_impl m mi > pointermap_getmki a mi 
+  lemma [sep_heap_rules]: "pointermap_sane m \<Longrightarrow> pointermap_getmk a m = (p,u) \<Longrightarrow>
+    < is_pointermap_impl m mi >
+      pointermap_getmki a mi
     <\<lambda>(pi,ui). is_pointermap_impl u ui * \<up>(pi = p)>\<^sub>t"
-    apply(cases "getentry m a")
-    apply(unfold pointermap_getmki_def)
-    apply(unfold return_bind)
-    apply(rule bind_rule[where R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None \<and> (snd (entriesi mi) = p)) * true"])
+  apply(cases "getentry m a")
+   apply(unfold pointermap_getmki_def)
+   apply(unfold return_bind)
+   apply(rule bind_rule[where R = "\<lambda>r. is_pointermap_impl m mi * \<up>(r = None \<and> (snd (entriesi mi) = p)) * true"])
     apply(sep_auto simp: pointermap_getmki_defs is_array_list_def split: prod.splits;fail)
-    apply(sep_auto simp: pointermap_getmki_defs)+
+   apply(sep_auto simp: pointermap_getmki_defs)+
   done
 
 end
