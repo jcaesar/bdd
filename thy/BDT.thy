@@ -242,16 +242,16 @@ lemma lowest_tops_cases:
 
 lemma lowest_tops_lowest: "lowest_tops es = Some a \<Longrightarrow> e \<in> set es \<Longrightarrow> ifex_ordered e \<Longrightarrow> v \<in> ifex_var_set e \<Longrightarrow> a \<le> v"
   apply(induction arbitrary: a rule: lowest_tops.induct)
-    subgoal by simp
-    subgoal
-      apply(cases e)
-        subgoal by (simp)
-        subgoal by (simp)
-        subgoal
-          apply(simp add: min_def Ball_def less_imp_le split: if_splits option.splits)
-            subgoal by (meson less_imp_le lowest_tops_NoneD order_refl)
-            by fastforce+
-      done
+   subgoal by simp
+   subgoal
+    apply(cases e)
+     subgoal by (simp)
+     subgoal by (simp)
+     subgoal
+      apply(simp add: min_def Ball_def less_imp_le split: if_splits option.splits)
+       subgoal by (meson less_imp_le lowest_tops_NoneD order_refl)
+      by fastforce+
+     done
   by fastforce+
 
 lemma termlemma2: "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
@@ -446,10 +446,10 @@ definition param_opt where "param_opt i t e =
 lemma param_opt_ifex_ite_eq: "ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow>
        param_opt i t e = Some r \<Longrightarrow> r = ifex_ite i t e"
   apply(rule ro_ifex_unique)
-    subgoal by (subst (asm) param_opt_def) (simp split: split_if_asm)
-    subgoal using order_ifex_ite_invar minimal_ifex_ite_invar by (blast)
-    by (subst val_ifex_ite[symmetric])
-       (auto split: split_if_asm simp add: bf_ite_def param_opt_def val_ifex_ite[symmetric])
+   subgoal by (subst (asm) param_opt_def) (simp split: split_if_asm)
+   subgoal using order_ifex_ite_invar minimal_ifex_ite_invar by (blast)
+   by (subst val_ifex_ite[symmetric])
+      (auto split: split_if_asm simp add: bf_ite_def param_opt_def val_ifex_ite[symmetric])
 
 
 function ifex_ite_opt :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where
@@ -472,27 +472,27 @@ lemma ifex_ite_opt_eq: "
   apply(subst ifex_ite_opt.simps)
   apply(rename_tac i t e)
   apply(case_tac "\<exists>r. param_opt i t e = Some r")
-    subgoal
-      apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
-      apply(rule param_opt_ifex_ite_eq)
-      by (auto simp add: bf_ifex_rel_def)
-    subgoal for i t e
+   subgoal
+    apply(simp del: ifex_ite.simps restrict_top.simps lowest_tops.simps)
+    apply(rule param_opt_ifex_ite_eq)
+    by (auto simp add: bf_ifex_rel_def)
+   subgoal for i t e
+    apply(clarsimp simp del: restrict_top.simps ifex_ite.simps ifex_ite_opt.simps)
+    apply(cases "lowest_tops [i,t,e] = None")
+     subgoal by clarsimp
+     subgoal
       apply(clarsimp simp del: restrict_top.simps ifex_ite.simps ifex_ite_opt.simps)
-      apply(cases "lowest_tops [i,t,e] = None")
-        subgoal by clarsimp
-        subgoal
-          apply(clarsimp simp del: restrict_top.simps ifex_ite.simps ifex_ite_opt.simps)
-          apply(subst ifex_ite.simps)
-          apply(rename_tac y)
-          apply(subgoal_tac "(ifex_ite_opt (restrict_top i y True) (restrict_top t y True) (restrict_top e y True)) =
-                             (ifex_ite (restrict_top i y True) (restrict_top t y True) (restrict_top e y True))")
-          apply(subgoal_tac "(ifex_ite_opt (restrict_top i y False) (restrict_top t y False) (restrict_top e y False)) =
-                             (ifex_ite (restrict_top i y False) (restrict_top t y False) (restrict_top e y False))")
-            subgoal by force
-            subgoal using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar by metis
-            subgoal using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar by metis
-        done
-    done
+      apply(subst ifex_ite.simps)
+      apply(rename_tac y)
+      apply(subgoal_tac "(ifex_ite_opt (restrict_top i y True) (restrict_top t y True) (restrict_top e y True)) =
+                         (ifex_ite (restrict_top i y True) (restrict_top t y True) (restrict_top e y True))")
+      apply(subgoal_tac "(ifex_ite_opt (restrict_top i y False) (restrict_top t y False) (restrict_top e y False)) =
+                         (ifex_ite (restrict_top i y False) (restrict_top t y False) (restrict_top e y False))")
+       subgoal by force
+       subgoal using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar by metis
+       subgoal using restrict_top_ifex_minimal_invar restrict_top_ifex_ordered_invar by metis
+      done
+   done
 done
 
 lemma ro_ifexI: "(a,b) \<in> bf_ifex_rel \<Longrightarrow> ro_ifex b" by (simp add: ifex_minimal_implied ifex_ordered_implied)
@@ -570,7 +570,7 @@ proof(induction i arbitrary: ass)
   note IF.prems[unfolded ifex_sat.simps]
   thus ?case proof(cases "ifex_sat e")
     case (Some a) thus ?thesis using IF.prems 
-      apply(clarsimp simp only: val_ifex.simps ifex_sat.simps option.simps fun_upd_same if_False ifex_upd_other[OF ni(2)]) 
+      apply(clarsimp simp only: val_ifex.simps ifex_sat.simps option.simps fun_upd_same if_False ifex_upd_other[OF ni(2)])
       apply(rule IF.IH(2), simp_all)
       done
   next
