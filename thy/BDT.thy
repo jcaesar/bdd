@@ -735,5 +735,4 @@ lemma bf_ifex_rel_consts_ensured_rev[simp]:
 
 declare ifex_ite_opt.simps restrict_top.simps lowest_tops.simps[simp del]
 
-
 end
