@@ -4,9 +4,9 @@ imports Bool_Func
 begin
 
 text\<open>
-	We first define all operations and properties on binary decision trees.
-	This has the advantage that we can use a simple, structurally defined type
-	and the disadvantage that we cannot represent sharing.
+We first define all operations and properties on binary decision trees.
+This has the advantage that we can use a simple, structurally defined type
+and the disadvantage that we cannot represent sharing.
 \<close>
 
 datatype 'a ifex = Trueif | Falseif | IF 'a "'a ifex" "'a ifex"
