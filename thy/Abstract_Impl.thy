@@ -68,16 +68,16 @@ lemma case_ifexi_rule:
   apply (cases n)
     subgoal
       apply (rule obind_rule)
-      apply (rule DESTRimpl_rule1[OF INV])
-      using NI FTI by (auto)
+       apply (rule DESTRimpl_rule1[OF INV])
+       using NI FTI by (auto)
     subgoal
       apply (rule obind_rule)
-      apply (rule DESTRimpl_rule2[OF INV])
-      using NI FFI by (auto)
+       apply (rule DESTRimpl_rule2[OF INV])
+       using NI FFI by (auto)
     subgoal
       apply (rule obind_rule)
-      apply (rule DESTRimpl_rule3[OF INV])
-      using NI FII by (auto)
+       apply (rule DESTRimpl_rule3[OF INV])
+       using NI FII by (auto)
 done
 
 abbreviation "return x \<equiv> \<lambda>s. Some (x,s)"
@@ -234,47 +234,41 @@ where
 
 lemma "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (val_impl ni ass s) (\<lambda>(r,s'). r = (val_ifex n ass) \<and> s'=s)"
   apply (induction n arbitrary: ni)
-  apply (subst val_impl.simps)
-  apply (rule ospec_cons)
-  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
-  apply simp
-  apply simp
-  apply simp
-  apply simp
-
-  apply (subst val_impl.simps)
-  apply (rule ospec_cons)
-  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
-  apply simp
-  apply clarsimp apply simp
-  apply simp
-  apply simp
-
-  apply (subst val_impl.simps)
-  apply (subst val_ifex.simps)
-  apply (clarsimp; intro impI conjI)
-  apply (rule ospec_cons)
-  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
-  apply simp
-  apply simp
-  apply simp
-  apply (rule ospec_cons)
-  apply (rprems; simp)
-  apply simp
-  apply simp
-
-  apply (rule ospec_cons)
-  apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
-  apply simp
-  apply simp
-  apply simp
-  apply (rule ospec_cons)
-  apply (rprems; simp)
-  apply simp
-  apply simp
+  subgoal
+   apply (subst val_impl.simps)
+   apply (rule ospec_cons)
+    apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+      by auto
+  subgoal
+   apply (subst val_impl.simps)
+   apply (rule ospec_cons)
+    apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+      by auto
+  subgoal
+   apply (subst val_impl.simps)
+   apply (subst val_ifex.simps)
+   apply (clarsimp; intro impI conjI)
+    apply (rule ospec_cons)
+     apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+       apply (simp; fail)
+      apply (simp; fail)
+     apply (rule ospec_cons)
+      apply (rprems; simp; fail)
+     apply (simp; fail)
+    apply (simp; fail)
+   apply (rule ospec_cons)
+    apply (rule case_ifexi_rule[where I'="\<lambda>s'. s'=s" and Q="\<lambda>s. Id"]; assumption?)
+      apply (simp; fail)
+     apply (simp; fail)
+    apply(simp)
+    apply (rule ospec_cons)
+     apply (rprems; simp; fail)
+    apply (simp; fail)
+   apply (simp; fail)
+   done
   done
 
-  end
+end
 
 locale bdd_impl_cmp_pre = bdd_impl_pre
 begin

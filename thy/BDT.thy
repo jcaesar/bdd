@@ -241,18 +241,15 @@ lemma lowest_tops_cases:
   by ((cases i; cases t; cases e), auto simp add: min_def)
 
 lemma lowest_tops_lowest: "lowest_tops es = Some a \<Longrightarrow> e \<in> set es \<Longrightarrow> ifex_ordered e \<Longrightarrow> v \<in> ifex_var_set e \<Longrightarrow> a \<le> v"
-  apply(induction arbitrary: a rule: lowest_tops.induct)
-   subgoal by simp
-   subgoal
-    apply(cases e)
-     subgoal by (simp)
-     subgoal by (simp)
-     subgoal
-      apply(simp add: min_def Ball_def less_imp_le split: if_splits option.splits)
-       subgoal by (meson less_imp_le lowest_tops_NoneD order_refl)
+proof (induction arbitrary: a rule: lowest_tops.induct)
+  case 2 thus ?case
+  proof(cases e)
+    case IF with 2 show ?thesis
+     apply (simp add: min_def Ball_def less_imp_le split: if_splits option.splits)
+       apply (meson less_imp_le lowest_tops_NoneD order_refl)
       by fastforce+
-     done
-  by fastforce+
+  qed simp+
+qed fastforce+
 
 lemma termlemma2: "lowest_tops [i, t, e] = Some xa \<Longrightarrow>
   (size (restrict_top i xa val) + size (restrict_top t xa val) + size (restrict_top e xa val)) <
@@ -411,19 +408,18 @@ lemma val_ifex_ite: "
   ifex_ordered i \<Longrightarrow> ifex_ordered t \<Longrightarrow> ifex_ordered e \<Longrightarrow>
   (bf_ite fi ft fe) ass = val_ifex (ifex_ite i t e) ass"
 proof(induction i t e arbitrary: fi ft fe rule: ifex_ite_induct)
-  case (IF i t e a) note goal3 = IF
-  thm goal3(1)
-  note mIH = goal3(1)[OF refl refl refl 
-    restrict_top_ifex_ordered_invar[OF goal3(6)]
-    restrict_top_ifex_ordered_invar[OF goal3(7)]
-    restrict_top_ifex_ordered_invar[OF goal3(8)], symmetric]
-  note uf1 = restrict_top_bf[OF three_ins(1) goal3(2) \<open>ifex_ordered i\<close>  goal3(3)]
-             restrict_top_bf[OF three_ins(2) goal3(2) \<open>ifex_ordered t\<close>  goal3(4)]
-             restrict_top_bf[OF three_ins(3) goal3(2) \<open>ifex_ordered e\<close>  goal3(5)]
+  case (IF i t e a)
+  note mIH = IF(1)[OF refl refl refl
+    restrict_top_ifex_ordered_invar[OF IF(6)]
+    restrict_top_ifex_ordered_invar[OF IF(7)]
+    restrict_top_ifex_ordered_invar[OF IF(8)], symmetric]
+  note uf1 = restrict_top_bf[OF three_ins(1) IF(2) \<open>ifex_ordered i\<close>  IF(3)]
+             restrict_top_bf[OF three_ins(2) IF(2) \<open>ifex_ordered t\<close>  IF(4)]
+             restrict_top_bf[OF three_ins(3) IF(2) \<open>ifex_ordered e\<close>  IF(5)]
   show ?case
     by(rule trans[OF brace90shannon[where i=a]])
-      (auto simp: restrict_top_ifex_ordered_invar goal3(1,2,6-8) uf1 mIH bf_ite_def[of "\<lambda>l. l a"]
-           split: ifc_split)
+      (auto simp: restrict_top_ifex_ordered_invar IF(1,2,6-8) uf1 mIH bf_ite_def[of "\<lambda>l. l a"]
+            split: ifc_split)
 qed (simp add: bf_ite_def bf_ifex_rel_def)+
 
 theorem ifex_ite_rel_bf: "
@@ -647,14 +643,12 @@ proof(induction t arbitrary: u)
   proof(cases "ifex_sat_list e")
     case (Some a)
     note mIH = mIH(2)[OF this]
-    thus ?thesis using IF.prems(2) unfolding ifex_sat_list.simps using Some
-    apply(clarsimp) using IF.prems(1) apply(clarsimp) using ifex_sat_list_subset apply fastforce done
+    thus ?thesis using IF.prems ifex_sat_list.simps Some ifex_sat_list_subset by fastforce
   next
     case None
     with IF.prems obtain ut where Some: "ifex_sat_list t = Some ut" by(simp split: option.splits)
     note mIH(1)[OF this]
-    thus ?thesis using IF.prems(2) unfolding ifex_sat_list.simps using None Some
-    apply(clarsimp) using IF.prems(1) apply(clarsimp) using ifex_sat_list_subset apply fastforce done
+    thus ?thesis using IF.prems ifex_sat_list.simps None Some ifex_sat_list_subset by fastforce
   qed
 qed simp_all
 
@@ -719,13 +713,8 @@ by(simp add: bf_ifex_rel_def IFC_def bf_lit_def)
 lemma bf_ifex_rel_consts_ensured[simp]:
   "(bf_True,x) \<in> bf_ifex_rel \<longleftrightarrow> (x = Trueif)"
   "(bf_False,x) \<in> bf_ifex_rel \<longleftrightarrow> (x = Falseif)"
-  apply(rule)
-    apply(rule roifex_Trueif_unique; (simp add: bf_ifex_rel_def; fail))
-  apply(clarify)
-  apply(rule)
-   apply(rule roifex_Falseif_unique; (simp add: bf_ifex_rel_def; fail))
-  apply(clarify)
-done
+  by(auto simp add: bf_ifex_rel_def
+             intro: roifex_Trueif_unique roifex_Falseif_unique)
 
 (* reverse of the above *)
 lemma bf_ifex_rel_consts_ensured_rev[simp]:

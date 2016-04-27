@@ -6,7 +6,7 @@ text\<open>
 The theory up to this point is implemented in a way that separated the different aspects into different levels.
 This is highly beneficial for us, since it allows us to tackle the difficulties arising in small chunks.
 However, exporting this to the user would be highly impractical.
-Thus, this theory collapses all the different levels (i.e. refinement steps) and relates the computations in the heap monad to 
+Thus, this theory collapses all the different levels (i.e. refinement steps) and relates the computations in the heap monad to
 @{type boolfunc}.
 \<close>
 
