@@ -242,7 +242,7 @@ by(sep_auto simp: bdd_relator_def)
 
 (* TODO: make sure that emptyci_rule and firends don't appear duplicate, once concrete-impl style, once level-collapsed. *)
 
-lemmas [simp] = bf_ite_def bf_False_def bf_True_def (* Not sure if I want those in the simpset or not\<dots> I need feedback from real world usage. *)
+lemmas [simp] = bf_ite_def
 
 text\<open>Efficient comparison of two nodes.\<close>
 
