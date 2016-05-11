@@ -521,5 +521,139 @@ proof(induction i t e arbitrary: s ii ti ei rule: ifex_ite_opt.induct, goal_case
     using map_invar_rule3 by presburger
 qed
 
+
+(* I could move this stuff into one of the not-so-strong locales. But for what? *)
+partial_function(option) sat_list_impl where
+"sat_list_impl ex s = do {
+  d \<leftarrow> DESTRimpl ex s;
+  case d of 
+    FD \<Rightarrow> Some None |
+    TD \<Rightarrow> Some (Some []) |
+    IFD v t e \<Rightarrow> do {
+      rece \<leftarrow> sat_list_impl e s;
+      case rece of
+        Some a \<Rightarrow> Some (Some ((v,False)#a)) |
+        None \<Rightarrow> do {
+          rect \<leftarrow> sat_list_impl t s;
+          Some (case rect of
+            Some a \<Rightarrow> Some ((v,True)#a) |
+            None \<Rightarrow> None)
+        }
+      }
+}"
+
+lemma sat_list_impl_spec: "I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (sat_list_impl ni s) (\<lambda>rl. rl = ifex_sat_list n)"
+  apply(induction n arbitrary: ni rule: ifex_sat_list.induct)
+    apply(auto simp add: sat_list_impl.simps intro: obind_rule elim: DESTRimpl_rule1 DESTRimpl_rule2)[2]
+  apply(subst sat_list_impl.simps)
+  apply(auto intro!: obind_rule elim: DESTRimpl_rule3)
+   apply(rprems)
+   apply(assumption)
+  apply(split option.splits)
+  apply(intro conjI[rotated])
+   apply(simp;fail)
+  apply(clarsimp)
+  apply(auto intro!: obind_rule elim: DESTRimpl_rule3)
+done
+
+fun sat_list_to_bdd where
+"sat_list_to_bdd [] s = Timpl s" |
+"sat_list_to_bdd ((v,u)#us) s = do {
+  (r,s) \<leftarrow> sat_list_to_bdd us s;
+  (f,s) \<leftarrow> Fimpl s;
+  (if u then IFimpl v r f s else IFimpl v f r s)
+}
+"
+
+lemma lesI: "(a,b) \<in> R s \<Longrightarrow> les s s' \<Longrightarrow> (a,b) \<in> R s'" unfolding les_def by simp
+
+lemma sat_list_to_bdd_spec: "I s \<Longrightarrow> ospec (sat_list_to_bdd u s) (\<lambda>(r,s'). I s' \<and> (r, sat_list_to_bdt u) \<in> R s' \<and> les s s')"
+  apply(induction arbitrary: s rule: sat_list_to_bdt.induct)
+   apply(auto intro: obind_rule elim: Timpl_rule[THEN ospec_cons])[1]
+  apply(subst sat_list_to_bdd.simps)
+  apply(intro obind_rule)
+   apply(subgoal_tac "ospec (sat_list_to_bdd us s) (\<lambda>(r, s'). I s' \<and> (r, sat_list_to_bdt us) \<in> R s' \<and> les s s')") (* the things you do if rprems doesn't work\<dots> *)
+    apply(assumption)
+   subgoal by auto
+  apply(clarify)
+  apply(intro obind_rule)
+  apply(erule Fimpl_rule)
+  apply(clarsimp; intro conjI; clarify)
+  (* * *)
+   apply(rule ospec_cons)
+    apply(erule IFimpl_rule)
+     apply(erule (1) lesI)
+    apply(erule lesI)
+    apply(rule les_refl;fail)
+   apply(clarify)
+   apply(auto simp add: IFC_def)[1]
+   apply((erule les_trans)+, rule les_refl; fail)
+  (* it is nearly the same reasoning again as from * *)
+  apply(rule ospec_cons)
+   apply(erule IFimpl_rule)
+    apply(erule lesI; rule les_refl;fail)
+   apply(((erule lesI)+, assumption | rule les_refl); fail)
+  apply(auto simp add: IFC_def)
+  apply((erule les_trans)+, rule les_refl; fail)
+done
+
+function sat_list_cover_impls where
+"sat_list_cover_impls e = (if ro_ifex e then
+	(case ifex_sat_list e of
+		None \<Rightarrow> [] | 
+		Some l \<Rightarrow> let 
+			le = sat_list_to_bdt l;
+			lm = ifex_ite le Falseif e in
+			l # ifex_sat_list_cover lm)
+	else [])"
+by clarsimp+
+
+partial_function(option) sat_list_cover_impl where
+"sat_list_cover_impl e s = do {
+  sl1 \<leftarrow> sat_list_impl e s;
+  (case sl1 of
+      None \<Rightarrow> Some ([],s) |
+      Some l \<Rightarrow> do {
+        (le,s) \<leftarrow> sat_list_to_bdd l s;
+        (f,s) \<leftarrow> Fimpl s;
+        (lm,s) \<leftarrow> ite_impl_lu le f e s;
+        (rec,s) \<leftarrow> sat_list_cover_impl lm s;
+        Some ((l # rec),s)
+      }
+  )
+}"
+
+lemma restrict_top_impl_spec: "ro_ifex n (* børk *) \<Longrightarrow> I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (sat_list_cover_impl ni s) (\<lambda>(rl,s'). rl = ifex_sat_list_cover n \<and> I s' \<and> les s s')"
+  apply(induction n arbitrary: ni s rule: ifex_sat_list_cover.induct)
+  apply(subst sat_list_cover_impl.simps)
+  apply(rule obind_rule)
+   apply(erule (1) sat_list_impl_spec)
+  apply(split option.splits)
+  apply(intro conjI)
+   apply(simp;fail)
+  apply(clarify, intro obind_rule)
+   apply(erule sat_list_to_bdd_spec)
+  apply(clarify, intro obind_rule)
+   apply(erule Fimpl_rule)
+  apply(clarify, intro obind_rule)
+   apply(erule ite_impl_lu_R)
+   apply(auto elim: lesI les_trans)[3]
+  apply(clarify, intro obind_rule)
+   apply(rprems)
+         apply(clarify;fail)
+        apply(assumption)
+       apply(rule refl, rule refl)
+     apply(meson ifex_minimal.simps(3) ifex_ordered.simps(3) minimal_ifex_ite_invar order_ifex_ite_invar sat_list_to_bdt_minimal sat_list_to_bdt_ordered) (* TODO: make a rule for this *)
+    apply(assumption)
+   apply(simp add: ifex_ite_opt_eq sat_list_to_bdt_minimal sat_list_to_bdt_ordered) (* and for this? *)
+  apply(clarify)
+  apply(rule oreturn_rule)
+  apply(clarify)
+  apply(intro conjI[rotated])
+    apply(elim les_trans; rule les_refl; fail)
+   apply(assumption)
+  apply(simp)
+done
+
 end
 end
