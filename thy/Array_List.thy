@@ -1,18 +1,17 @@
-(* Array implementation for list, contributed by Peter Lammich (except for the whacky parts) *)
 section\<open>Array List\<close>
-text\<open>This has been contributed by Peter Lammich\<close>
-theory ArrayList
+text\<open>Most of this has been contributed by Peter Lammich.\<close>
+theory Array_List
 imports
-	"$AFP/Separation_Logic_Imperative_HOL/Examples/Array_Blit"
+  "$AFP/Separation_Logic_Imperative_HOL/Examples/Array_Blit"
 begin
   text\<open>
     This implements a datastructure that efficiently supports two operations: appending an element and looking up the nth element. 
-	The implementation is straightforward.
+  The implementation is straightforward.
 \<close>
   text\<open>
     As underlying data structure an array is used.
-	Since changing the length of an array requires copying, we double the size whenever the array needs to be expanded.
-	We use a counter for the current length to track which elements are used and which are spares.
+  Since changing the length of an array requires copying, we double the size whenever the array needs to be expanded.
+  We use a counter for the current length to track which elements are used and which are spares.
 \<close>
   type_synonym 'a array_list = "'a array \<times> nat"
 
@@ -30,7 +29,7 @@ begin
 
   definition "arl_nth \<equiv> \<lambda>(a,n) i. do {
     Array.nth a i
-  }"  
+  }"
 
   lemma [sep_heap_rules]: "i<length l \<Longrightarrow> < is_array_list l a > arl_nth a i <\<lambda>x. is_array_list l a * \<up>(x = l!i) >"  
     by (sep_auto simp: arl_nth_def is_array_list_def split: prod.splits)
@@ -60,13 +59,13 @@ begin
   lemma is_array_list_prec: "precise is_array_list"
     unfolding is_array_list_def[abs_def]
     apply(rule preciseI)
-    apply(simp split: prod.splits) 
-  	using preciseD snga_prec by fastforce
-  	
+    apply(simp split: prod.splits)
+    using preciseD snga_prec by fastforce
+    
   lemma is_array_list_lengthIA: "is_array_list l li \<Longrightarrow>\<^sub>A \<up>(snd li = length l) * true"
-  	by(sep_auto simp: is_array_list_def split: prod.splits)
-  	find_consts "assn \<Rightarrow> bool"
+    by(sep_auto simp: is_array_list_def split: prod.splits)
+    find_consts "assn \<Rightarrow> bool"
   lemma is_array_list_lengthI: "x \<Turnstile> is_array_list l li \<Longrightarrow> snd li = length l"
-  using is_array_list_lengthIA by (metis (full_types) ent_pure_post_iff star_aci(2))   
+  using is_array_list_lengthIA by (metis (full_types) ent_pure_post_iff star_aci(2))
 
-end 
+end
