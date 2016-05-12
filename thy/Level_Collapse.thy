@@ -42,28 +42,6 @@ lemma join_hlp: "is_bdd_impl a s * is_bdd_impl b s = is_bdd_impl b s * is_bdd_im
   apply(simp; fail)
   done
 
-lemma add_true_asm:
-  assumes "<b * true> p <a>\<^sub>t"
-  shows "<b> p <a>\<^sub>t"
-  apply(rule cons_pre_rule)
-   prefer 2
-   apply(rule assms)
-  apply(simp add: ent_true_drop)
-  done
-
-lemma add_anything:
-  assumes "<b> p <a>"
-  shows "<b * x> p <\<lambda>r. a r * x>\<^sub>t"
-proof -
-  note [sep_heap_rules] = assms
-  show ?thesis by sep_auto
-qed
-
-lemma add_true:
-  assumes "<b> p <a>\<^sub>t"
-  shows "<b * true> p <a>\<^sub>t"
-  using assms add_anything[where x=true] by force
-
 
 definition node_relator where "node_relator x y \<longleftrightarrow> x \<in> y"
 text \<open>\<open>sep_auto\<close> behaves sub-optimal when having @{term "(bf,bdd) \<in> computed_pointer_relation"} as assumption in our cases. Using @{const node_relator} instead fixes this behavior with a custom solver for \<open>simp\<close>.\<close>

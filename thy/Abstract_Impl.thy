@@ -597,17 +597,6 @@ lemma sat_list_to_bdd_spec: "I s \<Longrightarrow> ospec (sat_list_to_bdd u s) (
   apply((erule les_trans)+, rule les_refl; fail)
 done
 
-function sat_list_cover_impls where
-"sat_list_cover_impls e = (if ro_ifex e then
-	(case ifex_sat_list e of
-		None \<Rightarrow> [] | 
-		Some l \<Rightarrow> let 
-			le = sat_list_to_bdt l;
-			lm = ifex_ite le Falseif e in
-			l # ifex_sat_list_cover lm)
-	else [])"
-by clarsimp+
-
 partial_function(option) sat_list_cover_impl where
 "sat_list_cover_impl e s = do {
   sl1 \<leftarrow> sat_list_impl e s;
@@ -623,7 +612,7 @@ partial_function(option) sat_list_cover_impl where
   )
 }"
 
-lemma restrict_top_impl_spec: "ro_ifex n (* børk *) \<Longrightarrow> I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (sat_list_cover_impl ni s) (\<lambda>(rl,s'). rl = ifex_sat_list_cover n \<and> I s' \<and> les s s')"
+lemma sat_list_cover_impl_spec: "ro_ifex n (* børk *) \<Longrightarrow> I s \<Longrightarrow> (ni,n) \<in> R s \<Longrightarrow> ospec (sat_list_cover_impl ni s) (\<lambda>(rl,s'). rl = ifex_sat_list_cover n \<and> I s' \<and> les s s')"
   apply(induction n arbitrary: ni s rule: ifex_sat_list_cover.induct)
   apply(subst sat_list_cover_impl.simps)
   apply(rule obind_rule)

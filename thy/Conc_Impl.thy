@@ -303,7 +303,6 @@ partial_function(heap) iteci_lu_code where "iteci_lu_code i t e s = do {
   | Some b \<Rightarrow> return (b, s)
 }"
 
-declare iteci_lu_code.simps[code]
 (* reduced the run-time of our examples by around 30%.
   But we would need some efficient automated machinery to show this,
   and I'm not even sure how to correctly use induction correctly for this.
@@ -328,6 +327,7 @@ lemma iteci_lu_rule: "
       apply auto[1]
       apply (fo_rule subst[rotated])
        apply (assumption)
+      (* apply(thin_tac _) That fact is not used\<dots> *)
       by auto
     subgoal by simp
     subgoal
@@ -374,10 +374,154 @@ lemma iteci_lu_rule: "
       done
   done
 
+declare iteci_lu_rule[THEN mp, sep_heap_rules]
+
+partial_function(heap) sat_listci where
+"sat_listci ex s = do {
+  d \<leftarrow> destrci ex s;
+  case d of 
+    FD \<Rightarrow> return None |
+    TD \<Rightarrow> return (Some []) |
+    IFD v t e \<Rightarrow> do {
+      rece \<leftarrow> sat_listci e s;
+      case rece of
+        Some a \<Rightarrow> return (Some ((v,False)#a)) |
+        None \<Rightarrow> do {
+          rect \<leftarrow> sat_listci t s;
+          return (case rect of
+            Some a \<Rightarrow> Some ((v,True)#a) |
+            None \<Rightarrow> None)
+        }
+      }
+}"
+declare sat_listci.simps[code]
+
+lemma sat_listci_rule: "
+  mi.sat_list_impl ex bdd = Some r \<longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    sat_listci ex bddi 
+  <\<lambda>r'. is_bdd_impl bdd bddi * \<up>(r' = r)>"
+apply(induction arbitrary: ex bddi bdd r rule: mi.sat_list_impl.fixp_induct)
+subgoal
+  using option_admissible
+    [where P="\<lambda>(x,xb) (xc). \<forall>xa. 
+      <is_bdd_impl xb xa> 
+       sat_listci x xa 
+      <\<lambda>r'. is_bdd_impl xb xa * \<up> (r' = xc)>"] (* Dragons even worse this time. *)
+  apply(auto)
+  apply(fo_rule subst[rotated])
+   apply(assumption)
+  by auto
+
+subgoal
+  by clarify
+
+subgoal
+  apply(unfold imp_to_meta)
+  apply(subst sat_listci.simps)
+  apply(split Option.bind_splits IFEXD.splits | clarify)+ (* Split on "destrmi' ex bdd = Some _" *)
+    apply(sep_auto;fail)
+   apply(sep_auto;fail)
+  apply(split Option.bind_splits IFEXD.splits option.splits | clarify)+
+   apply(rule bind_rule)
+    apply(sep_auto;fail)
+   apply(clarsimp)
+   apply(rule bind_rule)
+    apply(rprems)
+    apply(assumption)
+   apply(sep_auto;fail)
+  apply(split Option.bind_splits IFEXD.splits option.splits | clarify)+
+    by(sep_auto)+
+done
+declare sat_listci_rule[unfolded imp_to_meta, sep_heap_rules]
+
+fun sat_list_to_bddci where
+"sat_list_to_bddci [] s = tci s" |
+"sat_list_to_bddci ((v,u)#us) s = do {
+  (r,s) \<leftarrow> sat_list_to_bddci us s;
+  (f,s) \<leftarrow> fci s;
+  (if u then ifci v r f s else ifci v f r s)
+}
+"
+
+lemma sat_list_to_bddci_rule[sep_heap_rules]: "
+  mi.sat_list_to_bdd sl bdd = Some (r,bdd') \<Longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    sat_list_to_bddci sl bddi 
+  <\<lambda>(r',bddi'). is_bdd_impl bdd' bddi' * \<up>(r' = r)>\<^sub>t"
+by(induction arbitrary: bddi bdd bdd' r rule: mi.sat_list_to_bdd.induct;
+   sep_auto simp: imp_to_meta split: Option.bind_splits prod.splits)
+
+partial_function(heap) sat_list_coverci where
+"sat_list_coverci e s = do {
+  sl1 \<leftarrow> sat_listci e s;
+  (case sl1 of
+      None \<Rightarrow> return ([],s) |
+      Some l \<Rightarrow> do {
+        (le,s) \<leftarrow> sat_list_to_bddci l s;
+        (f,s) \<leftarrow> fci s;
+        (lm,s) \<leftarrow> iteci_lu le f e s;
+        (rec,s) \<leftarrow> sat_list_coverci lm s;
+        return ((l # rec),s)
+      }
+  )
+}"
+declare sat_list_coverci.simps[code]
+
+
+lemma add_true_asm:
+  assumes "<b * true> p <a>\<^sub>t"
+  shows "<b> p <a>\<^sub>t"
+  apply(rule cons_pre_rule)
+   prefer 2
+   apply(rule assms)
+  apply(simp add: ent_true_drop)
+  done
+
+lemma add_anything:
+  assumes "<b> p <a>"
+  shows "<b * x> p <\<lambda>r. a r * x>\<^sub>t"
+proof -
+  note [sep_heap_rules] = assms
+  show ?thesis by sep_auto
+qed
+
+lemma add_true:
+  assumes "<b> p <a>\<^sub>t"
+  shows "<b * true> p <a>\<^sub>t"
+  using assms add_anything[where x=true] by force
+
+lemma sat_list_coverci_rule[sep_heap_rules]: "
+  mi.sat_list_cover_impl ex bdd = Some (r,bdd') \<longrightarrow>
+  <is_bdd_impl bdd bddi> 
+    sat_list_coverci ex bddi 
+  <\<lambda>(r',bddi'). is_bdd_impl bdd' bddi' * \<up>(r' = r)>\<^sub>t"
+apply(induction arbitrary: r ex bddi bdd bdd' r rule: mi.sat_list_cover_impl.fixp_induct)
+subgoal
+  using option_admissible
+    [where P="\<lambda>(xa,xaaa) (x,xaaaa). \<forall>xaa.
+      <is_bdd_impl xaaa
+       xaa> sat_list_coverci xa xaa
+      <\<lambda>r. case r of (r', bddi') \<Rightarrow> is_bdd_impl xaaaa bddi' * \<up> (r' = x)>\<^sub>t"]
+  apply(auto)
+  apply(fo_rule subst[rotated])
+   apply(assumption)
+  by auto
+subgoal by clarify
+subgoal
+  apply(subst sat_list_coverci.simps)
+  apply(unfold imp_to_meta)
+  apply(split Option.bind_splits option.splits | clarify)+
+   apply(sep_auto;fail)
+  apply(split Option.bind_splits option.splits | clarify)+
+   apply(sep_auto)
+   apply(rule add_true)
+   apply(rprems)
+   apply(assumption)
+  by(sep_auto)
+done
+
 subsection\<open>A standard library of functions\<close>
-
-declare iteci_rule[THEN mp, sep_heap_rules]
-
 
 definition "notci e s \<equiv> do {
   (f,s) \<leftarrow> fci s;
