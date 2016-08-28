@@ -3,7 +3,7 @@
 
 import Prelude
 import Data.List (isPrefixOf)
-import IBDD (emptyci,tci,fci,ifci,andci,orci,notci,litci,graphifyci)
+import IBDD (emptyci,tci,fci,iteci,andci,orci,notci,litci,graphifyci)
 import qualified IBDD
 import ToPreludeChar (isToHs)
 import Control.Monad (liftM)

@@ -2,7 +2,7 @@
 import Prelude
 import Data.List (isPrefixOf,intercalate)
 import Data.Maybe (fromMaybe)
-import IBDD (emptyci,tci,fci,ifci,andci,orci,nandci,norci,biimpci,xorci,notci,litci,tautci,graphifyci)
+import IBDD (emptyci,tci,fci,iteci,andci,orci,nandci,norci,biimpci,xorci,notci,litci,tautci,graphifyci,sat_list_coverci)
 import qualified IBDD
 import ToPreludeChar (isToHs)
 import Control.Monad (liftM,liftM2,(>=>))

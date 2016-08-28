@@ -11,6 +11,6 @@ lemma [code del]:
           (integer_of_nat len)" by (simp add: blit'_def)
 declare blit_def[code]
 
-export_code open iteci_lu notci andci orci nandci norci biimpci xorci ifci tci fci tautci emptyci graphifyci litci eqci in Haskell module_name IBDD file "../hs/gen"
+export_code open iteci_lu notci andci orci nandci norci biimpci xorci iteci tci fci tautci emptyci graphifyci litci eqci sat_list_coverci in Haskell module_name IBDD file "../hs/gen"
 
 end
