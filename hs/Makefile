@@ -1,4 +1,4 @@
-TARGETS=SATToBDDot BDDCal Urquhart
+TARGETS=SATToBDDot BDDCal Urquhart Sudoku
 
 .PHONY: all clean $(TARGETS)
 
