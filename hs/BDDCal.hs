@@ -1,5 +1,6 @@
+{- This is strictly academic code. Do NOT! -}
 import Prelude
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf,intercalate)
 import Data.Maybe (fromMaybe)
 import IBDD (emptyci,tci,fci,ifci,andci,orci,nandci,norci,biimpci,xorci,notci,litci,tautci,graphifyci)
 import qualified IBDD
@@ -34,6 +35,7 @@ doAction (ids, bdd) line =
 	if length wl < 2 then cnp "Too few tokens" else
 	if head wl == "tautology" then liftM (\r-> ((ids,bdd),Just r)) (checkTaut (wl !! 1) bdd ids) else
 	if head wl == "graph" then liftM (\r-> ((ids,bdd),Just $ isToHs r)) (graphifyci [] (ga 1) bdd) else
+	if head wl == "pcl" then liftM (\(r,bdd)-> ((ids,bdd),Just r)) (pcl (wl !! 1) bdd ids) else
 	if length wl < 3 || wl !! 1 /= "=" then cnp "'=' expected"  else
 	let f = 
 		if length wl == 3 then return . (,) (ga 2) else
@@ -45,6 +47,15 @@ doAction (ids, bdd) line =
 		wl = words line
 		cnp x = error (x ++ " - could not parse " ++ unwords wl ++ ";")
 		ga ind = fromMaybe (cnp ("Unknown identifier " ++ (wl !! ind))) . flip Map.lookup ids $ wl !! ind
+
+pcl v bdd ids = do
+	let ps = \v p -> (if p then "" else "-") ++ show (IBDD.integer_of_nat v)
+	let pl = intercalate "," . map (uncurry ps)
+	let pf = intercalate "\n" . map pl
+	(r,s) <- sat_list_coverci (ids ! v) bdd
+	return $ (pf r,s)
+	
+
 
 assignInputs [] bdd = return (Map.empty,bdd)
 assignInputs (a:is) bdd = let (i,n) = a in do
