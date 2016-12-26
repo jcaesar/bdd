@@ -3,7 +3,6 @@ import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe)
 import IBDD (emptyci,tci,fci,ifci,andci,orci,nandci,norci,biimpci,xorci,notci,litci,tautci,graphifyci)
 import qualified IBDD
-import ToPreludeChar (isToHs)
 import Control.Monad (liftM,liftM2,(>=>))
 import Control.Monad.ST (stToIO)
 import Data.Map.Strict ((!));

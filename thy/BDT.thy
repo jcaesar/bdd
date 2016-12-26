@@ -85,7 +85,7 @@ lemma "(f, b) \<in> bf_ifex_rel \<Longrightarrow>  b = Falseif \<longleftrightar
   unfolding bf_ifex_rel_def using roifex_Falseif_unique by auto
 
 lemma ifex_ordered_not_part: "ifex_ordered  b \<Longrightarrow> b = IF v b1 b2 \<Longrightarrow> w < v \<Longrightarrow> w \<notin> ifex_var_set b"
-	using less_asym by fastforce
+  using less_asym by fastforce
 
 lemma ro_ifex_unique: "ro_ifex x \<Longrightarrow> ro_ifex y \<Longrightarrow> (\<And>ass. val_ifex x ass = val_ifex y ass) \<Longrightarrow> x = y"
  proof(induction x arbitrary: y)
@@ -451,10 +451,10 @@ definition param_opt where "param_opt i t e =
 lemma param_opt_ifex_ite_eq: "ro_ifex i \<Longrightarrow> ro_ifex t \<Longrightarrow> ro_ifex e \<Longrightarrow>
        param_opt i t e = Some r \<Longrightarrow> r = ifex_ite i t e"
   apply(rule ro_ifex_unique)
-   subgoal by (subst (asm) param_opt_def) (simp split: split_if_asm)
+   subgoal by (subst (asm) param_opt_def) (simp split: if_split_asm)
    subgoal using order_ifex_ite_invar minimal_ifex_ite_invar by (blast)
    by (subst val_ifex_ite[symmetric])
-      (auto split: split_if_asm simp add: bf_ite_def param_opt_def val_ifex_ite[symmetric])
+      (auto split: if_split_asm simp add: bf_ite_def param_opt_def val_ifex_ite[symmetric])
 
 
 function ifex_ite_opt :: "'a ifex \<Rightarrow> 'a ifex \<Rightarrow> 'a ifex \<Rightarrow> ('a :: linorder) ifex" where

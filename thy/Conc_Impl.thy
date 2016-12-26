@@ -1,6 +1,6 @@
 section\<open>Imparative implementation\<close>
 theory Conc_Impl
-imports Pointer_Map_Impl Middle_Impl
+imports Pointer_Map_Impl Middle_Impl "~~/src/HOL/Library/Code_Char"
 begin
 
 record bddi =
@@ -32,10 +32,9 @@ lemma is_bdd_impl_prec: "precise is_bdd_impl"
    apply(unfold star_aci(1))
    apply blast
   apply(rule_tac p = "dcli p" and h = "(x,y)" in preciseD[OF is_hashmap_prec])
-  apply(unfold star_aci(2)[symmetric])
-  apply(unfold star_aci(1)[symmetric]) (* black unfold magic *)
-  apply(unfold star_aci(2)[symmetric])
-  apply blast
+  apply(simp only: star_aci(2)[symmetric])
+  apply(simp only: star_aci(1)[symmetric]) (* black unfold magic *)
+  apply(simp only: star_aci(2)[symmetric])
   (* This proof is exactly the same as for pointermap. One could make a rule from it. *)
 done
 
@@ -184,7 +183,7 @@ lemma iteci_rule: "
              "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi. 
               <is_bdd_impl x4 bddi> 
                 iteci x1 x2 x3 bddi  
-              <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
+              <\<lambda>r. case r of (p\<^sub>i, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (p\<^sub>i = r1)>\<^sub>t"]
       apply auto[1]
       apply (fo_rule subst[rotated])
        apply (assumption)
@@ -323,7 +322,7 @@ lemma iteci_lu_rule: "
              "\<lambda>(((x1,x2),x3),x4) (r1,r2). \<forall>bddi.
               <is_bdd_impl x4 bddi>
                 iteci_lu x1 x2 x3 bddi  
-              <\<lambda>r. case r of (pi, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (pi = r1)>\<^sub>t"]
+              <\<lambda>r. case r of (p\<^sub>i, bddi') \<Rightarrow> is_bdd_impl r2 bddi' * \<up> (p\<^sub>i = r1)>\<^sub>t"]
       apply auto[1]
       apply (fo_rule subst[rotated])
        apply (assumption)

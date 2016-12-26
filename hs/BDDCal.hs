@@ -4,7 +4,6 @@ import Data.List (isPrefixOf,intercalate)
 import Data.Maybe (fromMaybe)
 import IBDD (emptyci,tci,fci,iteci,andci,orci,nandci,norci,biimpci,xorci,notci,litci,tautci,graphifyci,sat_list_coverci)
 import qualified IBDD
-import ToPreludeChar (isToHs)
 import Control.Monad (liftM,liftM2,(>=>))
 import Control.Monad.ST (stToIO)
 import Data.Map.Strict ((!));
@@ -34,7 +33,7 @@ doAction (ids, bdd) line =
 	if null wl || head wl == "autoreorder" then return ((ids, bdd), Nothing) else
 	if length wl < 2 then cnp "Too few tokens" else
 	if head wl == "tautology" then liftM (\r-> ((ids,bdd),Just r)) (checkTaut (wl !! 1) bdd ids) else
-	if head wl == "graph" then liftM (\r-> ((ids,bdd),Just $ isToHs r)) (graphifyci [] (ga 1) bdd) else
+	if head wl == "graph" then liftM (\r-> ((ids,bdd),Just r)) (graphifyci [] (ga 1) bdd) else
 	if head wl == "pcl" then liftM (\(r,bdd)-> ((ids,bdd),Just r)) (pcl (wl !! 1) bdd ids) else
 	if length wl < 3 || wl !! 1 /= "=" then cnp "'=' expected"  else
 	let f = 

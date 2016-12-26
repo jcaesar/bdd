@@ -4,7 +4,6 @@ import qualified IBDD
 import qualified Heap
 import Data.Maybe
 import Data.List
-import ToPreludeChar (isToHs)
 
 {- a Sudoku is coded into three figure numbers. First figure is the row index, the second the column, and the third the number that is noted in that cell -}
 
@@ -76,10 +75,8 @@ pcl v bdd = do
 	(r,s) <- sat_list_coverci v bdd
 	return $ (pf r,s)
 
-is2hs = isToHs 
-
 solve = undefined
 
 main = getContents >>= (solve . buildBdd . parseSudoku)
 
-{- This is immensely slow, but not because of the bdd operations… putStrLn =<< is2hs <$> stToIO (emptyci >>= (bigOr `appBdd` (mapBdd onlyOne . map (\c -> map (c+) cell) $ reverse . take 3 $ allCells)) >>= uncurry (graphifyci [])) -}
+{- This is immensely slow, but not because of the bdd operations… putStrLn =<< id <$> stToIO (emptyci >>= (bigOr `appBdd` (mapBdd onlyOne . map (\c -> map (c+) cell) $ reverse . take 3 $ allCells)) >>= uncurry (graphifyci [])) -}

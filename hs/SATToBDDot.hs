@@ -5,7 +5,6 @@ import Prelude
 import Data.List (isPrefixOf)
 import IBDD (emptyci,tci,fci,iteci,andci,orci,notci,litci,graphifyci)
 import qualified IBDD
-import ToPreludeChar (isToHs)
 import Control.Monad (liftM)
 import Control.Monad.ST (stToIO)
 
@@ -40,7 +39,7 @@ toGraphS s = do
 	(ep,d) <- toBdd s
 	graphifyci [] ep d
 toGraph :: String -> IO String
-toGraph s = liftM isToHs . stToIO . toGraphS . parseFile $ s
+toGraph s = stToIO . toGraphS . parseFile $ s
 
 main :: IO ()
 main = do
